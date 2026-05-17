@@ -336,6 +336,20 @@ build_miner() {
     local src_dir
     src_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/src"
 
+    # If source not found locally (standalone download), fetch from GitHub
+    if [[ ! -f "$src_dir/dagtech_miner.c" ]]; then
+        info "Downloading source from GitHub..."
+        local tmp_src="/tmp/dagtech-miner-src"
+        rm -rf "$tmp_src"
+        git clone --depth 1 https://github.com/Dagtechltd/dagtech-miner.git "$tmp_src" 2>/dev/null
+        if [[ $? -ne 0 ]]; then
+            mkdir -p "$tmp_src/src"
+            curl -fsSL "https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/src/dagtech_miner.c" \
+                -o "$tmp_src/src/dagtech_miner.c"
+        fi
+        src_dir="$tmp_src/src"
+    fi
+
     if [[ ! -f "$src_dir/dagtech_miner.c" ]]; then
         error "Source file not found: $src_dir/dagtech_miner.c"
         error "Please run this installer from the dagtech-miner directory"
