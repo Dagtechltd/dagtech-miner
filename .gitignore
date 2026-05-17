@@ -1,0 +1,15 @@
+# DagTech Miner - Git Ignore
+dagtech-miner
+*.o
+*.exe
+*.dll
+*.dylib
+*.so
+config.env
+logs/
+*.log
+.DS_Store
+Thumbs.db
+node_modules/
+build/
+dist/
