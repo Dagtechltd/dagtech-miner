@@ -4,13 +4,29 @@ High-performance mining software for the DagTech Network. CPU mining with built-
 
 **By Dawie Nel / DagTech Ltd** — [dagtech.network](https://dagtech.network)
 
-## Quick Start (Linux)
+## Quick Start
 
+### Linux
 ```bash
 git clone https://github.com/Dagtechltd/dagtech-miner.git
 cd dagtech-miner
 chmod +x install.sh
 ./install.sh
+```
+
+### macOS
+```bash
+git clone https://github.com/Dagtechltd/dagtech-miner.git
+cd dagtech-miner
+chmod +x install-mac.sh
+./install-mac.sh
+```
+
+### Windows
+```cmd
+git clone https://github.com/Dagtechltd/dagtech-miner.git
+cd dagtech-miner
+install.bat
 ```
 
 The installer will:
@@ -60,8 +76,9 @@ The built-in dashboard runs at `http://localhost:8881` while the miner is active
 
 - **Minimum**: 2 CPU cores, 512 MB RAM
 - **Recommended**: 4+ CPU cores, 2 GB+ RAM
-- **Supported OS**: Linux (Ubuntu 20.04+, Debian 11+, Fedora 36+, Arch)
-- **Dependencies**: gcc, make, libssl-dev (auto-installed)
+- **Linux**: Ubuntu 20.04+, Debian 11+, Fedora 36+, Arch (gcc auto-installed)
+- **macOS**: 11+ (Big Sur), Intel or Apple Silicon (Xcode CLT required)
+- **Windows**: 10+ with MinGW-w64 or Visual Studio Build Tools
 
 ## Configuration
 
