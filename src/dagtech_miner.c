@@ -17,11 +17,13 @@
 #ifdef _WIN32
   #include <winsock2.h>
   #include <ws2tcpip.h>
-  #pragma comment(lib, "ws2_32.lib")
+  #ifdef _MSC_VER
+    #pragma comment(lib, "ws2_32.lib")
+    typedef int ssize_t;
+  #endif
   #define close closesocket
   #define usleep(x) Sleep((x)/1000)
   #define sleep(x) Sleep((x)*1000)
-  typedef int ssize_t;
 #else
   #include <arpa/inet.h>
   #include <netdb.h>
