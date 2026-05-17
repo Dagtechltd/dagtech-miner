@@ -30,6 +30,9 @@
   #include <netinet/in.h>
   #include <sys/socket.h>
   #include <unistd.h>
+  #ifdef __APPLE__
+    #include <sys/sysctl.h>
+  #endif
 #endif
 
 #ifdef USE_OPENSSL
