@@ -323,15 +323,17 @@ static void dagtech_subscribe_authorize(void) {
         "{\"id\":1,\"method\":\"mining.subscribe\",\"params\":[\"DagTech/" DAGTECH_VERSION "\"]}");
     dagtech_send(buf);
 
-    char worker_full[256];
+    /* Pool requires a clean EVM address as username.
+       Worker name goes in the password field for identification. */
+    char pass_field[128];
     if (worker_name[0] && strcmp(worker_name, "dagtech") != 0)
-        snprintf(worker_full, sizeof(worker_full), "%s.%s", wallet, worker_name);
+        snprintf(pass_field, sizeof(pass_field), "%s", worker_name);
     else
-        snprintf(worker_full, sizeof(worker_full), "%s", wallet);
+        snprintf(pass_field, sizeof(pass_field), "%s", password);
 
     snprintf(buf, sizeof(buf),
         "{\"id\":2,\"method\":\"mining.authorize\",\"params\":[\"%s\",\"%s\"]}",
-        worker_full, password);
+        wallet, pass_field);
     dagtech_send(buf);
 }
 
@@ -368,13 +370,21 @@ static void dagtech_parse_stratum(const char *line) {
             }
         }
     }
-    /* Difficulty update */
+    /* Difficulty update — apply immediately to the live job so workers
+       stop submitting stale low-diff shares between set_difficulty and
+       the next mining.notify. */
     else if (strstr(line, "mining.set_difficulty")) {
         const char *p = strstr(line, "params");
         if (p) {
             p = strchr(p, '[');
             if (p) {
-                current_difficulty = atof(p + 1);
+                double new_diff = atof(p + 1);
+                current_difficulty = new_diff;
+                /* Hot-patch the live job so worker threads see it now */
+                pthread_mutex_lock(&job_mtx);
+                if (current_job.valid)
+                    current_job.difficulty = new_diff;
+                pthread_mutex_unlock(&job_mtx);
                 printf("[DagTech] Difficulty: %.8f\n", current_difficulty);
             }
         }
@@ -486,7 +496,26 @@ static int dagtech_make_header(const DagTechJob *j, uint32_t nonce, uint8_t head
     return 0;
 }
 
+/* Rate limiter: max ~5 share submissions per second to prevent
+   pool flood-disconnect during vardiff ramp-up. */
+static struct timespec last_submit_time = {0, 0};
+static pthread_mutex_t submit_rate_mtx = PTHREAD_MUTEX_INITIALIZER;
+#define SUBMIT_MIN_INTERVAL_MS 200  /* 1000ms / 5 shares = 200ms */
+
 static void dagtech_submit_share(const DagTechJob *j, uint32_t nonce) {
+    /* Throttle: skip if we submitted too recently */
+    struct timespec now;
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    pthread_mutex_lock(&submit_rate_mtx);
+    long elapsed_ms = (now.tv_sec - last_submit_time.tv_sec) * 1000 +
+                      (now.tv_nsec - last_submit_time.tv_nsec) / 1000000;
+    if (elapsed_ms < SUBMIT_MIN_INTERVAL_MS) {
+        pthread_mutex_unlock(&submit_rate_mtx);
+        return;  /* Drop this share to avoid flood */
+    }
+    last_submit_time = now;
+    pthread_mutex_unlock(&submit_rate_mtx);
+
     char nonce_hex[16];
     uint8_t nb[4];
     nb[0] = nonce & 0xff;
