@@ -68,17 +68,25 @@ where cl >nul 2>&1
 if not errorlevel 1 set "HAS_MSVC=1"
 
 if "%HAS_GCC%"=="0" if "%HAS_MSVC%"=="0" (
-    echo [DagTech] No C compiler found - downloading pre-built binary...
+    echo [DagTech] No C compiler found - using pre-built binary...
     if not exist "%BIN_DIR%" mkdir "%BIN_DIR%"
-    powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/bin/windows/dagtech-miner.exe' -OutFile '%BIN_DIR%\dagtech-miner.exe'"
-    if exist "%BIN_DIR%\dagtech-miner.exe" (
-        echo [DagTech] Pre-built binary downloaded successfully
+    REM Try local repo copy first
+    if exist "%~dp0bin\windows\dagtech-miner.exe" (
+        copy /y "%~dp0bin\windows\dagtech-miner.exe" "%BIN_DIR%\dagtech-miner.exe" >nul
+        echo [DagTech] Pre-built binary copied from repo
         set "SKIP_BUILD=1"
     ) else (
-        echo [DagTech] Download failed. Please install MinGW-w64 manually:
-        echo           https://www.mingw-w64.org/downloads/
-        pause
-        exit /b 1
+        echo [DagTech] Downloading pre-built binary from GitHub...
+        powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/bin/windows/dagtech-miner.exe' -OutFile '%BIN_DIR%\dagtech-miner.exe'"
+        if exist "%BIN_DIR%\dagtech-miner.exe" (
+            echo [DagTech] Pre-built binary downloaded successfully
+            set "SKIP_BUILD=1"
+        ) else (
+            echo [DagTech] Download failed. Please install MinGW-w64 manually:
+            echo           https://www.mingw-w64.org/downloads/
+            pause
+            exit /b 1
+        )
     )
 )
 if not defined SKIP_BUILD echo [DagTech] Compiler found
@@ -166,21 +174,21 @@ if defined SKIP_BUILD (
 ) else (
     echo [DagTech] Building DagTech Miner...
     set "SRC_DIR=%~dp0src"
-    if not exist "%SRC_DIR%\dagtech_miner.c" (
+    if not exist "!SRC_DIR!\dagtech_miner.c" (
         echo [DagTech] Source not found locally, downloading from GitHub...
         set "TMP_SRC=%TEMP%\dagtech-miner-src"
-        if exist "%TMP_SRC%" rmdir /s /q "%TMP_SRC%"
-        git clone --depth 1 https://github.com/Dagtechltd/dagtech-miner.git "%TMP_SRC%" >nul 2>&1
+        if exist "!TMP_SRC!" rmdir /s /q "!TMP_SRC!"
+        git clone --depth 1 https://github.com/Dagtechltd/dagtech-miner.git "!TMP_SRC!" >nul 2>&1
         if errorlevel 1 (
             echo [DagTech] Git clone failed, trying PowerShell download...
-            mkdir "%TMP_SRC%\src" 2>nul
-            powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/src/dagtech_miner.c' -OutFile '%TMP_SRC%\src\dagtech_miner.c'" 2>nul
-            if not exist "%TMP_SRC%\src\dagtech_miner.c" (
+            mkdir "!TMP_SRC!\src" 2>nul
+            powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/src/dagtech_miner.c' -OutFile '!TMP_SRC!\src\dagtech_miner.c'" 2>nul
+            if not exist "!TMP_SRC!\src\dagtech_miner.c" (
                 echo [DagTech] ERROR: Could not download source. Check internet connection.
                 pause
                 exit /b 1
             )
-            powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/src/dagtech_sha256.h' -OutFile '%TMP_SRC%\src\dagtech_sha256.h'" 2>nul
+            powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/src/dagtech_sha256.h' -OutFile '!TMP_SRC!\src\dagtech_sha256.h'" 2>nul
         )
         set "SRC_DIR=!TMP_SRC!\src"
         if exist "%~dp0dashboard\index.html" (
@@ -194,10 +202,10 @@ if defined SKIP_BUILD (
         pause
         exit /b 1
     )
-    if "%HAS_GCC%"=="1" (
-        gcc -O2 -Wall -o "%BIN_DIR%\dagtech-miner.exe" "%SRC_DIR%\dagtech_miner.c" -lws2_32 -lpthread
+    if "!HAS_GCC!"=="1" (
+        gcc -O2 -Wall -static -o "%BIN_DIR%\dagtech-miner.exe" "!SRC_DIR!\dagtech_miner.c" -lws2_32 -lpthread
     ) else (
-        cl /O2 /Fe:"%BIN_DIR%\dagtech-miner.exe" "%SRC_DIR%\dagtech_miner.c" ws2_32.lib
+        cl /O2 /Fe:"%BIN_DIR%\dagtech-miner.exe" "!SRC_DIR!\dagtech_miner.c" ws2_32.lib
     )
     if errorlevel 1 (
         echo [DagTech] BUILD FAILED
@@ -222,6 +230,17 @@ if exist "%~dp0bin\windows\dagtech-start.bat" (
     echo [DagTech] WARNING: Launcher templates not found, downloading...
     powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/bin/windows/dagtech-start.bat' -OutFile '%BIN_DIR%\dagtech-start.bat'"
     powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/bin/windows/dagtech-stop.bat' -OutFile '%BIN_DIR%\dagtech-stop.bat'"
+)
+
+REM ---- Add to PATH ----
+echo [DagTech] Adding to PATH...
+echo %PATH% | findstr /i /c:"%BIN_DIR%" >nul 2>&1
+if errorlevel 1 (
+    setx PATH "%PATH%;%BIN_DIR%" >nul 2>&1
+    echo [DagTech] PATH updated. Open a NEW terminal for dagtech-start.bat to work.
+    echo [DagTech] Or run directly: %BIN_DIR%\dagtech-start.bat
+) else (
+    echo [DagTech] PATH already configured
 )
 
 REM ---- Done ----

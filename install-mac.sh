@@ -116,7 +116,7 @@ install_dependencies() {
 
     # Check for OpenSSL via Homebrew (optional, we have built-in SHA256)
     if command -v brew &>/dev/null; then
-        if brew list openssl &>/dev/null 2>&1; then
+        if brew list openssl &>/dev/null; then
             success "OpenSSL found via Homebrew (will use for acceleration)"
             export LDFLAGS="-L$(brew --prefix openssl)/lib"
             export CPPFLAGS="-I$(brew --prefix openssl)/include"
@@ -217,12 +217,12 @@ build_miner() {
         info "Downloading source from GitHub..."
         local tmp_src="/tmp/dagtech-miner-src"
         rm -rf "$tmp_src"
-        git clone --depth 1 https://github.com/Dagtechltd/dagtech-miner.git "$tmp_src" 2>/dev/null
-        if [[ $? -ne 0 ]]; then
+        if ! git clone --depth 1 https://github.com/Dagtechltd/dagtech-miner.git "$tmp_src" 2>/dev/null; then
             # Fallback: direct download if git clone fails
+            info "Git clone failed, trying direct download..."
             mkdir -p "$tmp_src/src"
             curl -fsSL "https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/src/dagtech_miner.c" \
-                -o "$tmp_src/src/dagtech_miner.c"
+                -o "$tmp_src/src/dagtech_miner.c" || true
         fi
         src_dir="$tmp_src/src"
     fi
@@ -243,9 +243,7 @@ build_miner() {
     fi
 
     info "Compiling with: $cc $cflags"
-    $cc $cflags -o "$BIN_DIR/dagtech-miner" "$src_dir/dagtech_miner.c" $ldflags 2>&1
-
-    if [[ $? -ne 0 ]]; then
+    if ! $cc $cflags -o "$BIN_DIR/dagtech-miner" "$src_dir/dagtech_miner.c" $ldflags 2>&1; then
         error "Build failed!"
         exit 1
     fi
@@ -395,7 +393,7 @@ print_summary() {
     echo ""
     echo -e "${GREEN}  ╔══════════════════════════════════════════╗${NC}"
     echo -e "${GREEN}  ║   ${BOLD}Installation Complete!${NC}${GREEN}                 ║${NC}"
-    echo -e "${GREEN}  ╚���═════════════════════════════════════════╝${NC}"
+    echo -e "${GREEN}  ╚══════════════════════════════════════════╝${NC}"
     echo ""
     echo -e "  ${BOLD}Quick Start:${NC}"
     echo -e "    ${CYAN}dagtech-start${NC}    Start mining"

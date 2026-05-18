@@ -582,10 +582,10 @@
             <div class="platform-icon">&#128187;</div>
             <div class="platform-name">Windows</div>
           </div>
-          <div class="platform-reqs">Windows 10+ &bull; MinGW-w64 or Visual Studio &bull; Auto-installs via winget</div>
+          <div class="platform-reqs">Windows 10+ &bull; No compiler needed &bull; Pre-built binary included</div>
           <ul class="platform-steps">
             <li>Detects CPU/RAM/GPU via system queries</li>
-            <li>Auto-installs MinGW compiler if missing</li>
+            <li>Uses pre-built binary automatically (no compiler required)</li>
             <li>Creates .bat launcher scripts for easy start/stop</li>
             <li>Configuration wizard with GPU detection</li>
           </ul>
@@ -734,7 +734,7 @@
           <div class="step-number">3</div>
           <div class="step-content">
             <h4>Run the Installer</h4>
-            <p>The batch installer checks for MinGW or Visual Studio. If neither is found, it installs MinGW automatically via winget:</p>
+            <p>The batch installer automatically uses the pre-built binary from the repo. If a C compiler is available, it can optionally build from source:</p>
             <div class="code-block">install.bat</div>
           </div>
         </div>

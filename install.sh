@@ -183,16 +183,20 @@ install_dependencies() {
     case "$pkg_mgr" in
         apt)
             $need_sudo apt-get update -qq
-            $need_sudo apt-get install -y -qq build-essential libssl-dev git curl >/dev/null 2>&1
+            $need_sudo apt-get install -y -qq build-essential git curl >/dev/null 2>&1
+            $need_sudo apt-get install -y -qq libssl-dev >/dev/null 2>&1 || true
             ;;
         dnf|yum)
-            $need_sudo $pkg_mgr install -y gcc make openssl-devel git curl >/dev/null 2>&1
+            $need_sudo $pkg_mgr install -y gcc make git curl >/dev/null 2>&1
+            $need_sudo $pkg_mgr install -y openssl-devel >/dev/null 2>&1 || true
             ;;
         pacman)
-            $need_sudo pacman -Sy --noconfirm gcc make openssl git curl >/dev/null 2>&1
+            $need_sudo pacman -Sy --noconfirm gcc make git curl >/dev/null 2>&1
+            $need_sudo pacman -Sy --noconfirm openssl >/dev/null 2>&1 || true
             ;;
         zypper)
-            $need_sudo zypper install -y gcc make libopenssl-devel git curl >/dev/null 2>&1
+            $need_sudo zypper install -y gcc make git curl >/dev/null 2>&1
+            $need_sudo zypper install -y libopenssl-devel >/dev/null 2>&1 || true
             ;;
     esac
 
@@ -341,11 +345,11 @@ build_miner() {
         info "Downloading source from GitHub..."
         local tmp_src="/tmp/dagtech-miner-src"
         rm -rf "$tmp_src"
-        git clone --depth 1 https://github.com/Dagtechltd/dagtech-miner.git "$tmp_src" 2>/dev/null
-        if [[ $? -ne 0 ]]; then
+        if ! git clone --depth 1 https://github.com/Dagtechltd/dagtech-miner.git "$tmp_src" 2>/dev/null; then
+            info "Git clone failed, trying direct download..."
             mkdir -p "$tmp_src/src"
             curl -fsSL "https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/src/dagtech_miner.c" \
-                -o "$tmp_src/src/dagtech_miner.c"
+                -o "$tmp_src/src/dagtech_miner.c" || true
         fi
         src_dir="$tmp_src/src"
     fi
@@ -362,12 +366,24 @@ build_miner() {
         opt_flags="-O2 -march=native"
     fi
 
-    info "Compiling with: gcc $opt_flags"
-    gcc $opt_flags -Wall -Wextra -o "$BIN_DIR/dagtech-miner" \
-        "$src_dir/dagtech_miner.c" \
-        -lssl -lcrypto -lpthread -lm 2>&1
+    # Detect OpenSSL availability for linking
+    local ldflags="-lpthread -lm"
+    if pkg-config --exists openssl 2>/dev/null; then
+        ldflags="$(pkg-config --libs openssl) $ldflags"
+        opt_flags="$opt_flags -DUSE_OPENSSL $(pkg-config --cflags openssl)"
+        info "OpenSSL found — using hardware-accelerated SHA256"
+    elif [[ -f /usr/include/openssl/sha.h ]]; then
+        ldflags="-lssl -lcrypto $ldflags"
+        opt_flags="$opt_flags -DUSE_OPENSSL"
+        info "OpenSSL headers found — using hardware-accelerated SHA256"
+    else
+        info "OpenSSL not found — using built-in SHA256"
+    fi
 
-    if [[ $? -ne 0 ]]; then
+    info "Compiling with: gcc $opt_flags"
+    if ! gcc $opt_flags -Wall -Wextra -o "$BIN_DIR/dagtech-miner" \
+        "$src_dir/dagtech_miner.c" \
+        $ldflags 2>&1; then
         error "Build failed!"
         exit 1
     fi

@@ -31,13 +31,21 @@ install.bat
 
 The installer will:
 1. Check your hardware (CPU cores, RAM, GPU availability)
-2. Install build dependencies automatically
-3. Ask for your wallet address
-4. Let you choose CPU, GPU, or both
-5. Build the miner optimized for your system
-6. Set up the dashboard and launcher scripts
+2. Ask for your wallet address
+3. Let you choose CPU, GPU, or both
+4. Build the miner (Linux/Mac) or use the pre-built binary (Windows — no compiler needed)
+5. Set up the dashboard and launcher scripts
 
-## Manual Build
+## After Installation
+
+| OS | Start | Stop |
+|---|---|---|
+| Linux/Mac | `dagtech-start` | `dagtech-stop` |
+| Windows | `dagtech-start.bat` | `dagtech-stop.bat` |
+
+> **Note:** On Windows, open a **new** terminal window after installation for the PATH to take effect. Or run directly: `%USERPROFILE%\.dagtech-miner\bin\dagtech-start.bat`
+
+## Manual Build (Linux/Mac only)
 
 ```bash
 make
@@ -60,14 +68,6 @@ Options:
   --help               Show help
 ```
 
-## After Installation
-
-```bash
-dagtech-start      # Start mining
-dagtech-stop       # Stop mining
-dagtech-status     # Check status and stats
-```
-
 ## Dashboard
 
 The built-in dashboard runs at `http://localhost:8881` while the miner is active. It shows real-time hashrate, shares, uptime, and connection info.
@@ -78,7 +78,7 @@ The built-in dashboard runs at `http://localhost:8881` while the miner is active
 - **Recommended**: 4+ CPU cores, 2 GB+ RAM
 - **Linux**: Ubuntu 20.04+, Debian 11+, Fedora 36+, Arch (gcc auto-installed)
 - **macOS**: 11+ (Big Sur), Intel or Apple Silicon (Xcode CLT required)
-- **Windows**: 10+ with MinGW-w64 or Visual Studio Build Tools
+- **Windows**: 10+ (no compiler needed — pre-built binary included)
 
 ## Configuration
 

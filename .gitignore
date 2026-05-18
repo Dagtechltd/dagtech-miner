@@ -1,7 +1,6 @@
 # DagTech Miner - Git Ignore
 dagtech-miner
 *.o
-*.exe
 *.dll
 *.dylib
 *.so
@@ -14,3 +13,7 @@ node_modules/
 build/
 dist/
 gh_*
+
+# Allow pre-built binaries in bin/
+!bin/
+!bin/**
