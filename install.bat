@@ -215,47 +215,14 @@ if exist "%~dp0dashboard\index.html" (
 
 REM ---- Create launcher batch files ----
 echo [DagTech] Creating launcher scripts...
-
-(
-echo @echo off
-echo REM DagTech Miner Launcher - dagtech.network
-echo setlocal
-echo set "CONFIG=%USERPROFILE%\.dagtech-miner\config.env"
-echo set "BIN=%USERPROFILE%\.dagtech-miner\bin\dagtech-miner.exe"
-echo set "LOG_DIR=%USERPROFILE%\.dagtech-miner\logs"
-echo set "DASHBOARD=%USERPROFILE%\.dagtech-miner\dashboard"
-echo.
-echo for /f "tokens=1,2 delims==" %%%%a in ^(%CONFIG%^) do ^(
-echo   if "%%%%a"=="WALLET" set "WALLET=%%%%b"
-echo   if "%%%%a"=="POOL_HOST" set "POOL_HOST=%%%%b"
-echo   if "%%%%a"=="POOL_PORT" set "POOL_PORT=%%%%b"
-echo   if "%%%%a"=="THREADS" set "THREADS=%%%%b"
-echo   if "%%%%a"=="WORKER_NAME" set "WORKER=%%%%b"
-echo   if "%%%%a"=="METRICS_PORT" set "METRICS_PORT=%%%%b"
-echo ^)
-echo.
-echo echo.
-echo echo   DagTech Miner - dagtech.network
-echo echo   Pool: %%POOL_HOST%%:%%POOL_PORT%%
-echo echo   Wallet: %%WALLET%%
-echo echo   Threads: %%THREADS%%
-echo echo.
-echo.
-echo REM Start dashboard
-echo start /min python -m http.server 8881 --bind 127.0.0.1 --directory "%%DASHBOARD%%" 2^>nul
-echo echo [DagTech] Dashboard: http://localhost:8881
-echo.
-echo "%%BIN%%" --wallet %%WALLET%% --pool %%POOL_HOST%% --port %%POOL_PORT%% --threads %%THREADS%% --worker %%WORKER%% --metrics-port %%METRICS_PORT%%
-) > "%BIN_DIR%\dagtech-start.bat"
-
-(
-echo @echo off
-echo taskkill /f /im dagtech-miner.exe 2^>nul ^&^& echo [DagTech] Miner stopped ^|^| echo [DagTech] Miner not running
-) > "%BIN_DIR%\dagtech-stop.bat"
-
-REM ---- Add to PATH ----
-echo [DagTech] Adding to PATH...
-setx PATH "%PATH%;%BIN_DIR%" >nul 2>&1
+if exist "%~dp0bin\windows\dagtech-start.bat" (
+    copy /y "%~dp0bin\windows\dagtech-start.bat" "%BIN_DIR%\dagtech-start.bat" >nul
+    copy /y "%~dp0bin\windows\dagtech-stop.bat" "%BIN_DIR%\dagtech-stop.bat" >nul
+) else (
+    echo [DagTech] WARNING: Launcher templates not found, downloading...
+    powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/bin/windows/dagtech-start.bat' -OutFile '%BIN_DIR%\dagtech-start.bat'"
+    powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/bin/windows/dagtech-stop.bat' -OutFile '%BIN_DIR%\dagtech-stop.bat'"
+)
 
 REM ---- Done ----
 echo.
