@@ -90,7 +90,7 @@ echo.
 
 :wallet_prompt
 set /p "WALLET=  Enter wallet address (0x...): "
-echo %WALLET% | findstr /r "^0x[0-9a-fA-F]*$" >nul 2>&1
+    powershell -Command "if ('%WALLET%' -match '^0x[0-9a-fA-F]{40}$') { exit 0 } else { exit 1 }"
 if errorlevel 1 (
     echo [DagTech] Invalid wallet format. Must start with 0x
     goto :wallet_prompt
@@ -161,52 +161,50 @@ echo METRICS_PORT=8880
 echo [DagTech] Config saved
 
 REM ---- Build ----
-echo [DagTech] Building DagTech Miner...
-set "SRC_DIR=%~dp0src"
-if not exist "%SRC_DIR%\dagtech_miner.c" (
-    echo [DagTech] Source not found locally, downloading from GitHub...
-    set "TMP_SRC=%TEMP%\dagtech-miner-src"
-    if exist "%TMP_SRC%" rmdir /s /q "%TMP_SRC%"
-    git clone --depth 1 https://github.com/Dagtechltd/dagtech-miner.git "%TMP_SRC%" >nul 2>&1
-    if errorlevel 1 (
-        echo [DagTech] Git clone failed, trying PowerShell download...
-        mkdir "%TMP_SRC%\src" 2>nul
-        powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/src/dagtech_miner.c' -OutFile '%TMP_SRC%\src\dagtech_miner.c'" 2>nul
-        if not exist "%TMP_SRC%\src\dagtech_miner.c" (
-            echo [DagTech] ERROR: Could not download source. Check internet connection.
-            pause
-            exit /b 1
-        )
-        powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/src/dagtech_sha256.h' -OutFile '%TMP_SRC%\src\dagtech_sha256.h'" 2>nul
-    )
-    set "SRC_DIR=!TMP_SRC!\src"
-    if exist "%~dp0dashboard\index.html" (
-        REM keep local dashboard
-    ) else if exist "!TMP_SRC!\dashboard\index.html" (
-        copy /y "!TMP_SRC!\dashboard\index.html" "%DASHBOARD_DIR%\" >nul
-    )
-)
-if not exist "!SRC_DIR!\dagtech_miner.c" (
-    echo [DagTech] ERROR: Source not found after download attempt.
-    pause
-    exit /b 1
-)
-
 if defined SKIP_BUILD (
     echo [DagTech] Using pre-built binary - skipping compile
 ) else (
-if "%HAS_GCC%"=="1" (
-    gcc -O2 -Wall -o "%BIN_DIR%\dagtech-miner.exe" "%SRC_DIR%\dagtech_miner.c" -lws2_32 -lpthread
-) else (
-    cl /O2 /Fe:"%BIN_DIR%\dagtech-miner.exe" "%SRC_DIR%\dagtech_miner.c" ws2_32.lib
-)
-
-if errorlevel 1 (
-    echo [DagTech] BUILD FAILED
-    pause
-    exit /b 1
-)
-echo [DagTech] Build successful
+    echo [DagTech] Building DagTech Miner...
+    set "SRC_DIR=%~dp0src"
+    if not exist "%SRC_DIR%\dagtech_miner.c" (
+        echo [DagTech] Source not found locally, downloading from GitHub...
+        set "TMP_SRC=%TEMP%\dagtech-miner-src"
+        if exist "%TMP_SRC%" rmdir /s /q "%TMP_SRC%"
+        git clone --depth 1 https://github.com/Dagtechltd/dagtech-miner.git "%TMP_SRC%" >nul 2>&1
+        if errorlevel 1 (
+            echo [DagTech] Git clone failed, trying PowerShell download...
+            mkdir "%TMP_SRC%\src" 2>nul
+            powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/src/dagtech_miner.c' -OutFile '%TMP_SRC%\src\dagtech_miner.c'" 2>nul
+            if not exist "%TMP_SRC%\src\dagtech_miner.c" (
+                echo [DagTech] ERROR: Could not download source. Check internet connection.
+                pause
+                exit /b 1
+            )
+            powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/src/dagtech_sha256.h' -OutFile '%TMP_SRC%\src\dagtech_sha256.h'" 2>nul
+        )
+        set "SRC_DIR=!TMP_SRC!\src"
+        if exist "%~dp0dashboard\index.html" (
+            REM keep local dashboard
+        ) else if exist "!TMP_SRC!\dashboard\index.html" (
+            copy /y "!TMP_SRC!\dashboard\index.html" "%DASHBOARD_DIR%\" >nul
+        )
+    )
+    if not exist "!SRC_DIR!\dagtech_miner.c" (
+        echo [DagTech] ERROR: Source not found after download attempt.
+        pause
+        exit /b 1
+    )
+    if "%HAS_GCC%"=="1" (
+        gcc -O2 -Wall -o "%BIN_DIR%\dagtech-miner.exe" "%SRC_DIR%\dagtech_miner.c" -lws2_32 -lpthread
+    ) else (
+        cl /O2 /Fe:"%BIN_DIR%\dagtech-miner.exe" "%SRC_DIR%\dagtech_miner.c" ws2_32.lib
+    )
+    if errorlevel 1 (
+        echo [DagTech] BUILD FAILED
+        pause
+        exit /b 1
+    )
+    echo [DagTech] Build successful
 )
 
 REM ---- Copy dashboard ----
