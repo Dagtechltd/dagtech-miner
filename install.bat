@@ -69,9 +69,8 @@ if not errorlevel 1 set "HAS_MSVC=1"
 
 if "%HAS_GCC%"=="0" if "%HAS_MSVC%"=="0" (
     echo [DagTech] No C compiler found - downloading pre-built binary...
-    set "PREBUILT_URL=https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/bin/windows/dagtech-miner.exe"
     if not exist "%BIN_DIR%" mkdir "%BIN_DIR%"
-    powershell -Command "Invoke-WebRequest -Uri '%PREBUILT_URL%' -OutFile '%BIN_DIR%\dagtech-miner.exe'"
+    powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/bin/windows/dagtech-miner.exe' -OutFile '%BIN_DIR%\dagtech-miner.exe'"
     if exist "%BIN_DIR%\dagtech-miner.exe" (
         echo [DagTech] Pre-built binary downloaded successfully
         set "SKIP_BUILD=1"
