@@ -99,13 +99,13 @@ if errorlevel 1 (
 echo.
 echo   Mining mode:
 if "%GPU_AVAILABLE%"=="1" (
-    echo     1) CPU only
-    echo     2) GPU only
-    echo     3) CPU + GPU [recommended]
+    echo     1^) CPU only
+    echo     2^) GPU only
+    echo     3^) CPU + GPU [recommended]
     echo.
     set /p "MODE_CHOICE=  Choice [1-3]: "
 ) else (
-    echo     1) CPU only (no GPU detected)
+    echo     1^) CPU only ^(no GPU detected^)
     set "MODE_CHOICE=1"
 )
 
