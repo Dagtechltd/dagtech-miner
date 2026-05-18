@@ -168,7 +168,7 @@ static inline void dagtech_xor_salsa8(uint32_t B[16], const uint32_t Bx[16]) {
         x01^=ROTL(x00+x03,7);  x06^=ROTL(x05+x04,7);
         x11^=ROTL(x10+x09,7);  x12^=ROTL(x15+x14,7);
         x02^=ROTL(x01+x00,9);  x07^=ROTL(x06+x05,9);
-        x04^=ROTL(x11+x10,9);  x13^=ROTL(x12+x15,9);
+        x08^=ROTL(x11+x10,9);  x13^=ROTL(x12+x15,9);
         x03^=ROTL(x02+x01,13); x04^=ROTL(x07+x06,13);
         x09^=ROTL(x08+x11,13); x14^=ROTL(x13+x12,13);
         x00^=ROTL(x03+x02,18); x05^=ROTL(x04+x07,18);
