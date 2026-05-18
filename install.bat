@@ -165,7 +165,30 @@ REM ---- Build ----
 echo [DagTech] Building DagTech Miner...
 set "SRC_DIR=%~dp0src"
 if not exist "%SRC_DIR%\dagtech_miner.c" (
-    echo [DagTech] ERROR: Source not found. Run from dagtech-miner directory.
+    echo [DagTech] Source not found locally, downloading from GitHub...
+    set "TMP_SRC=%TEMP%\dagtech-miner-src"
+    if exist "%TMP_SRC%" rmdir /s /q "%TMP_SRC%"
+    git clone --depth 1 https://github.com/Dagtechltd/dagtech-miner.git "%TMP_SRC%" >nul 2>&1
+    if errorlevel 1 (
+        echo [DagTech] Git clone failed, trying PowerShell download...
+        mkdir "%TMP_SRC%\src" 2>nul
+        powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/src/dagtech_miner.c' -OutFile '%TMP_SRC%\src\dagtech_miner.c'" 2>nul
+        if not exist "%TMP_SRC%\src\dagtech_miner.c" (
+            echo [DagTech] ERROR: Could not download source. Check internet connection.
+            pause
+            exit /b 1
+        )
+        powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/src/dagtech_sha256.h' -OutFile '%TMP_SRC%\src\dagtech_sha256.h'" 2>nul
+    )
+    set "SRC_DIR=!TMP_SRC!\src"
+    if exist "%~dp0dashboard\index.html" (
+        REM keep local dashboard
+    ) else if exist "!TMP_SRC!\dashboard\index.html" (
+        copy /y "!TMP_SRC!\dashboard\index.html" "%DASHBOARD_DIR%\" >nul
+    )
+)
+if not exist "!SRC_DIR!\dagtech_miner.c" (
+    echo [DagTech] ERROR: Source not found after download attempt.
     pause
     exit /b 1
 )
