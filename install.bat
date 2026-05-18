@@ -68,21 +68,21 @@ where cl >nul 2>&1
 if not errorlevel 1 set "HAS_MSVC=1"
 
 if "%HAS_GCC%"=="0" if "%HAS_MSVC%"=="0" (
-    echo [DagTech] No C compiler found.
-    echo [DagTech] Installing MinGW-w64 via winget...
-    winget install --id=MingW-w64.MingW-w64 --source=winget --accept-source-agreements --accept-package-agreements >nul 2>&1
-    if errorlevel 1 (
-        echo [DagTech] Auto-install failed. Please install MinGW-w64 manually:
+    echo [DagTech] No C compiler found - downloading pre-built binary...
+    set "PREBUILT_URL=https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/bin/windows/dagtech-miner.exe"
+    if not exist "%BIN_DIR%" mkdir "%BIN_DIR%"
+    powershell -Command "Invoke-WebRequest -Uri '%PREBUILT_URL%' -OutFile '%BIN_DIR%\dagtech-miner.exe'"
+    if exist "%BIN_DIR%\dagtech-miner.exe" (
+        echo [DagTech] Pre-built binary downloaded successfully
+        set "SKIP_BUILD=1"
+    ) else (
+        echo [DagTech] Download failed. Please install MinGW-w64 manually:
         echo           https://www.mingw-w64.org/downloads/
-        echo           Or install Visual Studio Build Tools
         pause
         exit /b 1
     )
-    echo [DagTech] MinGW installed. Please restart this installer.
-    pause
-    exit /b 0
 )
-echo [DagTech] Compiler found
+if not defined SKIP_BUILD echo [DagTech] Compiler found
 
 REM ---- Configuration ----
 echo.
@@ -193,6 +193,9 @@ if not exist "!SRC_DIR!\dagtech_miner.c" (
     exit /b 1
 )
 
+if defined SKIP_BUILD (
+    echo [DagTech] Using pre-built binary - skipping compile
+) else (
 if "%HAS_GCC%"=="1" (
     gcc -O2 -Wall -o "%BIN_DIR%\dagtech-miner.exe" "%SRC_DIR%\dagtech_miner.c" -lws2_32 -lpthread
 ) else (
@@ -205,6 +208,7 @@ if errorlevel 1 (
     exit /b 1
 )
 echo [DagTech] Build successful
+)
 
 REM ---- Copy dashboard ----
 echo [DagTech] Installing dashboard...
