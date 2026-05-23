@@ -171,7 +171,7 @@ configure_miner() {
     # Pool
     echo ""
     local pool_addr="excalibur.dagtech.network"
-    local pool_port=3334
+    local pool_port=3335
     echo -ne "  ${CYAN}Pool address (default: $pool_addr):${NC} "
     read -r pool_input
     if [[ -n "$pool_input" ]]; then pool_addr="$pool_input"; fi
@@ -282,9 +282,24 @@ source "$INSTALL_DIR/config.env"
 BIN="$INSTALL_DIR/bin/dagtech-miner"
 DASHBOARD="$INSTALL_DIR/dashboard"
 
+# Determine connection target — use proxy if installed (macOS 26+)
+CONNECT_HOST="$POOL_HOST"
+CONNECT_PORT="$POOL_PORT"
+if [[ -n "${PROXY_PORT:-}" ]] && [[ -x "$INSTALL_DIR/bin/dagtech-proxy" ]]; then
+    # Start proxy if not already running
+    if ! pgrep -f dagtech-proxy >/dev/null 2>&1; then
+        "$INSTALL_DIR/bin/dagtech-proxy" &
+        PROXY_PID=$!
+        sleep 1
+        echo "[DagTech] LAN proxy started (localhost:$PROXY_PORT -> $POOL_HOST:$POOL_PORT)"
+    fi
+    CONNECT_HOST="127.0.0.1"
+    CONNECT_PORT="$PROXY_PORT"
+fi
+
 echo ""
 echo "  DagTech Miner - dagtech.network"
-echo "  Pool: $POOL_HOST:$POOL_PORT"
+echo "  Pool: $CONNECT_HOST:$CONNECT_PORT"
 echo "  Wallet: $WALLET"
 echo "  Threads: $THREADS"
 echo ""
@@ -293,11 +308,11 @@ echo ""
 if [[ -f "$DASHBOARD/index.html" ]] && command -v python3 &>/dev/null; then
     cd "$DASHBOARD" && python3 -m http.server 8881 --bind 127.0.0.1 &>/dev/null &
     DASH_PID=$!
-    trap "kill $DASH_PID 2>/dev/null" EXIT
+    trap "kill $DASH_PID 2>/dev/null; kill ${PROXY_PID:-0} 2>/dev/null" EXIT
     echo "[DagTech] Dashboard: http://localhost:8881"
 fi
 
-ARGS="--wallet $WALLET --pool $POOL_HOST --port $POOL_PORT --threads $THREADS --worker $WORKER_NAME --metrics-port $METRICS_PORT"
+ARGS="--wallet $WALLET --pool $CONNECT_HOST --port $CONNECT_PORT --threads $THREADS --worker $WORKER_NAME --metrics-port $METRICS_PORT"
 exec $BIN $ARGS
 LAUNCHER
     chmod +x "$BIN_DIR/dagtech-start"
@@ -336,6 +351,140 @@ setup_path() {
     export PATH="$HOME/.dagtech-miner/bin:$PATH"
 }
 
+install_lan_proxy() {
+    # macOS 26.5+ blocks ad-hoc signed binaries from making LAN connections
+    # when running from launchd (Local Network Privacy). Python (/usr/bin/python3)
+    # is Apple-signed and exempt. This proxy listens on localhost and forwards
+    # traffic to the pool on the LAN, letting the miner connect via 127.0.0.1.
+    local macos_ver
+    macos_ver=$(sw_vers -productVersion 2>/dev/null || echo "0")
+    local major="${macos_ver%%.*}"
+    if (( major < 26 )); then return 0; fi
+
+    info "macOS $macos_ver detected — installing LAN proxy for launchd compatibility..."
+
+    local proxy_port=3336
+    cat > "${BIN_DIR}/dagtech-proxy" <<'PROXY_SCRIPT'
+#!/usr/bin/env python3
+"""DagTech TCP Proxy - localhost -> pool LAN address.
+Required on macOS 26.5+ where ad-hoc signed binaries cannot connect
+to LAN hosts when running from launchd (Local Network Privacy)."""
+import socket, threading, signal, sys, os, time
+
+# Read config
+config = {}
+config_path = os.path.expanduser("~/.dagtech-miner/config.env")
+if os.path.exists(config_path):
+    with open(config_path) as f:
+        for line in f:
+            line = line.strip()
+            if '=' in line and not line.startswith('#'):
+                k, v = line.split('=', 1)
+                config[k.strip()] = v.strip().strip('"').strip("'")
+
+POOL_HOST = config.get("POOL_HOST", "excalibur.dagtech.network")
+POOL_PORT = int(config.get("POOL_PORT", "3335"))
+LOCAL_PORT = int(config.get("PROXY_PORT", "3336"))
+LOG_FILE = os.path.expanduser("~/.dagtech-miner/logs/proxy.log")
+
+running = True
+def handle_signal(s, f):
+    global running; running = False
+signal.signal(signal.SIGTERM, handle_signal)
+signal.signal(signal.SIGINT, handle_signal)
+
+def log(msg):
+    try:
+        with open(LOG_FILE, "a") as f:
+            f.write(time.strftime("%Y-%m-%d %H:%M:%S") + " " + msg + "\n")
+    except: pass
+
+def forward(src, dst, name):
+    try:
+        while running:
+            data = src.recv(4096)
+            if not data: break
+            dst.sendall(data)
+    except: pass
+    try: src.close()
+    except: pass
+    try: dst.close()
+    except: pass
+
+def handle_client(client):
+    try:
+        pool = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        pool.settimeout(10)
+        pool.connect((POOL_HOST, POOL_PORT))
+        log("Connected to pool " + POOL_HOST + ":" + str(POOL_PORT))
+        t1 = threading.Thread(target=forward, args=(client, pool, "c2p"), daemon=True)
+        t2 = threading.Thread(target=forward, args=(pool, client, "p2c"), daemon=True)
+        t1.start(); t2.start()
+        t1.join(); t2.join()
+    except Exception as e:
+        log("Pool connect error: " + str(e))
+        client.close()
+
+log("Proxy starting")
+srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+srv.bind(("127.0.0.1", LOCAL_PORT))
+srv.listen(5)
+srv.settimeout(2)
+log("Listening on 127.0.0.1:" + str(LOCAL_PORT) + " -> " + POOL_HOST + ":" + str(POOL_PORT))
+while running:
+    try:
+        client, addr = srv.accept()
+        log("Client connected from " + str(addr))
+        threading.Thread(target=handle_client, args=(client,), daemon=True).start()
+    except socket.timeout: continue
+    except Exception as e:
+        log("Accept error: " + str(e)); break
+srv.close()
+log("Proxy stopped")
+PROXY_SCRIPT
+    chmod +x "${BIN_DIR}/dagtech-proxy"
+
+    # Add PROXY_PORT to config if not present
+    if ! grep -q "PROXY_PORT" "$CONFIG_FILE" 2>/dev/null; then
+        echo "PROXY_PORT=$proxy_port" >> "$CONFIG_FILE"
+    fi
+
+    # Install proxy launchd service
+    local proxy_plist="$HOME/Library/LaunchAgents/network.dagtech.proxy.plist"
+    mkdir -p "$HOME/Library/LaunchAgents"
+    cat > "$proxy_plist" <<PROXYPLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>network.dagtech.proxy</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>${BIN_DIR}/dagtech-proxy</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>KeepAlive</key>
+    <true/>
+    <key>Nice</key>
+    <integer>19</integer>
+    <key>StandardOutPath</key>
+    <string>${LOG_DIR}/proxy-stdout.log</string>
+    <key>StandardErrorPath</key>
+    <string>${LOG_DIR}/proxy-stderr.log</string>
+</dict>
+</plist>
+PROXYPLIST
+    launchctl load "$proxy_plist" 2>/dev/null
+    success "LAN proxy installed (localhost:$proxy_port -> pool)"
+    # Export flag so create_launchd_service uses proxy
+    USING_PROXY=true
+    PROXY_PORT=$proxy_port
+}
+
 create_launchd_service() {
     echo ""
     echo -ne "  ${CYAN}Install as launchd service (auto-start on login)? (y/N):${NC} "
@@ -345,6 +494,15 @@ create_launchd_service() {
     source "$CONFIG_FILE"
     local plist="$HOME/Library/LaunchAgents/network.dagtech.miner.plist"
     mkdir -p "$HOME/Library/LaunchAgents"
+
+    # On macOS 26.5+, the proxy is installed and miner connects via localhost
+    local connect_host="${POOL_HOST}"
+    local connect_port="${POOL_PORT}"
+    if [[ "${USING_PROXY:-false}" == "true" ]]; then
+        connect_host="127.0.0.1"
+        connect_port="${PROXY_PORT:-3336}"
+        info "Using LAN proxy: miner -> localhost:${connect_port} -> ${POOL_HOST}:${POOL_PORT}"
+    fi
 
     cat > "$plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -359,9 +517,9 @@ create_launchd_service() {
         <string>--wallet</string>
         <string>${WALLET}</string>
         <string>--pool</string>
-        <string>${POOL_HOST}</string>
+        <string>${connect_host}</string>
         <string>--port</string>
-        <string>${POOL_PORT}</string>
+        <string>${connect_port}</string>
         <string>--threads</string>
         <string>${THREADS}</string>
         <string>--worker</string>
@@ -419,6 +577,7 @@ main() {
     install_dashboard
     create_launcher
     setup_path
+    install_lan_proxy
     create_launchd_service
     print_summary
 }

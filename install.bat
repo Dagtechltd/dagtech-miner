@@ -132,7 +132,7 @@ if "%THREADS%"=="" set "THREADS=%DEFAULT_THREADS%"
 REM ---- Pool ----
 echo.
 set "POOL_HOST=excalibur.dagtech.network"
-set "POOL_PORT=3334"
+set "POOL_PORT=3335"
 set /p "POOL_INPUT=  Pool address (default: %POOL_HOST%): "
 if not "%POOL_INPUT%"=="" set "POOL_HOST=%POOL_INPUT%"
 set /p "PORT_INPUT=  Pool port (default: %POOL_PORT%): "

@@ -1,554 +1,620 @@
-#!/bin/bash
-set -e
-INSTALL_DIR="$HOME/.dagtech-miner"
-VERSION="2.0.0"
-POOL_HOST="pool.dagtech.network"
-POOL_PORT=3335
-METRICS_PORT=8880
-DASHBOARD_PORT=8881
-RED='\033[0;31m'; GREEN='\033[0;32m'; BLUE='\033[0;34m'; CYAN='\033[0;36m'
-YELLOW='\033[1;33m'; BOLD='\033[1m'; NC='\033[0m'
-banner() { echo ""; echo -e "${BLUE}===== DagTech Miner Installer v${VERSION} =====${NC}"; echo ""; }
-log()  { echo -e "${GREEN}[OK]${NC} $1"; }
-warn() { echo -e "${YELLOW}[!]${NC} $1"; }
-fail() { echo -e "${RED}[FAIL]${NC} $1"; exit 1; }
-info() { echo -e "${CYAN}[i]${NC} $1"; }
-detect_os() {
-    case "$(uname -s)" in
-        Darwin*) OS="macos"; PKG="brew"; DEFAULT_THREADS=$(sysctl -n hw.ncpu 2>/dev/null || echo 4) ;;
-        Linux*)  OS="linux"; DEFAULT_THREADS=$(nproc 2>/dev/null || echo 4)
-                 if command -v apt-get &>/dev/null; then PKG="apt"
-                 elif command -v dnf &>/dev/null; then PKG="dnf"
-                 elif command -v yum &>/dev/null; then PKG="yum"
-                 elif command -v pacman &>/dev/null; then PKG="pacman"
-                 else PKG="unknown"; fi ;;
-        *)       fail "Unsupported: $(uname -s)" ;;
-    esac
-    log "OS: ${OS} ($(uname -m)), pkg: ${PKG}"
-}
-check_prereqs() {
-    info "Checking prerequisites..."
-    if ! command -v cc &>/dev/null && ! command -v gcc &>/dev/null; then
-        case "$PKG" in
-            brew) xcode-select --install 2>/dev/null || true ;;
-            apt) sudo apt-get update -qq && sudo apt-get install -y -qq build-essential ;;
-            dnf|yum) sudo $PKG install -y gcc make ;;
-            pacman) sudo pacman -Sy --noconfirm gcc make ;;
-            *) fail "Install gcc manually" ;;
-        esac
-    fi
-    log "C compiler ready"
-    if [ "$OS" = "macos" ]; then
-        for d in /opt/homebrew/opt/openssl@3 /usr/local/opt/openssl@3; do
-            [ -d "$d" ] && { SSL_INC="-I$d/include"; SSL_LIB="-L$d/lib"; break; }
-        done
-        [ -z "$SSL_INC" ] && { command -v brew &>/dev/null && brew install openssl@3 && SSL_INC="-I$(brew --prefix openssl@3)/include" && SSL_LIB="-L$(brew --prefix openssl@3)/lib" || fail "Install Homebrew first"; }
-    else
-        if ! pkg-config --exists openssl 2>/dev/null && [ ! -f /usr/include/openssl/sha.h ]; then
-            case "$PKG" in
-                apt) sudo apt-get install -y -qq libssl-dev ;;
-                dnf|yum) sudo $PKG install -y openssl-devel ;;
-                pacman) sudo pacman -Sy --noconfirm openssl ;;
-                *) fail "Install openssl-dev" ;;
-            esac
-        fi
-        SSL_INC=""; SSL_LIB=""
-    fi
-    log "OpenSSL ready"
-    command -v python3 &>/dev/null || { case "$PKG" in brew) brew install python3;; apt) sudo apt-get install -y -qq python3;; *) warn "No python3";; esac; }
-    log "Python3 ready"
-}
-get_config() {
-    echo ""; echo -e "${BOLD}Configuration${NC}"; echo "--------------------"
-    read -rp "Wallet (0x...): " WALLET
-    [[ "$WALLET" =~ ^0x[0-9a-fA-F]{40}$ ]] || fail "Invalid wallet"
-    HN=$(hostname -s 2>/dev/null || echo worker)
-    read -rp "Worker [$HN]: " WORKER; WORKER="${WORKER:-$HN}"
-    read -rp "Pool host [$POOL_HOST]: " ih; POOL_HOST="${ih:-$POOL_HOST}"
-    read -rp "Pool port [$POOL_PORT]: " ip; POOL_PORT="${ip:-$POOL_PORT}"
-    read -rp "Threads [$DEFAULT_THREADS]: " it; THREADS="${it:-$DEFAULT_THREADS}"
-    info "W=$WALLET Wk=$WORKER P=$POOL_HOST:$POOL_PORT T=$THREADS"
-    read -rp "OK? [Y/n]: " c; if [[ "$c" =~ ^[Nn] ]]; then exit 0; fi
-}
-create_dirs() { mkdir -p "$INSTALL_DIR"/{bin,src,dashboard,logs}; log "Dirs created"; }
-extract_source() {
-    info "Extracting source..."
-    cat > /tmp/_dt.b64 << 'B64EOF'
-LyogYmRhZ19jcHVfbWluZXIuYyAtIEJsb2NrREFHIENQVSBTdHJhdHVtIE1pbmVyCiAqIFVzZXMg
-c3RhbmRhcmQgc2NyeXB0KE49MTAyNCxyPTEscD0xKSArIEJEQUcgcG9zdC1ST01peCB0d2Vhawog
-KiBDb25uZWN0cyB0byBwb29sIHZpYSBzdHJhdHVtIChzYW1lIHByb3RvY29sIGFzIEdQVSBtaW5l
-cikKICogRGVzaWduZWQgdG8gcnVuIGF0IGxvd2VzdCBDUFUgcHJpb3JpdHkgKG5pY2UgMTksIGxp
-bWl0ZWQgdGhyZWFkcykKICovCgojaW5jbHVkZSA8YXJwYS9pbmV0Lmg+CiNpbmNsdWRlIDxuZXRk
-Yi5oPgojaW5jbHVkZSA8bmV0aW5ldC9pbi5oPgojaW5jbHVkZSA8b3BlbnNzbC9zaGEuaD4KI2lu
-Y2x1ZGUgPHN5cy9zb2NrZXQuaD4KI2luY2x1ZGUgPHVuaXN0ZC5oPgojaW5jbHVkZSA8cHRocmVh
-ZC5oPgojaW5jbHVkZSA8c2lnbmFsLmg+CgojaW5jbHVkZSA8c3RkaW8uaD4KI2luY2x1ZGUgPHN0
-ZGxpYi5oPgojaW5jbHVkZSA8c3RyaW5nLmg+CiNpbmNsdWRlIDxzdGRpbnQuaD4KI2luY2x1ZGUg
-PHRpbWUuaD4KI2luY2x1ZGUgPGVycm5vLmg+CgovKiAtLS0tIENvbmZpZyAtLS0tICovCnN0YXRp
-YyBjaGFyIFBPT0xfSE9TVFsyNTZdID0gIjEyNy4wLjAuMSI7CnN0YXRpYyBpbnQgUE9PTF9QT1JU
-ID0gMzMzNDsKc3RhdGljIGNoYXIgV0FMTEVUWzY0XSA9ICIweDYzODdDMzJjY0RENjBCZkJhMDBF
-QzcwQTY3NzE1RGNkNTJFODA4M2YiOwpzdGF0aWMgY2hhciBXT1JLRVJbNjRdID0gImRlZmF1bHQi
-OwpzdGF0aWMgY2hhciBQQVNTV09SRFszMl0gPSAieCI7CnN0YXRpYyBpbnQgTlVNX1RIUkVBRFMg
-PSA4OwpzdGF0aWMgaW50IE1FVFJJQ1NfUE9SVCA9IDg4ODA7CnN0YXRpYyB2b2xhdGlsZSBpbnQg
-cnVubmluZyA9IDE7CgovKiAtLS0tIFN0cmF0dW0gc3RhdGUgLS0tLSAqLwpzdGF0aWMgaW50IHNv
-Y2tmZCA9IC0xOwpzdGF0aWMgcHRocmVhZF9tdXRleF90IHNvY2tfbXR4ID0gUFRIUkVBRF9NVVRF
-WF9JTklUSUFMSVpFUjsKc3RhdGljIHB0aHJlYWRfbXV0ZXhfdCBqb2JfbXR4ID0gUFRIUkVBRF9N
-VVRFWF9JTklUSUFMSVpFUjsKCnN0YXRpYyB1aW50NjRfdCB0b3RhbF9oYXNoZXMgPSAwOwpzdGF0
-aWMgdWludDY0X3QgdG90YWxfc3VibWl0dGVkID0gMDsKc3RhdGljIHVpbnQ2NF90IHRvdGFsX2Fj
-Y2VwdGVkID0gMDsKc3RhdGljIHVpbnQ2NF90IHRvdGFsX3JlamVjdGVkID0gMDsKc3RhdGljIHVp
-bnQ2NF90IHRvdGFsX3N0YWxlID0gMDsKc3RhdGljIHRpbWVfdCBzdGFydF90aW1lID0gMDsKc3Rh
-dGljIHB0aHJlYWRfbXV0ZXhfdCBzdGF0c19tdHggPSBQVEhSRUFEX01VVEVYX0lOSVRJQUxJWkVS
-OwoKLyogSGFzaHJhdGUgdHJhY2tpbmcgKi8Kc3RhdGljIGRvdWJsZSBjdXJyZW50X2hhc2hyYXRl
-ID0gMC4wOwpzdGF0aWMgdGltZV90IGxhc3RfcmF0ZV90aW1lID0gMDsKc3RhdGljIHVpbnQ2NF90
-IGxhc3RfcmF0ZV9oYXNoZXMgPSAwOwoKdHlwZWRlZiBzdHJ1Y3QgewogICAgaW50IHZhbGlkOwog
-ICAgdWludDY0X3Qgc2VxOwogICAgY2hhciBqb2JfaWRbMTI4XTsKICAgIGNoYXIgcHJldmhhc2hb
-MjU2XTsKICAgIGNoYXIgdmVyc2lvblsxNl07CiAgICBjaGFyIGJpdHNbMTZdOwogICAgY2hhciBu
-dGltZVsxNl07CiAgICBjaGFyIGV4dHJhbm9uY2UxWzE2XTsKICAgIGRvdWJsZSBkaWZmaWN1bHR5
-Owp9IEpvYjsKCnN0YXRpYyBKb2IgY3VycmVudF9qb2IgPSB7MH07CnN0YXRpYyBjaGFyIGV4dHJh
-bm9uY2UxX2dsb2JhbFsxNl0gPSAiIjsKc3RhdGljIGRvdWJsZSBjdXJyZW50X2RpZmZpY3VsdHkg
-PSAwLjAxOwoKLyogQ29ubmVjdGlvbiBzdGF0ZSAqLwpzdGF0aWMgdm9sYXRpbGUgaW50IGNvbm5l
-Y3RlZCA9IDA7CgovKiAtLS0tIFV0aWxpdHkgLS0tLSAqLwpzdGF0aWMgaW5saW5lIHVpbnQzMl90
-IHN3YWIzMih1aW50MzJfdCB4KSB7CiAgICByZXR1cm4gKCh4ICYgMHgwMDAwMDBmZlVMKSA8PCAy
-NCkgfAogICAgICAgICAgICgoeCAmIDB4MDAwMGZmMDBVTCkgPDwgOCkgIHwKICAgICAgICAgICAo
-KHggJiAweDAwZmYwMDAwVUwpID4+IDgpICB8CiAgICAgICAgICAgKCh4ICYgMHhmZjAwMDAwMFVM
-KSA+PiAyNCk7Cn0KCnN0YXRpYyB2b2lkIGhleF90b19ieXRlcyhjb25zdCBjaGFyICpoZXgsIHVp
-bnQ4X3QgKm91dCwgaW50IGxlbikgewogICAgZm9yIChpbnQgaSA9IDA7IGkgPCBsZW47IGkrKykg
-ewogICAgICAgIHNzY2FuZihoZXggKyAyKmksICIlMmhoeCIsICZvdXRbaV0pOwogICAgfQp9Cgpz
-dGF0aWMgdm9pZCBieXRlc190b19oZXgoY29uc3QgdWludDhfdCAqZGF0YSwgaW50IGxlbiwgY2hh
-ciAqb3V0KSB7CiAgICBmb3IgKGludCBpID0gMDsgaSA8IGxlbjsgaSsrKSB7CiAgICAgICAgc3By
-aW50ZihvdXQgKyAyKmksICIlMDJ4IiwgZGF0YVtpXSk7CiAgICB9CiAgICBvdXRbMipsZW5dID0g
-MDsKfQoKc3RhdGljIHZvaWQgc2hhMjU2ZChjb25zdCB1aW50OF90ICpkYXRhLCBpbnQgbGVuLCB1
-aW50OF90ICpvdXQpIHsKICAgIHVpbnQ4X3QgaDFbMzJdOwogICAgU0hBMjU2KGRhdGEsIGxlbiwg
-aDEpOwogICAgU0hBMjU2KGgxLCAzMiwgb3V0KTsKfQoKLyogLS0tLSBTY3J5cHQgaW1wbGVtZW50
-YXRpb24gKE49MTAyNCwgcj0xLCBwPTEpIC0tLS0gKi8Kc3RhdGljIGlubGluZSB2b2lkIHhvcl9z
-YWxzYTgodWludDMyX3QgQlsxNl0sIGNvbnN0IHVpbnQzMl90IEJ4WzE2XSkgewogICAgdWludDMy
-X3QgeDAwLHgwMSx4MDIseDAzLHgwNCx4MDUseDA2LHgwNyx4MDgseDA5LHgxMCx4MTEseDEyLHgx
-Myx4MTQseDE1OwogICAgLyogUHJlLVhPUiBCIHdpdGggQnggSU4gUExBQ0UgKHN0YW5kYXJkIHNj
-cnlwdCBwYXR0ZXJuKSAqLwogICAgeDAwPShCWzBdXj1CeFswXSk7IHgwMT0oQlsxXV49QnhbMV0p
-OyB4MDI9KEJbMl1ePUJ4WzJdKTsgeDAzPShCWzNdXj1CeFszXSk7CiAgICB4MDQ9KEJbNF1ePUJ4
-WzRdKTsgeDA1PShCWzVdXj1CeFs1XSk7IHgwNj0oQls2XV49QnhbNl0pOyB4MDc9KEJbN11ePUJ4
-WzddKTsKICAgIHgwOD0oQls4XV49QnhbOF0pOyB4MDk9KEJbOV1ePUJ4WzldKTsgeDEwPShCWzEw
-XV49QnhbMTBdKTsgeDExPShCWzExXV49QnhbMTFdKTsKICAgIHgxMj0oQlsxMl1ePUJ4WzEyXSk7
-IHgxMz0oQlsxM11ePUJ4WzEzXSk7IHgxND0oQlsxNF1ePUJ4WzE0XSk7IHgxNT0oQlsxNV1ePUJ4
-WzE1XSk7CgogICAgI2RlZmluZSBSKGEsYykgKCgoYSk8PChjKSkgfCAoKGEpPj4oMzItKGMpKSkp
-CiAgICBmb3IgKGludCBpID0gMDsgaSA8IDg7IGkgKz0gMikgewogICAgICAgIC8qIENvbHVtbiBy
-b3VuZCAqLwogICAgICAgIHgwNF49Uih4MDAreDEyLDcpOyB4MDlePVIoeDA1K3gwMSw3KTsgeDE0
-Xj1SKHgxMCt4MDYsNyk7IHgwM149Uih4MTUreDExLDcpOwogICAgICAgIHgwOF49Uih4MDQreDAw
-LDkpOyB4MTNePVIoeDA5K3gwNSw5KTsgeDAyXj1SKHgxNCt4MTAsOSk7IHgwN149Uih4MDMreDE1
-LDkpOwogICAgICAgIHgxMl49Uih4MDgreDA0LDEzKTsgeDAxXj1SKHgxMyt4MDksMTMpOyB4MDZe
-PVIoeDAyK3gxNCwxMyk7IHgxMV49Uih4MDcreDAzLDEzKTsKICAgICAgICB4MDBePVIoeDEyK3gw
-OCwxOCk7IHgwNV49Uih4MDEreDEzLDE4KTsgeDEwXj1SKHgwNit4MDIsMTgpOyB4MTVePVIoeDEx
-K3gwNywxOCk7CiAgICAgICAgLyogUm93IHJvdW5kIC0gU1RBTkRBUkQgKHgwOCwgbm90IHgwNCkg
-Ki8KICAgICAgICB4MDFePVIoeDAwK3gwMyw3KTsgeDA2Xj1SKHgwNSt4MDQsNyk7IHgxMV49Uih4
-MTAreDA5LDcpOyB4MTJePVIoeDE1K3gxNCw3KTsKICAgICAgICB4MDJePVIoeDAxK3gwMCw5KTsg
-eDA3Xj1SKHgwNit4MDUsOSk7IHgwOF49Uih4MTEreDEwLDkpOyB4MTNePVIoeDEyK3gxNSw5KTsK
-ICAgICAgICB4MDNePVIoeDAyK3gwMSwxMyk7IHgwNF49Uih4MDcreDA2LDEzKTsgeDA5Xj1SKHgw
-OCt4MTEsMTMpOyB4MTRePVIoeDEzK3gxMiwxMyk7CiAgICAgICAgeDAwXj1SKHgwMyt4MDIsMTgp
-OyB4MDVePVIoeDA0K3gwNywxOCk7IHgxMF49Uih4MDkreDA4LDE4KTsgeDE1Xj1SKHgxNCt4MTMs
-MTgpOwogICAgfQogICAgI3VuZGVmIFIKCiAgICBCWzBdKz14MDA7IEJbMV0rPXgwMTsgQlsyXSs9
-eDAyOyBCWzNdKz14MDM7CiAgICBCWzRdKz14MDQ7IEJbNV0rPXgwNTsgQls2XSs9eDA2OyBCWzdd
-Kz14MDc7CiAgICBCWzhdKz14MDg7IEJbOV0rPXgwOTsgQlsxMF0rPXgxMDsgQlsxMV0rPXgxMTsK
-ICAgIEJbMTJdKz14MTI7IEJbMTNdKz14MTM7IEJbMTRdKz14MTQ7IEJbMTVdKz14MTU7Cn0KCnN0
-YXRpYyB2b2lkIHNjcnlwdF9yb21peCh1aW50MzJfdCAqWCwgdWludDMyX3QgKlYsIGludCBOKSB7
-CiAgICBmb3IgKGludCBpID0gMDsgaSA8IE47IGkrKykgewogICAgICAgIG1lbWNweSgmVltpICog
-MzJdLCBYLCAxMjgpOwogICAgICAgIHhvcl9zYWxzYTgoJlhbMF0sICZYWzE2XSk7CiAgICAgICAg
-eG9yX3NhbHNhOCgmWFsxNl0sICZYWzBdKTsKICAgIH0KICAgIGZvciAoaW50IGkgPSAwOyBpIDwg
-TjsgaSsrKSB7CiAgICAgICAgaW50IGogPSBYWzE2XSAmIChOIC0gMSk7CiAgICAgICAgZm9yIChp
-bnQgayA9IDA7IGsgPCAzMjsgaysrKSBYW2tdIF49IFZbaiAqIDMyICsga107CiAgICAgICAgeG9y
-X3NhbHNhOCgmWFswXSwgJlhbMTZdKTsKICAgICAgICB4b3Jfc2Fsc2E4KCZYWzE2XSwgJlhbMF0p
-OwogICAgfQp9CgovKiBCREFHIHBvc3QtUk9NaXggdHdlYWsgKi8Kc3RhdGljIGlubGluZSB2b2lk
-IGJkYWdfcG9zdF9yb21peF90d2Vhayh1aW50MzJfdCAqWCkgewogICAgdWludDMyX3QgeCA9IHN3
-YWIzMihYWzBdKTsKICAgIHggPSAoeCAmIDB4ZmZmZjgwMDB1KSB8ICgoeCArIDB4ZTB1KSAmIDB4
-N2ZmZnUpOwogICAgWFswXSA9IHN3YWIzMih4KTsKfQoKc3RhdGljIHZvaWQgaG1hY19zaGEyNTYo
-Y29uc3QgdWludDhfdCAqa2V5LCBpbnQga2xlbiwgY29uc3QgdWludDhfdCAqZGF0YSwgaW50IGRs
-ZW4sIHVpbnQ4X3QgKm91dCkgewogICAgdWludDhfdCBpcGFkWzY0XSwgb3BhZFs2NF0sIGtidWZb
-MzJdOwogICAgaWYgKGtsZW4gPiA2NCkgeyBTSEEyNTYoa2V5LCBrbGVuLCBrYnVmKTsga2V5ID0g
-a2J1Zjsga2xlbiA9IDMyOyB9CiAgICBtZW1zZXQoaXBhZCwgMHgzNiwgNjQpOyBtZW1zZXQob3Bh
-ZCwgMHg1YywgNjQpOwogICAgZm9yIChpbnQgaSA9IDA7IGkgPCBrbGVuOyBpKyspIHsgaXBhZFtp
-XSBePSBrZXlbaV07IG9wYWRbaV0gXj0ga2V5W2ldOyB9CgogICAgU0hBMjU2X0NUWCBjdHg7CiAg
-ICB1aW50OF90IHRtcFszMl07CiAgICBTSEEyNTZfSW5pdCgmY3R4KTsgU0hBMjU2X1VwZGF0ZSgm
-Y3R4LCBpcGFkLCA2NCk7IFNIQTI1Nl9VcGRhdGUoJmN0eCwgZGF0YSwgZGxlbik7IFNIQTI1Nl9G
-aW5hbCh0bXAsICZjdHgpOwogICAgU0hBMjU2X0luaXQoJmN0eCk7IFNIQTI1Nl9VcGRhdGUoJmN0
-eCwgb3BhZCwgNjQpOyBTSEEyNTZfVXBkYXRlKCZjdHgsIHRtcCwgMzIpOyBTSEEyNTZfRmluYWwo
-b3V0LCAmY3R4KTsKfQoKc3RhdGljIHZvaWQgcGJrZGYyX3NoYTI1Nihjb25zdCB1aW50OF90ICpw
-YXNzLCBpbnQgcGxlbiwgY29uc3QgdWludDhfdCAqc2FsdCwgaW50IHNsZW4sIHVpbnQ4X3QgKm91
-dCwgaW50IGRrbGVuKSB7CiAgICB1aW50OF90IGJ1ZlsyNTZdLCBVWzMyXSwgVFszMl07CiAgICBp
-bnQgYmxvY2tzID0gKGRrbGVuICsgMzEpIC8gMzI7CiAgICBmb3IgKGludCBibG9jayA9IDE7IGJs
-b2NrIDw9IGJsb2NrczsgYmxvY2srKykgewogICAgICAgIG1lbWNweShidWYsIHNhbHQsIHNsZW4p
-OwogICAgICAgIGJ1ZltzbGVuXSA9IChibG9jayA+PiAyNCkgJiAweGZmOwogICAgICAgIGJ1Zltz
-bGVuKzFdID0gKGJsb2NrID4+IDE2KSAmIDB4ZmY7CiAgICAgICAgYnVmW3NsZW4rMl0gPSAoYmxv
-Y2sgPj4gOCkgJiAweGZmOwogICAgICAgIGJ1ZltzbGVuKzNdID0gYmxvY2sgJiAweGZmOwogICAg
-ICAgIGhtYWNfc2hhMjU2KHBhc3MsIHBsZW4sIGJ1Ziwgc2xlbiArIDQsIFUpOwogICAgICAgIG1l
-bWNweShULCBVLCAzMik7CiAgICAgICAgaW50IGNvcHlsZW4gPSAoYmxvY2sgPT0gYmxvY2tzICYm
-IGRrbGVuICUgMzIpID8gZGtsZW4gJSAzMiA6IDMyOwogICAgICAgIG1lbWNweShvdXQgKyAoYmxv
-Y2stMSkqMzIsIFQsIGNvcHlsZW4pOwogICAgfQp9CgovKiBGdWxsIHNjcnlwdCBoYXNoIHdpdGgg
-QkRBRyB0d2VhayAqLwpzdGF0aWMgdm9pZCBiZGFnX3NjcnlwdF9oYXNoKGNvbnN0IHVpbnQ4X3Qg
-KmlucHV0LCB1aW50OF90ICpvdXRwdXQpIHsKICAgIHVpbnQzMl90IFhbMzJdOwogICAgdWludDMy
-X3QgKlYgPSAodWludDMyX3QgKiltYWxsb2MoMTAyNCAqIDEyOCk7CiAgICBpZiAoIVYpIHsgZnBy
-aW50ZihzdGRlcnIsICJPT01cbiIpOyBleGl0KDEpOyB9CgogICAgLyogQnl0ZS1zd2FwIGVhY2gg
-dWludDMyIGluIGhlYWRlciAocG9vbCBleHBlY3RzIGJpZy1lbmRpYW4gd29yZHMpICovCiAgICB1
-aW50OF90IGhkcls4MF07CiAgICBmb3IgKGludCBpID0gMDsgaSA8IDgwOyBpICs9IDQpIHsKICAg
-ICAgICBoZHJbaSswXSA9IGlucHV0W2krM107CiAgICAgICAgaGRyW2krMV0gPSBpbnB1dFtpKzJd
-OwogICAgICAgIGhkcltpKzJdID0gaW5wdXRbaSsxXTsKICAgICAgICBoZHJbaSszXSA9IGlucHV0
-W2krMF07CiAgICB9CgogICAgcGJrZGYyX3NoYTI1NihoZHIsIDgwLCBoZHIsIDgwLCAodWludDhf
-dCopWCwgMTI4KTsKICAgIHNjcnlwdF9yb21peChYLCBWLCAxMDI0KTsKICAgIGJkYWdfcG9zdF9y
-b21peF90d2VhayhYKTsKICAgIHBia2RmMl9zaGEyNTYoaGRyLCA4MCwgKHVpbnQ4X3QqKVgsIDEy
-OCwgb3V0cHV0LCAzMik7CgogICAgZnJlZShWKTsKfQoKCi8qIC0tLS0gTWV0cmljcyBIVFRQIFNl
-cnZlciAtLS0tICovCnN0YXRpYyB2b2lkICptZXRyaWNzX3RocmVhZCh2b2lkICphcmcpIHsKICAg
-ICh2b2lkKWFyZzsKICAgIGludCBzcnYgPSBzb2NrZXQoQUZfSU5FVCwgU09DS19TVFJFQU0sIDAp
-OwogICAgaWYgKHNydiA8IDApIHsgcGVycm9yKCJtZXRyaWNzIHNvY2tldCIpOyByZXR1cm4gTlVM
-TDsgfQoKICAgIGludCBvcHQgPSAxOwogICAgc2V0c29ja29wdChzcnYsIFNPTF9TT0NLRVQsIFNP
-X1JFVVNFQUREUiwgJm9wdCwgc2l6ZW9mKG9wdCkpOwojaWZkZWYgU09fUkVVU0VQT1JUCiAgICBz
-ZXRzb2Nrb3B0KHNydiwgU09MX1NPQ0tFVCwgU09fUkVVU0VQT1JULCAmb3B0LCBzaXplb2Yob3B0
-KSk7CiNlbmRpZgoKICAgIHN0cnVjdCBzb2NrYWRkcl9pbiBhZGRyOwogICAgbWVtc2V0KCZhZGRy
-LCAwLCBzaXplb2YoYWRkcikpOwogICAgYWRkci5zaW5fZmFtaWx5ID0gQUZfSU5FVDsKICAgIGFk
-ZHIuc2luX2FkZHIuc19hZGRyID0gSU5BRERSX0FOWTsKICAgIGFkZHIuc2luX3BvcnQgPSBodG9u
-cyhNRVRSSUNTX1BPUlQpOwoKICAgIGlmIChiaW5kKHNydiwgKHN0cnVjdCBzb2NrYWRkciopJmFk
-ZHIsIHNpemVvZihhZGRyKSkgPCAwKSB7CiAgICAgICAgcGVycm9yKCJtZXRyaWNzIGJpbmQiKTsK
-ICAgICAgICBjbG9zZShzcnYpOwogICAgICAgIHJldHVybiBOVUxMOwogICAgfQogICAgbGlzdGVu
-KHNydiwgNSk7CiAgICBwcmludGYoIltNRVRSSUNTXSBIVFRQIHNlcnZlciBvbiBwb3J0ICVkXG4i
-LCBNRVRSSUNTX1BPUlQpOwoKICAgIHdoaWxlIChydW5uaW5nKSB7CiAgICAgICAgZmRfc2V0IGZk
-czsKICAgICAgICBGRF9aRVJPKCZmZHMpOwogICAgICAgIEZEX1NFVChzcnYsICZmZHMpOwogICAg
-ICAgIHN0cnVjdCB0aW1ldmFsIHR2ID0gezEsIDB9OwogICAgICAgIGlmIChzZWxlY3Qoc3J2ICsg
-MSwgJmZkcywgTlVMTCwgTlVMTCwgJnR2KSA8PSAwKSBjb250aW51ZTsKCiAgICAgICAgc3RydWN0
-IHNvY2thZGRyX2luIGNsaWVudDsKICAgICAgICBzb2NrbGVuX3QgY2xlbiA9IHNpemVvZihjbGll
-bnQpOwogICAgICAgIGludCBjbGkgPSBhY2NlcHQoc3J2LCAoc3RydWN0IHNvY2thZGRyKikmY2xp
-ZW50LCAmY2xlbik7CiAgICAgICAgaWYgKGNsaSA8IDApIGNvbnRpbnVlOwoKICAgICAgICBjaGFy
-IHJlcWJ1ZlsyMDQ4XTsKICAgICAgICByZWN2KGNsaSwgcmVxYnVmLCBzaXplb2YocmVxYnVmKS0x
-LCAwKTsKCiAgICAgICAgcHRocmVhZF9tdXRleF9sb2NrKCZzdGF0c19tdHgpOwogICAgICAgIHVp
-bnQ2NF90IGggPSB0b3RhbF9oYXNoZXM7CiAgICAgICAgdWludDY0X3Qgc3ViID0gdG90YWxfc3Vi
-bWl0dGVkOwogICAgICAgIHVpbnQ2NF90IGFjYyA9IHRvdGFsX2FjY2VwdGVkOwogICAgICAgIHVp
-bnQ2NF90IHJlaiA9IHRvdGFsX3JlamVjdGVkOwogICAgICAgIHVpbnQ2NF90IHN0YSA9IHRvdGFs
-X3N0YWxlOwogICAgICAgIGRvdWJsZSBociA9IGN1cnJlbnRfaGFzaHJhdGU7CiAgICAgICAgcHRo
-cmVhZF9tdXRleF91bmxvY2soJnN0YXRzX210eCk7CgogICAgICAgIHRpbWVfdCBub3cgPSB0aW1l
-KE5VTEwpOwogICAgICAgIGxvbmcgdXB0aW1lID0gKGxvbmcpKG5vdyAtIHN0YXJ0X3RpbWUpOwoK
-ICAgICAgICBjaGFyIGpzb25bMTAyNF07CiAgICAgICAgc25wcmludGYoanNvbiwgc2l6ZW9mKGpz
-b24pLAogICAgICAgICAgICAie1wiaGFzaHJhdGVcIjolLjFmLFwiYWNjZXB0ZWRcIjolbHUsXCJy
-ZWplY3RlZFwiOiVsdSxcInN0YWxlXCI6JWx1LCIKICAgICAgICAgICAgIlwic3VibWl0dGVkXCI6
-JWx1LFwiaGFzaGVzXCI6JWx1LFwidXB0aW1lXCI6JWxkLFwidGhyZWFkc1wiOiVkLCIKICAgICAg
-ICAgICAgIlwicG9vbFwiOlwiJXM6JWRcIixcIndhbGxldFwiOlwiJXNcIixcIndvcmtlclwiOlwi
-JXNcIiwiCiAgICAgICAgICAgICJcImRpZmZpY3VsdHlcIjolLjhmLFwiY29ubmVjdGVkXCI6JWR9
-IiwKICAgICAgICAgICAgaHIsICh1bnNpZ25lZCBsb25nKWFjYywgKHVuc2lnbmVkIGxvbmcpcmVq
-LCAodW5zaWduZWQgbG9uZylzdGEsCiAgICAgICAgICAgICh1bnNpZ25lZCBsb25nKXN1YiwgKHVu
-c2lnbmVkIGxvbmcpaCwgdXB0aW1lLCBOVU1fVEhSRUFEUywKICAgICAgICAgICAgUE9PTF9IT1NU
-LCBQT09MX1BPUlQsIFdBTExFVCwgV09SS0VSLAogICAgICAgICAgICBjdXJyZW50X2RpZmZpY3Vs
-dHksIGNvbm5lY3RlZCk7CgogICAgICAgIGNoYXIgcmVzcFsyMDQ4XTsKICAgICAgICBzbnByaW50
-ZihyZXNwLCBzaXplb2YocmVzcCksCiAgICAgICAgICAgICJIVFRQLzEuMSAyMDAgT0tcclxuIgog
-ICAgICAgICAgICAiQ29udGVudC1UeXBlOiBhcHBsaWNhdGlvbi9qc29uXHJcbiIKICAgICAgICAg
-ICAgIkFjY2Vzcy1Db250cm9sLUFsbG93LU9yaWdpbjogKlxyXG4iCiAgICAgICAgICAgICJDb25u
-ZWN0aW9uOiBjbG9zZVxyXG4iCiAgICAgICAgICAgICJDb250ZW50LUxlbmd0aDogJWRcclxuXHJc
-biVzIiwKICAgICAgICAgICAgKGludClzdHJsZW4oanNvbiksIGpzb24pOwoKICAgICAgICBzZW5k
-KGNsaSwgcmVzcCwgc3RybGVuKHJlc3ApLCAwKTsKICAgICAgICBjbG9zZShjbGkpOwogICAgfQog
-ICAgY2xvc2Uoc3J2KTsKICAgIHJldHVybiBOVUxMOwp9CgovKiAtLS0tIE5ldHdvcmtpbmcgLyBT
-dHJhdHVtIC0tLS0gKi8Kc3RhdGljIGludCBjb25uZWN0X3Bvb2wodm9pZCkgewogICAgaWYgKHNv
-Y2tmZCA+PSAwKSB7IGNsb3NlKHNvY2tmZCk7IHNvY2tmZCA9IC0xOyB9CiAgICBzb2NrZmQgPSBz
-b2NrZXQoQUZfSU5FVCwgU09DS19TVFJFQU0sIDApOwogICAgaWYgKHNvY2tmZCA8IDApIHJldHVy
-biAtMTsKCiAgICBzdHJ1Y3Qgc29ja2FkZHJfaW4gYWRkcjsKICAgIG1lbXNldCgmYWRkciwgMCwg
-c2l6ZW9mKGFkZHIpKTsKICAgIGFkZHIuc2luX2ZhbWlseSA9IEFGX0lORVQ7CiAgICBhZGRyLnNp
-bl9wb3J0ID0gaHRvbnMoUE9PTF9QT1JUKTsKCiAgICBpZiAoaW5ldF9wdG9uKEFGX0lORVQsIFBP
-T0xfSE9TVCwgJmFkZHIuc2luX2FkZHIpIDw9IDApIHsKICAgICAgICBzdHJ1Y3QgaG9zdGVudCAq
-aGUgPSBnZXRob3N0YnluYW1lKFBPT0xfSE9TVCk7CiAgICAgICAgaWYgKCFoZSkgcmV0dXJuIC0x
-OwogICAgICAgIG1lbWNweSgmYWRkci5zaW5fYWRkciwgaGUtPmhfYWRkcl9saXN0WzBdLCBoZS0+
-aF9sZW5ndGgpOwogICAgfQoKICAgIGlmIChjb25uZWN0KHNvY2tmZCwgKHN0cnVjdCBzb2NrYWRk
-ciopJmFkZHIsIHNpemVvZihhZGRyKSkgPCAwKSByZXR1cm4gLTE7CiAgICByZXR1cm4gMDsKfQoK
-c3RhdGljIHZvaWQgc2VuZF9saW5lKGNvbnN0IGNoYXIgKmxpbmUpIHsKICAgIHB0aHJlYWRfbXV0
-ZXhfbG9jaygmc29ja19tdHgpOwogICAgaWYgKHNvY2tmZCA8IDApIHsgcHRocmVhZF9tdXRleF91
-bmxvY2soJnNvY2tfbXR4KTsgcmV0dXJuOyB9CiAgICBjaGFyIGJ1ZlsyMDQ4XTsKICAgIHNucHJp
-bnRmKGJ1Ziwgc2l6ZW9mKGJ1ZiksICIlc1xuIiwgbGluZSk7CiAgICBzZW5kKHNvY2tmZCwgYnVm
-LCBzdHJsZW4oYnVmKSwgMCk7CiAgICBwdGhyZWFkX211dGV4X3VubG9jaygmc29ja19tdHgpOwp9
-CgpzdGF0aWMgdm9pZCBzdWJzY3JpYmVfYXV0aG9yaXplKHZvaWQpIHsKICAgIGNoYXIgYnVmWzUx
-Ml07CiAgICBzbnByaW50ZihidWYsIHNpemVvZihidWYpLCAie1wiaWRcIjoxLFwibWV0aG9kXCI6
-XCJtaW5pbmcuc3Vic2NyaWJlXCIsXCJwYXJhbXNcIjpbXX0iKTsKICAgIHNlbmRfbGluZShidWYp
-OwogICAgc25wcmludGYoYnVmLCBzaXplb2YoYnVmKSwgIntcImlkXCI6MixcIm1ldGhvZFwiOlwi
-bWluaW5nLmF1dGhvcml6ZVwiLFwicGFyYW1zXCI6W1wiJXNcIixcIiVzXCJdfSIsIFdBTExFVCwg
-UEFTU1dPUkQpOwogICAgc2VuZF9saW5lKGJ1Zik7Cn0KCnN0YXRpYyBpbnQgZXh0cmFjdF9xdW90
-ZWRfc3RyaW5ncyhjb25zdCBjaGFyICpsaW5lLCBjaGFyIG91dFtdWzI1Nl0sIGludCBtYXgpIHsK
-ICAgIGludCBjb3VudCA9IDA7CiAgICBjb25zdCBjaGFyICpwID0gbGluZTsKICAgIHdoaWxlIChj
-b3VudCA8IG1heCAmJiAocCA9IHN0cmNocihwLCAnIicpKSAhPSBOVUxMKSB7CiAgICAgICAgcCsr
-OwogICAgICAgIGNvbnN0IGNoYXIgKmVuZCA9IHN0cmNocihwLCAnIicpOwogICAgICAgIGlmICgh
-ZW5kKSBicmVhazsKICAgICAgICBpbnQgbGVuID0gZW5kIC0gcDsKICAgICAgICBpZiAobGVuID4g
-MjU1KSBsZW4gPSAyNTU7CiAgICAgICAgbWVtY3B5KG91dFtjb3VudF0sIHAsIGxlbik7CiAgICAg
-ICAgb3V0W2NvdW50XVtsZW5dID0gMDsKICAgICAgICBjb3VudCsrOwogICAgICAgIHAgPSBlbmQg
-KyAxOwogICAgfQogICAgcmV0dXJuIGNvdW50Owp9CgpzdGF0aWMgdm9pZCBwYXJzZV9saW5lKGNv
-bnN0IGNoYXIgKmxpbmUpIHsKICAgIGlmIChzdHJzdHIobGluZSwgIm1pbmluZy5zdWJzY3JpYmUi
-KSA9PSBOVUxMICYmIHN0cnN0cihsaW5lLCAiXCJyZXN1bHRcIiIpICYmIHN0cnN0cihsaW5lLCAi
-XCJpZFwiOjEiKSkgewogICAgICAgIGNoYXIgc3RyaW5nc1syMF1bMjU2XTsKICAgICAgICBpbnQg
-biA9IGV4dHJhY3RfcXVvdGVkX3N0cmluZ3MobGluZSwgc3RyaW5ncywgMjApOwogICAgICAgIGZv
-ciAoaW50IGkgPSAwOyBpIDwgbjsgaSsrKSB7CiAgICAgICAgICAgIGlmIChzdHJsZW4oc3RyaW5n
-c1tpXSkgPT0gOCAmJiBzdHJzcG4oc3RyaW5nc1tpXSwgIjAxMjM0NTY3ODlhYmNkZWYiKSA9PSA4
-KSB7CiAgICAgICAgICAgICAgICBzdHJuY3B5KGV4dHJhbm9uY2UxX2dsb2JhbCwgc3RyaW5nc1tp
-XSwgc2l6ZW9mKGV4dHJhbm9uY2UxX2dsb2JhbCktMSk7CiAgICAgICAgICAgICAgICBwcmludGYo
-IltTVUJTQ1JJQkVdIGV4dHJhbm9uY2UxPSVzXG4iLCBleHRyYW5vbmNlMV9nbG9iYWwpOwogICAg
-ICAgICAgICAgICAgYnJlYWs7CiAgICAgICAgICAgIH0KICAgICAgICB9CiAgICB9CiAgICBlbHNl
-IGlmIChzdHJzdHIobGluZSwgIm1pbmluZy5zZXRfZGlmZmljdWx0eSIpKSB7CiAgICAgICAgY29u
-c3QgY2hhciAqcCA9IHN0cnN0cihsaW5lLCAicGFyYW1zIik7CiAgICAgICAgaWYgKHApIHsgcCA9
-IHN0cmNocihwLCAnWycpOyBpZiAocCkgeyBjdXJyZW50X2RpZmZpY3VsdHkgPSBhdG9mKHArMSk7
-IHByaW50ZigiW0RJRkZJQ1VMVFldICUuOGZcbiIsIGN1cnJlbnRfZGlmZmljdWx0eSk7IH0gfQog
-ICAgfQogICAgZWxzZSBpZiAoc3Ryc3RyKGxpbmUsICJtaW5pbmcubm90aWZ5IikpIHsKICAgICAg
-ICBjaGFyIHN0cmluZ3NbMjBdWzI1Nl07CiAgICAgICAgaW50IG4gPSBleHRyYWN0X3F1b3RlZF9z
-dHJpbmdzKGxpbmUsIHN0cmluZ3MsIDIwKTsKICAgICAgICBpbnQgb2Zmc2V0ID0gMDsKICAgICAg
-ICBmb3IgKGludCBpID0gMDsgaSA8IG47IGkrKykgeyBpZiAoc3RyY21wKHN0cmluZ3NbaV0sICJt
-aW5pbmcubm90aWZ5IikgPT0gMCkgeyBvZmZzZXQgPSBpICsgMTsgYnJlYWs7IH0gfQogICAgICAg
-IGlmIChvZmZzZXQgPCBuICYmIHN0cmNtcChzdHJpbmdzW29mZnNldF0sICJwYXJhbXMiKSA9PSAw
-KSBvZmZzZXQrKzsKICAgICAgICBpZiAobiAtIG9mZnNldCA+PSA1KSB7CiAgICAgICAgICAgIHB0
-aHJlYWRfbXV0ZXhfbG9jaygmam9iX210eCk7CiAgICAgICAgICAgIGN1cnJlbnRfam9iLnZhbGlk
-ID0gMTsKICAgICAgICAgICAgY3VycmVudF9qb2Iuc2VxKys7CiAgICAgICAgICAgIGN1cnJlbnRf
-am9iLmRpZmZpY3VsdHkgPSBjdXJyZW50X2RpZmZpY3VsdHk7CiAgICAgICAgICAgIHN0cm5jcHko
-Y3VycmVudF9qb2Iuam9iX2lkLCBzdHJpbmdzW29mZnNldF0sIHNpemVvZihjdXJyZW50X2pvYi5q
-b2JfaWQpLTEpOwogICAgICAgICAgICBzdHJuY3B5KGN1cnJlbnRfam9iLnByZXZoYXNoLCBzdHJp
-bmdzW29mZnNldCsxXSwgc2l6ZW9mKGN1cnJlbnRfam9iLnByZXZoYXNoKS0xKTsKICAgICAgICAg
-ICAgc3RybmNweShjdXJyZW50X2pvYi52ZXJzaW9uLCBzdHJpbmdzW29mZnNldCsyXSwgc2l6ZW9m
-KGN1cnJlbnRfam9iLnZlcnNpb24pLTEpOwogICAgICAgICAgICBzdHJuY3B5KGN1cnJlbnRfam9i
-LmJpdHMsIHN0cmluZ3Nbb2Zmc2V0KzNdLCBzaXplb2YoY3VycmVudF9qb2IuYml0cyktMSk7CiAg
-ICAgICAgICAgIHN0cm5jcHkoY3VycmVudF9qb2IubnRpbWUsIHN0cmluZ3Nbb2Zmc2V0KzRdLCBz
-aXplb2YoY3VycmVudF9qb2IubnRpbWUpLTEpOwogICAgICAgICAgICBzdHJuY3B5KGN1cnJlbnRf
-am9iLmV4dHJhbm9uY2UxLCBleHRyYW5vbmNlMV9nbG9iYWwsIHNpemVvZihjdXJyZW50X2pvYi5l
-eHRyYW5vbmNlMSktMSk7CiAgICAgICAgICAgIHB0aHJlYWRfbXV0ZXhfdW5sb2NrKCZqb2JfbXR4
-KTsKICAgICAgICAgICAgcHJpbnRmKCJbTkVXIEpPQl0gaWQ9JXMgZGlmZj0lLjhmXG4iLCBjdXJy
-ZW50X2pvYi5qb2JfaWQsIGN1cnJlbnRfam9iLmRpZmZpY3VsdHkpOwogICAgICAgIH0KICAgIH0K
-ICAgIGVsc2UgaWYgKHN0cnN0cihsaW5lLCAiXCJyZXN1bHRcIiIpICYmIHN0cnN0cihsaW5lLCAi
-dHJ1ZSIpKSB7CiAgICAgICAgcHRocmVhZF9tdXRleF9sb2NrKCZzdGF0c19tdHgpOwogICAgICAg
-IHRvdGFsX2FjY2VwdGVkKys7CiAgICAgICAgcHRocmVhZF9tdXRleF91bmxvY2soJnN0YXRzX210
-eCk7CiAgICAgICAgcHJpbnRmKCJbQUNDRVBURURdIHRvdGFsPSVsdVxuIiwgKHVuc2lnbmVkIGxv
-bmcpdG90YWxfYWNjZXB0ZWQpOwogICAgfQogICAgZWxzZSBpZiAoc3Ryc3RyKGxpbmUsICJcImVy
-cm9yXCIiKSAmJiAhc3Ryc3RyKGxpbmUsICJudWxsIikpIHsKICAgICAgICBpZiAoc3Ryc3RyKGxp
-bmUsICIyMSIpIHx8IHN0cnN0cihsaW5lLCAic3RhbGUiKSkgewogICAgICAgICAgICBwdGhyZWFk
-X211dGV4X2xvY2soJnN0YXRzX210eCk7CiAgICAgICAgICAgIHRvdGFsX3N0YWxlKys7CiAgICAg
-ICAgICAgIHB0aHJlYWRfbXV0ZXhfdW5sb2NrKCZzdGF0c19tdHgpOwogICAgICAgICAgICBwcmlu
-dGYoIltTVEFMRV0gdG90YWw9JWx1IHwgJXNcbiIsICh1bnNpZ25lZCBsb25nKXRvdGFsX3N0YWxl
-LCBsaW5lKTsKICAgICAgICB9IGVsc2UgewogICAgICAgICAgICBwdGhyZWFkX211dGV4X2xvY2so
-JnN0YXRzX210eCk7CiAgICAgICAgICAgIHRvdGFsX3JlamVjdGVkKys7CiAgICAgICAgICAgIHB0
-aHJlYWRfbXV0ZXhfdW5sb2NrKCZzdGF0c19tdHgpOwogICAgICAgICAgICBwcmludGYoIltSRUpF
-Q1RFRF0gdG90YWw9JWx1IHwgJXNcbiIsICh1bnNpZ25lZCBsb25nKXRvdGFsX3JlamVjdGVkLCBs
-aW5lKTsKICAgICAgICB9CiAgICB9Cn0KCnN0YXRpYyB2b2xhdGlsZSBpbnQgcmVjdl9ydW5uaW5n
-ID0gMDsKCnN0YXRpYyB2b2lkICpyZWN2X3RocmVhZCh2b2lkICphcmcpIHsKICAgICh2b2lkKWFy
-ZzsKICAgIGNoYXIgYnVmWzgxOTJdOwogICAgY2hhciBsaW5lYnVmWzE2Mzg0XSA9IHswfTsKICAg
-IGludCBsaW5lbGVuID0gMDsKCiAgICByZWN2X3J1bm5pbmcgPSAxOwogICAgd2hpbGUgKHJ1bm5p
-bmcgJiYgcmVjdl9ydW5uaW5nKSB7CiAgICAgICAgc3NpemVfdCBuID0gcmVjdihzb2NrZmQsIGJ1
-Ziwgc2l6ZW9mKGJ1ZiktMSwgMCk7CiAgICAgICAgaWYgKG4gPD0gMCkgeyBjb25uZWN0ZWQgPSAw
-OyByZWN2X3J1bm5pbmcgPSAwOyBicmVhazsgfQogICAgICAgIGJ1ZltuXSA9IDA7CiAgICAgICAg
-Zm9yIChpbnQgaSA9IDA7IGkgPCBuOyBpKyspIHsKICAgICAgICAgICAgaWYgKGJ1ZltpXSA9PSAn
-XG4nKSB7CiAgICAgICAgICAgICAgICBsaW5lYnVmW2xpbmVsZW5dID0gMDsKICAgICAgICAgICAg
-ICAgIGlmIChsaW5lbGVuID4gMCkgcGFyc2VfbGluZShsaW5lYnVmKTsKICAgICAgICAgICAgICAg
-IGxpbmVsZW4gPSAwOwogICAgICAgICAgICB9IGVsc2UgaWYgKGxpbmVsZW4gPCAoaW50KXNpemVv
-ZihsaW5lYnVmKS0xKSB7CiAgICAgICAgICAgICAgICBsaW5lYnVmW2xpbmVsZW4rK10gPSBidWZb
-aV07CiAgICAgICAgICAgIH0KICAgICAgICB9CiAgICB9CiAgICByZXR1cm4gTlVMTDsKfQoKc3Rh
-dGljIGludCBtYWtlX2hlYWRlcihjb25zdCBKb2IgKmosIHVpbnQzMl90IG5vbmNlLCB1aW50OF90
-IGhlYWRlcls4MF0pIHsKICAgIGlmIChzdHJsZW4oai0+dmVyc2lvbikgIT0gOCB8fCBzdHJsZW4o
-ai0+cHJldmhhc2gpIDwgNjQgfHwKICAgICAgICBzdHJsZW4oai0+bnRpbWUpICE9IDggfHwgc3Ry
-bGVuKGotPmJpdHMpICE9IDggfHwKICAgICAgICBzdHJsZW4oai0+ZXh0cmFub25jZTEpICE9IDgp
-IHJldHVybiAtMTsKCiAgICB1aW50OF90IHZlcnNpb25bNF0sIHByZXZoYXNoWzMyXSwgbnRpbWVf
-Yls0XSwgYml0c19iWzRdOwogICAgdWludDhfdCBlbjFbNF0sIGVuMls0XSwgZW5fY29tYmluZWRb
-OF0sIG1lcmtsZVszMl07CgogICAgaGV4X3RvX2J5dGVzKGotPnZlcnNpb24sIHZlcnNpb24sIDQp
-OwogICAgaGV4X3RvX2J5dGVzKGotPnByZXZoYXNoLCBwcmV2aGFzaCwgMzIpOwogICAgaGV4X3Rv
-X2J5dGVzKGotPm50aW1lLCBudGltZV9iLCA0KTsKICAgIGhleF90b19ieXRlcyhqLT5iaXRzLCBi
-aXRzX2IsIDQpOwogICAgaGV4X3RvX2J5dGVzKGotPmV4dHJhbm9uY2UxLCBlbjEsIDQpOwogICAg
-bWVtc2V0KGVuMiwgMCwgNCk7CgogICAgbWVtY3B5KGVuX2NvbWJpbmVkLCBlbjEsIDQpOwogICAg
-bWVtY3B5KGVuX2NvbWJpbmVkICsgNCwgZW4yLCA0KTsKICAgIHNoYTI1NmQoZW5fY29tYmluZWQs
-IDgsIG1lcmtsZSk7CgogICAgbWVtY3B5KGhlYWRlciwgdmVyc2lvbiwgNCk7CiAgICBtZW1jcHko
-aGVhZGVyICsgNCwgcHJldmhhc2gsIDMyKTsKICAgIG1lbWNweShoZWFkZXIgKyAzNiwgbWVya2xl
-LCAzMik7CiAgICBtZW1jcHkoaGVhZGVyICsgNjgsIG50aW1lX2IsIDQpOwogICAgbWVtY3B5KGhl
-YWRlciArIDcyLCBiaXRzX2IsIDQpOwogICAgaGVhZGVyWzc2XSA9IG5vbmNlICYgMHhmZjsKICAg
-IGhlYWRlcls3N10gPSAobm9uY2UgPj4gOCkgJiAweGZmOwogICAgaGVhZGVyWzc4XSA9IChub25j
-ZSA+PiAxNikgJiAweGZmOwogICAgaGVhZGVyWzc5XSA9IChub25jZSA+PiAyNCkgJiAweGZmOwoK
-ICAgIHJldHVybiAwOwp9CgpzdGF0aWMgdm9pZCBzdWJtaXRfbm9uY2UoY29uc3QgSm9iICpqLCB1
-aW50MzJfdCBub25jZSkgewogICAgY2hhciBub25jZV9oZXhbMTZdOwogICAgdWludDhfdCBuYls0
-XTsKICAgIG5iWzBdPW5vbmNlJjB4ZmY7IG5iWzFdPShub25jZT4+OCkmMHhmZjsgbmJbMl09KG5v
-bmNlPj4xNikmMHhmZjsgbmJbM109KG5vbmNlPj4yNCkmMHhmZjsKICAgIGJ5dGVzX3RvX2hleChu
-YiwgNCwgbm9uY2VfaGV4KTsKCiAgICBjaGFyIGJ1Zls1MTJdOwogICAgc25wcmludGYoYnVmLCBz
-aXplb2YoYnVmKSwKICAgICAgICAie1wiaWRcIjolbHUsXCJtZXRob2RcIjpcIm1pbmluZy5zdWJt
-aXRcIixcInBhcmFtc1wiOltcIiVzXCIsXCIlc1wiLFwiMDAwMDAwMDBcIixcIiVzXCIsXCIlc1wi
-XX0iLAogICAgICAgICh1bnNpZ25lZCBsb25nKSgxMDAwICsgdG90YWxfc3VibWl0dGVkKSwgV0FM
-TEVULCBqLT5qb2JfaWQsIGotPm50aW1lLCBub25jZV9oZXgpOwogICAgc2VuZF9saW5lKGJ1Zik7
-CgogICAgcHRocmVhZF9tdXRleF9sb2NrKCZzdGF0c19tdHgpOwogICAgdG90YWxfc3VibWl0dGVk
-Kys7CiAgICBwdGhyZWFkX211dGV4X3VubG9jaygmc3RhdHNfbXR4KTsKfQoKc3RhdGljIGludCBj
-aGVja190YXJnZXQoY29uc3QgdWludDhfdCAqaGFzaCwgZG91YmxlIGRpZmZpY3VsdHkpIHsKICAg
-IGRvdWJsZSB0aHJlc2hvbGQgPSA2NTUzNS4wIC8gZGlmZmljdWx0eTsKICAgIHVpbnQzMl90IHRh
-cmdldF90b3AgPSAodWludDMyX3QpKHRocmVzaG9sZCA+IDQyOTQ5NjcyOTUuMCA/IDQyOTQ5Njcy
-OTV1IDogdGhyZXNob2xkKTsKICAgIHVpbnQzMl90IGhhc2hfdG9wID0gKCh1aW50MzJfdCloYXNo
-WzMxXTw8MjQpIHwgKCh1aW50MzJfdCloYXNoWzMwXTw8MTYpIHwKICAgICAgICAgICAgICAgICAg
-ICAgICAgKCh1aW50MzJfdCloYXNoWzI5XTw8OCkgfCBoYXNoWzI4XTsKICAgIHJldHVybiBoYXNo
-X3RvcCA8PSB0YXJnZXRfdG9wOwp9CgpzdGF0aWMgdm9pZCAqbWluZV90aHJlYWQodm9pZCAqYXJn
-KSB7CiAgICBpbnQgdGlkID0gKihpbnQqKWFyZzsKICAgIHVpbnQzMl90IG5vbmNlID0gKHVpbnQz
-Ml90KXRpZCAqICgweEZGRkZGRkZGdSAvIE5VTV9USFJFQURTKTsKICAgIHVpbnQ2NF90IGxvY2Fs
-X2hhc2hlcyA9IDA7CgogICAgcHJpbnRmKCJbVEhSRUFEICVkXSBzdGFydGluZyBhdCBub25jZSAw
-eCUwOHhcbiIsIHRpZCwgbm9uY2UpOwoKICAgIHdoaWxlIChydW5uaW5nKSB7CiAgICAgICAgSm9i
-IGo7CiAgICAgICAgcHRocmVhZF9tdXRleF9sb2NrKCZqb2JfbXR4KTsKICAgICAgICBqID0gY3Vy
-cmVudF9qb2I7CiAgICAgICAgcHRocmVhZF9tdXRleF91bmxvY2soJmpvYl9tdHgpOwoKICAgICAg
-ICBpZiAoIWNvbm5lY3RlZCkgeyB1c2xlZXAoNTAwMDAwKTsgY29udGludWU7IH0KCiAgICAgICAg
-aWYgKCFqLnZhbGlkKSB7IHVzbGVlcCgxMDAwMDApOyBjb250aW51ZTsgfQoKICAgICAgICB1aW50
-NjRfdCBqb2Jfc2VxID0gai5zZXE7CgogICAgICAgIGZvciAoaW50IGJhdGNoID0gMDsgYmF0Y2gg
-PCAzMiAmJiBydW5uaW5nOyBiYXRjaCsrKSB7CiAgICAgICAgICAgIHVpbnQ4X3QgaGVhZGVyWzgw
-XTsKICAgICAgICAgICAgaWYgKG1ha2VfaGVhZGVyKCZqLCBub25jZSwgaGVhZGVyKSA8IDApIGJy
-ZWFrOwoKICAgICAgICAgICAgdWludDhfdCBoYXNoWzMyXTsKICAgICAgICAgICAgYmRhZ19zY3J5
-cHRfaGFzaChoZWFkZXIsIGhhc2gpOwogICAgICAgICAgICBsb2NhbF9oYXNoZXMrKzsKCiAgICAg
-ICAgICAgIGlmIChjaGVja190YXJnZXQoaGFzaCwgai5kaWZmaWN1bHR5KSkgewogICAgICAgICAg
-ICAgICAgcHJpbnRmKCJbVEhSRUFEICVkXSBTSEFSRSBGT1VORCEgbm9uY2U9MHglMDh4XG4iLCB0
-aWQsIG5vbmNlKTsKICAgICAgICAgICAgICAgIHN1Ym1pdF9ub25jZSgmaiwgbm9uY2UpOwogICAg
-ICAgICAgICB9CgogICAgICAgICAgICBub25jZSsrOwoKICAgICAgICAgICAgcHRocmVhZF9tdXRl
-eF9sb2NrKCZqb2JfbXR4KTsKICAgICAgICAgICAgaWYgKGN1cnJlbnRfam9iLnNlcSAhPSBqb2Jf
-c2VxKSB7IHB0aHJlYWRfbXV0ZXhfdW5sb2NrKCZqb2JfbXR4KTsgYnJlYWs7IH0KICAgICAgICAg
-ICAgcHRocmVhZF9tdXRleF91bmxvY2soJmpvYl9tdHgpOwogICAgICAgIH0KCiAgICAgICAgcHRo
-cmVhZF9tdXRleF9sb2NrKCZzdGF0c19tdHgpOwogICAgICAgIHRvdGFsX2hhc2hlcyArPSBsb2Nh
-bF9oYXNoZXM7CiAgICAgICAgcHRocmVhZF9tdXRleF91bmxvY2soJnN0YXRzX210eCk7CiAgICAg
-ICAgbG9jYWxfaGFzaGVzID0gMDsKICAgIH0KICAgIHJldHVybiBOVUxMOwp9CgpzdGF0aWMgdm9p
-ZCBzaWdoYW5kbGVyKGludCBzaWcpIHsgKHZvaWQpc2lnOyBydW5uaW5nID0gMDsgfQoKCi8qIC0t
-LS0gUmVjb25uZWN0aW9uIGhlbHBlciAtLS0tICovCnN0YXRpYyBwdGhyZWFkX3QgZ19yZWN2X3Rp
-ZDsKCnN0YXRpYyBpbnQgZG9fY29ubmVjdF9hbmRfYXV0aCh2b2lkKSB7CiAgICBwcmludGYoIltD
-T05ORUNUXSBDb25uZWN0aW5nIHRvICVzOiVkLi4uXG4iLCBQT09MX0hPU1QsIFBPT0xfUE9SVCk7
-CiAgICBpZiAoY29ubmVjdF9wb29sKCkgPCAwKSB7CiAgICAgICAgcHJpbnRmKCJbQ09OTkVDVF0g
-RmFpbGVkIHRvIGNvbm5lY3RcbiIpOwogICAgICAgIHJldHVybiAtMTsKICAgIH0KICAgIHByaW50
-ZigiW0NPTk5FQ1RdIENvbm5lY3RlZCwgc3Vic2NyaWJpbmcuLi5cbiIpOwogICAgY29ubmVjdGVk
-ID0gMTsKCiAgICBwdGhyZWFkX211dGV4X2xvY2soJmpvYl9tdHgpOwogICAgY3VycmVudF9qb2Iu
-dmFsaWQgPSAwOwogICAgcHRocmVhZF9tdXRleF91bmxvY2soJmpvYl9tdHgpOwoKICAgIHN1YnNj
-cmliZV9hdXRob3JpemUoKTsKCiAgICAvKiBTdGFydCByZWN2IHRocmVhZCB0byBwcm9jZXNzIHJl
-c3BvbnNlcyAqLwogICAgcmVjdl9ydW5uaW5nID0gMTsKICAgIHB0aHJlYWRfY3JlYXRlKCZnX3Jl
-Y3ZfdGlkLCBOVUxMLCByZWN2X3RocmVhZCwgTlVMTCk7CgogICAgZm9yIChpbnQgaSA9IDA7IGkg
-PCAxMDAgJiYgcnVubmluZyAmJiByZWN2X3J1bm5pbmcgJiYgIWN1cnJlbnRfam9iLnZhbGlkOyBp
-KyspIHVzbGVlcCgxMDAwMDApOwogICAgaWYgKCFjdXJyZW50X2pvYi52YWxpZCkgewogICAgICAg
-IHByaW50ZigiW0NPTk5FQ1RdIE5vIGpvYiByZWNlaXZlZCBhZnRlciAxMHNcbiIpOwogICAgICAg
-IGNvbm5lY3RlZCA9IDA7CiAgICAgICAgcmVjdl9ydW5uaW5nID0gMDsKICAgICAgICBpZiAoc29j
-a2ZkID49IDApIHsgY2xvc2Uoc29ja2ZkKTsgc29ja2ZkID0gLTE7IH0KICAgICAgICBwdGhyZWFk
-X2pvaW4oZ19yZWN2X3RpZCwgTlVMTCk7CiAgICAgICAgcmV0dXJuIC0xOwogICAgfQoKICAgIHBy
-aW50ZigiW0NPTk5FQ1RdIEdvdCBmaXJzdCBqb2IsIG1pbmluZyBhY3RpdmVcbiIpOwogICAgcmV0
-dXJuIDA7Cn0KCmludCBtYWluKGludCBhcmdjLCBjaGFyICoqYXJndikgewogICAgc2V0dmJ1Zihz
-dGRvdXQsIE5VTEwsIF9JT0xCRiwgMCk7CiAgICBzaWduYWwoU0lHSU5ULCBzaWdoYW5kbGVyKTsK
-ICAgIHNpZ25hbChTSUdURVJNLCBzaWdoYW5kbGVyKTsKICAgIHNpZ25hbChTSUdQSVBFLCBTSUdf
-SUdOKTsKCiAgICBmb3IgKGludCBpID0gMTsgaSA8IGFyZ2M7IGkrKykgewogICAgICAgIGlmIChz
-dHJjbXAoYXJndltpXSwgIi0taG9zdCIpID09IDAgJiYgaSsxIDwgYXJnYykgc3RybmNweShQT09M
-X0hPU1QsIGFyZ3ZbKytpXSwgc2l6ZW9mKFBPT0xfSE9TVCktMSk7CiAgICAgICAgZWxzZSBpZiAo
-c3RyY21wKGFyZ3ZbaV0sICItLXBvcnQiKSA9PSAwICYmIGkrMSA8IGFyZ2MpIFBPT0xfUE9SVCA9
-IGF0b2koYXJndlsrK2ldKTsKICAgICAgICBlbHNlIGlmIChzdHJjbXAoYXJndltpXSwgIi0td2Fs
-bGV0IikgPT0gMCAmJiBpKzEgPCBhcmdjKSBzdHJuY3B5KFdBTExFVCwgYXJndlsrK2ldLCBzaXpl
-b2YoV0FMTEVUKS0xKTsKICAgICAgICBlbHNlIGlmIChzdHJjbXAoYXJndltpXSwgIi0tdGhyZWFk
-cyIpID09IDAgJiYgaSsxIDwgYXJnYykgTlVNX1RIUkVBRFMgPSBhdG9pKGFyZ3ZbKytpXSk7CiAg
-ICAgICAgZWxzZSBpZiAoc3RyY21wKGFyZ3ZbaV0sICItLXdvcmtlciIpID09IDAgJiYgaSsxIDwg
-YXJnYykgc3RybmNweShXT1JLRVIsIGFyZ3ZbKytpXSwgc2l6ZW9mKFdPUktFUiktMSk7CiAgICAg
-ICAgZWxzZSBpZiAoc3RyY21wKGFyZ3ZbaV0sICItLXBhc3N3b3JkIikgPT0gMCAmJiBpKzEgPCBh
-cmdjKSBzdHJuY3B5KFBBU1NXT1JELCBhcmd2WysraV0sIHNpemVvZihQQVNTV09SRCktMSk7CiAg
-ICAgICAgZWxzZSBpZiAoc3RyY21wKGFyZ3ZbaV0sICItLW1ldHJpY3MtcG9ydCIpID09IDAgJiYg
-aSsxIDwgYXJnYykgTUVUUklDU19QT1JUID0gYXRvaShhcmd2WysraV0pOwogICAgfQoKICAgIHN0
-YXJ0X3RpbWUgPSB0aW1lKE5VTEwpOwogICAgcHJpbnRmKCJCREFHIENQVSBNaW5lciB2MiAtICVk
-IHRocmVhZHNcbiIsIE5VTV9USFJFQURTKTsKICAgIHByaW50ZigiUG9vbDogJXM6JWQgIFdhbGxl
-dDogJS4xMHMuLi4lcyAgV29ya2VyOiAlc1xuIiwgUE9PTF9IT1NULCBQT09MX1BPUlQsIFdBTExF
-VCwgV0FMTEVUKzM2LCBXT1JLRVIpOwogICAgcHJpbnRmKCJNZXRyaWNzOiBodHRwOi8vbG9jYWxo
-b3N0OiVkXG4iLCBNRVRSSUNTX1BPUlQpOwoKICAgIC8qIFN0YXJ0IG1ldHJpY3MgSFRUUCBzZXJ2
-ZXIgKi8KICAgIHB0aHJlYWRfdCBtZXRyaWNzX3RpZDsKICAgIHB0aHJlYWRfY3JlYXRlKCZtZXRy
-aWNzX3RpZCwgTlVMTCwgbWV0cmljc190aHJlYWQsIE5VTEwpOwoKICAgIC8qIFN0YXJ0IG1pbmlu
-ZyB0aHJlYWRzICh0aGV5IHdhaXQgZm9yIGNvbm5lY3RlZCt2YWxpZCBqb2IpICovCiAgICBwdGhy
-ZWFkX3QgKnRocmVhZHMgPSBtYWxsb2MoTlVNX1RIUkVBRFMgKiBzaXplb2YocHRocmVhZF90KSk7
-CiAgICBpbnQgKnRpZHMgPSBtYWxsb2MoTlVNX1RIUkVBRFMgKiBzaXplb2YoaW50KSk7CiAgICBm
-b3IgKGludCBpID0gMDsgaSA8IE5VTV9USFJFQURTOyBpKyspIHsKICAgICAgICB0aWRzW2ldID0g
-aTsKICAgICAgICBwdGhyZWFkX2NyZWF0ZSgmdGhyZWFkc1tpXSwgTlVMTCwgbWluZV90aHJlYWQs
-ICZ0aWRzW2ldKTsKICAgIH0KCiAgICAvKiBNYWluIGxvb3A6IGNvbm5lY3QsIHJ1biByZWN2LCBy
-ZWNvbm5lY3Qgb24gZGlzY29ubmVjdCAqLwogICAgd2hpbGUgKHJ1bm5pbmcpIHsKICAgICAgICBp
-ZiAoZG9fY29ubmVjdF9hbmRfYXV0aCgpIDwgMCkgewogICAgICAgICAgICBwcmludGYoIltSRUNP
-Tk5FQ1RdIFJldHJ5aW5nIGluIDVzLi4uXG4iKTsKICAgICAgICAgICAgZm9yIChpbnQgaSA9IDA7
-IGkgPCA1MCAmJiBydW5uaW5nOyBpKyspIHVzbGVlcCgxMDAwMDApOwogICAgICAgICAgICBjb250
-aW51ZTsKICAgICAgICB9CgogICAgICAgIGxhc3RfcmF0ZV90aW1lID0gdGltZShOVUxMKTsKICAg
-ICAgICBsYXN0X3JhdGVfaGFzaGVzID0gdG90YWxfaGFzaGVzOwoKICAgICAgICB3aGlsZSAocnVu
-bmluZyAmJiByZWN2X3J1bm5pbmcpIHsKICAgICAgICAgICAgc2xlZXAoMTApOwogICAgICAgICAg
-ICB0aW1lX3Qgbm93ID0gdGltZShOVUxMKTsKICAgICAgICAgICAgZG91YmxlIGVsYXBzZWQgPSBk
-aWZmdGltZShub3csIGxhc3RfcmF0ZV90aW1lKTsKICAgICAgICAgICAgaWYgKGVsYXBzZWQgPj0g
-MTApIHsKICAgICAgICAgICAgICAgIHB0aHJlYWRfbXV0ZXhfbG9jaygmc3RhdHNfbXR4KTsKICAg
-ICAgICAgICAgICAgIHVpbnQ2NF90IGggPSB0b3RhbF9oYXNoZXM7CiAgICAgICAgICAgICAgICBk
-b3VibGUgcmF0ZSA9IChoIC0gbGFzdF9yYXRlX2hhc2hlcykgLyBlbGFwc2VkOwogICAgICAgICAg
-ICAgICAgY3VycmVudF9oYXNocmF0ZSA9IHJhdGU7CiAgICAgICAgICAgICAgICBwdGhyZWFkX211
-dGV4X3VubG9jaygmc3RhdHNfbXR4KTsKICAgICAgICAgICAgcHJpbnRmKCJbU1RBVFNdICUuMWYg
-SC9zIHwgaGFzaGVzPSVsdSBzdWJtaXR0ZWQ9JWx1IGFjY2VwdGVkPSVsdSByZWplY3RlZD0lbHUg
-c3RhbGU9JWx1XG4iLAogICAgICAgICAgICAgICAgICAgcmF0ZSwgKHVuc2lnbmVkIGxvbmcpaCwg
-KHVuc2lnbmVkIGxvbmcpdG90YWxfc3VibWl0dGVkLAogICAgICAgICAgICAgICAgICAgKHVuc2ln
-bmVkIGxvbmcpdG90YWxfYWNjZXB0ZWQsICh1bnNpZ25lZCBsb25nKXRvdGFsX3JlamVjdGVkLAog
-ICAgICAgICAgICAgICAgICAgKHVuc2lnbmVkIGxvbmcpdG90YWxfc3RhbGUpOwogICAgICAgICAg
-ICBsYXN0X3JhdGVfaGFzaGVzID0gaDsKICAgICAgICAgICAgbGFzdF9yYXRlX3RpbWUgPSBub3c7
-CiAgICAgICAgICAgIH0KICAgICAgICB9CgogICAgICAgIC8qIHJlY3ZfdGhyZWFkIGV4aXRlZCA9
-IGRpc2Nvbm5lY3RlZCAqLwogICAgICAgIHB0aHJlYWRfam9pbihnX3JlY3ZfdGlkLCBOVUxMKTsK
-ICAgICAgICBjb25uZWN0ZWQgPSAwOwoKICAgICAgICBpZiAocnVubmluZykgewogICAgICAgICAg
-ICBwcmludGYoIltSRUNPTk5FQ1RdIENvbm5lY3Rpb24gbG9zdCwgcmV0cnlpbmcgaW4gNXMuLi5c
-biIpOwogICAgICAgICAgICBmb3IgKGludCBpID0gMDsgaSA8IDUwICYmIHJ1bm5pbmc7IGkrKykg
-dXNsZWVwKDEwMDAwMCk7CiAgICAgICAgfQogICAgfQoKICAgIGZvciAoaW50IGkgPSAwOyBpIDwg
-TlVNX1RIUkVBRFM7IGkrKykgcHRocmVhZF9qb2luKHRocmVhZHNbaV0sIE5VTEwpOwoKICAgIGZy
-ZWUodGhyZWFkcyk7IGZyZWUodGlkcyk7CiAgICBpZiAoc29ja2ZkID49IDApIGNsb3NlKHNvY2tm
-ZCk7CiAgICBwcmludGYoIlNodXRkb3duIGNvbXBsZXRlXG4iKTsKICAgIHJldHVybiAwOwp9Cg==
+#!/usr/bin/env bash
+# ============================================================================
+# DagTech Miner - Linux Installer
+# Copyright (c) 2024-2026 DagTech Ltd / Dawie Nel
+# https://dagtech.network
+#
+# One-command installer: curl -sSL https://get.dagtech.network | bash
+# Or: ./install.sh
+# ============================================================================
+set -euo pipefail
 
-B64EOF
-    [ "$OS" = "macos" ] && base64 -D -i /tmp/_dt.b64 -o "$INSTALL_DIR/src/ref_miner.c" || base64 -d /tmp/_dt.b64 > "$INSTALL_DIR/src/ref_miner.c"
-    rm -f /tmp/_dt.b64
-    log "Source: $(wc -l < "$INSTALL_DIR/src/ref_miner.c") lines"
+DAGTECH_VERSION="1.0.0"
+INSTALL_DIR="$HOME/.dagtech-miner"
+CONFIG_FILE="$INSTALL_DIR/config.env"
+BIN_DIR="$INSTALL_DIR/bin"
+DASHBOARD_DIR="$INSTALL_DIR/dashboard"
+LOG_DIR="$INSTALL_DIR/logs"
+SERVICE_NAME="dagtech-miner"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+YELLOW='\033[1;33m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+# ============================================================================
+# DagTech Branding
+# ============================================================================
+print_banner() {
+    echo ""
+    echo -e "${BLUE}  ╔══════════════════════════════════════════╗${NC}"
+    echo -e "${BLUE}  ║                                          ║${NC}"
+    echo -e "${BLUE}  ║   ${BOLD}${CYAN}DagTech Miner${NC}${BLUE}  v${DAGTECH_VERSION}               ║${NC}"
+    echo -e "${BLUE}  ║   ${NC}dagtech.network${BLUE}                       ║${NC}"
+    echo -e "${BLUE}  ║                                          ║${NC}"
+    echo -e "${BLUE}  ║   ${NC}By Dawie Nel / DagTech Ltd${BLUE}             ║${NC}"
+    echo -e "${BLUE}  ║                                          ║${NC}"
+    echo -e "${BLUE}  ╚══════════════════════════════════════════╝${NC}"
+    echo ""
 }
-compile_miner() {
-    info "Compiling..."
-    CC=$(command -v cc || command -v gcc)
-    $CC -O2 -w -o "$INSTALL_DIR/bin/ref_miner" "$INSTALL_DIR/src/ref_miner.c" $SSL_INC $SSL_LIB -lssl -lcrypto -lpthread 2>&1 || fail "Compile failed"
-    chmod +x "$INSTALL_DIR/bin/ref_miner"; log "Compiled"
+
+info()    { echo -e "${BLUE}[DagTech]${NC} $1"; }
+success() { echo -e "${GREEN}[DagTech]${NC} $1"; }
+warn()    { echo -e "${YELLOW}[DagTech]${NC} $1"; }
+error()   { echo -e "${RED}[DagTech]${NC} $1"; }
+
+# ============================================================================
+# System Checks
+# ============================================================================
+check_os() {
+    info "Checking operating system..."
+    if [[ "$(uname -s)" != "Linux" ]]; then
+        error "This installer is for Linux only."
+        error "For Windows, use install.bat | For Mac, use install-mac.sh"
+        exit 1
+    fi
+    success "Linux detected: $(uname -r)"
 }
-write_dashboard() {
-    cat > "$INSTALL_DIR/dashboard/dashboard_server.py" << 'DPY'
-#!/usr/bin/env python3
-import http.server,json,os,urllib.request,sys
-DD=os.path.dirname(os.path.abspath(__file__))
-MU="http://127.0.0.1:8880/"
-class H(http.server.SimpleHTTPRequestHandler):
-    def __init__(s,*a,**k):super().__init__(*a,directory=DD,**k)
-    def do_GET(s):
-        if s.path=='/api/metrics':
-            try:
-                with urllib.request.urlopen(urllib.request.Request(MU,headers={'Accept':'application/json'}),timeout=3) as r:d=r.read()
-                s.send_response(200);s.send_header('Content-Type','application/json');s.send_header('Access-Control-Allow-Origin','*');s.send_header('Content-Length',len(d));s.end_headers();s.wfile.write(d)
-            except Exception as e:
-                er=json.dumps({"error":str(e)}).encode();s.send_response(502);s.send_header('Content-Type','application/json');s.send_header('Content-Length',len(er));s.end_headers();s.wfile.write(er)
-        else:super().do_GET()
-    def log_message(s,*a):pass
-if __name__=='__main__':
-    mp=int(sys.argv[2])if len(sys.argv)>2 else 8880
-    MU=f"http://127.0.0.1:{mp}/"
-    p=int(sys.argv[1])if len(sys.argv)>1 else 8881;print(f"[DASH] :{p} metrics:{mp}")
-    http.server.HTTPServer(('0.0.0.0',p),H).serve_forever()
-DPY
-    chmod +x "$INSTALL_DIR/dashboard/dashboard_server.py"; log "Dashboard server"
-    cat > "$INSTALL_DIR/dashboard/index.html" << 'DH'
-<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>DagTech Miner</title><style>:root{--bg:#080b14;--cd:rgba(13,17,28,.85);--gl:rgba(56,136,255,.25);--bl:hsl(210,100%,56%);--bb:hsl(210,100%,70%);--t1:#e8ecf4;--t2:#8892a8;--td:#5a6478}*{margin:0;padding:0;box-sizing:border-box}body{font-family:Inter,-apple-system,sans-serif;background:var(--bg);color:var(--t1);min-height:100vh;padding:16px}.hd{text-align:center;padding:20px 0 16px}.hd h1{font-family:'Space Grotesk',sans-serif;font-size:1.6rem;color:var(--bb)}.hd .v{font-size:.75rem;color:var(--td)}.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;max-width:900px;margin:0 auto}.c{background:var(--cd);border:1px solid var(--gl);border-radius:12px;padding:16px}.ct{font-size:.7rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--t2);margin-bottom:8px}.bn{font-size:2rem;font-weight:700;color:var(--bb);font-family:'Space Grotesk',monospace}.ss{font-size:.8rem;color:var(--t2);margin-top:4px}.wa{font-family:monospace;font-size:.75rem;color:var(--bl);word-break:break-all}canvas{width:100%;height:120px}.fc{grid-column:1/-1}.gb{height:8px;background:rgba(56,136,255,.15);border-radius:4px;margin-top:8px;overflow:hidden}.gf{height:100%;background:var(--bl);border-radius:4px;transition:width .5s}.sd{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--bl);margin-right:6px;animation:p 2s infinite}@keyframes p{0%,100%{opacity:1}50%{opacity:.4}}.dg{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.di .l{font-size:.7rem;color:var(--td)}.di .vl{font-size:.85rem;font-family:monospace}.ob{display:none;background:rgba(255,100,100,.15);border:1px solid rgba(255,100,100,.3);border-radius:8px;padding:12px;text-align:center;color:#f99;margin:0 auto 12px;max-width:900px}@media(max-width:600px){body{padding:8px}.bn{font-size:1.5rem}}</style><link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"></head><body><div class="hd"><h1>DagTech Miner</h1><div class="v">v2.0.0</div></div><div id="ob" class="ob">Offline</div><div class="g"><div class="c"><div class="ct">Hashrate</div><div class="bn" id="hr">--</div><div class="ss" id="hs">...</div></div><div class="c"><div class="ct">Shares</div><div class="bn" id="ac">--</div><div class="ss" id="s2">--</div></div><div class="c"><div class="ct">Balance</div><div class="bn" id="bl2">--</div><div class="wa" id="w2">--</div></div><div class="c"><div class="ct">Connection</div><div style="display:flex;align-items:center;margin-bottom:8px"><span class="sd" id="dt"></span><span id="cs">...</span></div><div class="dg"><div class="di"><div class="l">Pool</div><div class="vl" id="pa">--</div></div><div class="di"><div class="l">Worker</div><div class="vl" id="wn">--</div></div><div class="di"><div class="l">Uptime</div><div class="vl" id="ut">--</div></div><div class="di"><div class="l">Diff</div><div class="vl" id="df">--</div></div></div></div><div class="c"><div class="ct">CPU</div><div class="bn" id="cp">--%</div><div class="gb"><div class="gf" id="cg" style="width:0%"></div></div><div class="ss" id="ct2">Temp:--</div></div><div class="c"><div class="ct">Est.Daily</div><div class="bn" id="ee">--</div><div class="ss">hashrate-based</div></div><div class="c fc"><div class="ct">Hashrate</div><canvas id="hc"></canvas></div><div class="c fc"><div class="ct">Shares</div><canvas id="sc"></canvas></div></div><script>const M=120,hH=[],sH=[];let wA='';function fH(h){return h>=1e6?(h/1e6).toFixed(2)+' MH/s':h>=1e3?(h/1e3).toFixed(2)+' KH/s':h.toFixed(0)+' H/s'}function fU(s){const h=Math.floor(s/3600),m=Math.floor(s%3600/60);return h?h+'h '+m+'m':m+'m'}function dC(id,d,cl){const cv=document.getElementById(id),cx=cv.getContext('2d'),dp=devicePixelRatio||1,r=cv.getBoundingClientRect();cv.width=r.width*dp;cv.height=r.height*dp;cx.scale(dp,dp);const w=r.width,h=r.height;cx.clearRect(0,0,w,h);if(d.length<2)return;const mx=Math.max(...d)*1.1||1,mn=Math.min(...d)*.9,rg=mx-mn||1;cx.beginPath();cx.strokeStyle=cl;cx.lineWidth=2;d.forEach((v,i)=>{const x=i/(M-1)*w,y=h-(v-mn)/rg*(h-10)-5;i?cx.lineTo(x,y):cx.moveTo(x,y)});cx.stroke();cx.lineTo(w,h);cx.lineTo(0,h);cx.closePath();cx.fillStyle=cl.replace('1)','0.1)');cx.fill()}async function fM(){try{const r=await fetch('/api/metrics'),d=await r.json();if(d.error)throw d.error;document.getElementById('ob').style.display='none';document.getElementById('hr').textContent=fH(d.hashrate);hH.push(d.hashrate);hH.length>M&&hH.shift();document.getElementById('hs').textContent=d.threads+' thr';document.getElementById('ac').textContent=d.accepted+'/'+d.submitted;const rt=d.submitted?(100*d.accepted/d.submitted).toFixed(1):0;document.getElementById('s2').textContent=rt+'% '+d.rejected+'r '+d.stale+'s';sH.push(d.accepted);sH.length>M&&sH.shift();document.getElementById('cs').textContent=d.connected?'Connected':'Down';document.getElementById('dt').style.background=d.connected?'var(--bl)':'#f66';document.getElementById('pa').textContent=d.pool||'--';document.getElementById('wn').textContent=d.worker||'--';document.getElementById('ut').textContent=fU(d.uptime);document.getElementById('df').textContent=d.difficulty?d.difficulty.toFixed(6):'--';document.getElementById('cp').textContent=(d.cpu_usage!=null?d.cpu_usage.toFixed(1):'--')+'%';document.getElementById('cg').style.width=(d.cpu_usage||0)+'%';document.getElementById('ct2').textContent='Temp:'+(d.cpu_temp>0?d.cpu_temp.toFixed(0)+'C':'N/A');if(d.wallet){wA=d.wallet;document.getElementById('w2').textContent=d.wallet}document.getElementById('ee').textContent=d.hashrate>0?((d.hashrate/5e5)*15360*9.9*.99).toFixed(2)+' BDAG':'--';dC('hc',hH,'rgba(56,136,255,1)');dC('sc',sH,'rgba(56,200,255,1)')}catch(e){document.getElementById('ob').style.display='block';document.getElementById('cs').textContent='Offline';document.getElementById('dt').style.background='#f66'}}async function fB(){if(!wA)return;try{const r=await fetch('https://rpc.bdagscan.com',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_getBalance',params:[wA,'latest']})});const d=await r.json();if(d.result)document.getElementById('bl2').textContent=(Number(BigInt(d.result))/1e18).toFixed(2)+' BDAG'}catch(e){}}fM();setInterval(fM,5e3);setTimeout(()=>{fB();setInterval(fB,6e4)},2e3)</script></body></html>
-DH
-    log "Dashboard HTML"
+
+check_architecture() {
+    info "Checking CPU architecture..."
+    ARCH=$(uname -m)
+    case "$ARCH" in
+        x86_64|amd64)
+            success "Architecture: x86_64 (supported)"
+            ;;
+        aarch64|arm64)
+            success "Architecture: ARM64 (supported)"
+            ;;
+        *)
+            error "Unsupported architecture: $ARCH"
+            exit 1
+            ;;
+    esac
 }
-write_scripts() {
-    cat > "$INSTALL_DIR/config.env" << CEOF
-WALLET=${WALLET}
-POOL_HOST=${POOL_HOST}
-POOL_PORT=${POOL_PORT}
-THREADS=${THREADS}
-WORKER_NAME=${WORKER}
-METRICS_PORT=${METRICS_PORT}
-DASHBOARD_PORT=${DASHBOARD_PORT}
-CEOF
-    cat > "$INSTALL_DIR/run_miner.sh" << 'RE'
-#!/bin/bash
-D="$(cd "$(dirname "$0")" && pwd)"; source "$D/config.env"
-pkill -f "ref_miner.*--wallet" 2>/dev/null; pkill -f dashboard_server 2>/dev/null; sleep 1
-echo "[DT] $WORKER_NAME @ $POOL_HOST:$POOL_PORT ($THREADS thr)"
-nohup "$D/bin/ref_miner" --host "$POOL_HOST" --port "$POOL_PORT" --wallet "$WALLET" --worker "$WORKER_NAME" --threads "$THREADS" --metrics-port "$METRICS_PORT" > "$D/logs/miner.log" 2>&1 &
-echo "[DT] Miner:$!"; sleep 3
-nohup python3 "$D/dashboard/dashboard_server.py" "$DASHBOARD_PORT" "$METRICS_PORT" > "$D/logs/dashboard.log" 2>&1 &
-echo "[DT] Dash:$! http://localhost:$DASHBOARD_PORT"
-if [ -t 0 ]; then
-  command -v open &>/dev/null && { sleep 2; open "http://localhost/$DASHBOARD_PORT" 2>/dev/null & }
-  command -v xdg-open &>/dev/null && { sleep 2; xdg-open "http://localhost/$DASHBOARD_PORT" 2>/dev/null & }
+
+check_cpu() {
+    info "Checking CPU capabilities..."
+    local cores
+    cores=$(nproc 2>/dev/null || echo 1)
+    local model
+    model=$(grep -m1 "model name" /proc/cpuinfo 2>/dev/null | cut -d: -f2 | xargs || echo "Unknown")
+    local ram_mb
+    ram_mb=$(free -m 2>/dev/null | awk '/^Mem:/ {print $2}' || echo 0)
+
+    echo ""
+    echo -e "  ${BOLD}Hardware Summary:${NC}"
+    echo -e "  CPU:     ${CYAN}$model${NC}"
+    echo -e "  Cores:   ${CYAN}$cores${NC}"
+    echo -e "  RAM:     ${CYAN}${ram_mb} MB${NC}"
+    echo ""
+
+    # CPU mining needs at least 2 cores and 512MB RAM
+    if (( cores < 2 )); then
+        warn "Low core count ($cores). CPU mining will be slow."
+        warn "Minimum recommended: 4 cores"
+    fi
+    if (( ram_mb < 512 )); then
+        error "Insufficient RAM (${ram_mb}MB). Minimum: 512MB"
+        exit 1
+    fi
+    if (( ram_mb < 2048 )); then
+        warn "Low RAM (${ram_mb}MB). Recommended: 2GB+"
+    fi
+
+    success "CPU check passed"
+}
+
+check_gpu() {
+    info "Checking GPU availability..."
+    local has_nvidia=0
+    local has_amd=0
+    local gpu_name=""
+
+    # Check NVIDIA
+    if command -v nvidia-smi &>/dev/null; then
+        has_nvidia=1
+        gpu_name=$(nvidia-smi --query-gpu=name --format=csv,noheader 2>/dev/null | head -1 || echo "NVIDIA GPU")
+        local vram
+        vram=$(nvidia-smi --query-gpu=memory.total --format=csv,noheader 2>/dev/null | head -1 || echo "Unknown")
+        echo -e "  GPU:     ${CYAN}$gpu_name${NC}"
+        echo -e "  VRAM:    ${CYAN}$vram${NC}"
+        success "NVIDIA GPU detected with CUDA support"
+    fi
+
+    # Check AMD
+    if command -v rocm-smi &>/dev/null || lspci 2>/dev/null | grep -iq "amd.*vga\|radeon"; then
+        has_amd=1
+        gpu_name=$(lspci 2>/dev/null | grep -i "vga\|3d" | grep -i "amd\|radeon" | head -1 | sed 's/.*: //' || echo "AMD GPU")
+        echo -e "  GPU:     ${CYAN}$gpu_name${NC}"
+        if ! command -v rocm-smi &>/dev/null; then
+            warn "AMD GPU found but ROCm drivers not installed"
+            warn "GPU mining requires ROCm. Install from: https://rocm.docs.amd.com"
+            has_amd=0
+        else
+            success "AMD GPU detected with ROCm support"
+        fi
+    fi
+
+    if (( has_nvidia == 0 && has_amd == 0 )); then
+        warn "No supported GPU detected. CPU-only mining available."
+        echo ""
+        GPU_AVAILABLE=0
+    else
+        GPU_AVAILABLE=1
+    fi
+}
+
+# ============================================================================
+# Dependency Installation
+# ============================================================================
+install_dependencies() {
+    info "Installing build dependencies..."
+
+    # Detect package manager
+    local pkg_mgr=""
+    if command -v apt-get &>/dev/null; then
+        pkg_mgr="apt"
+    elif command -v dnf &>/dev/null; then
+        pkg_mgr="dnf"
+    elif command -v yum &>/dev/null; then
+        pkg_mgr="yum"
+    elif command -v pacman &>/dev/null; then
+        pkg_mgr="pacman"
+    elif command -v zypper &>/dev/null; then
+        pkg_mgr="zypper"
+    else
+        error "No supported package manager found"
+        error "Please install manually: gcc, make, libssl-dev, git"
+        exit 1
+    fi
+
+    info "Package manager: $pkg_mgr"
+
+    local need_sudo=""
+    if [[ $EUID -ne 0 ]]; then
+        need_sudo="sudo"
+    fi
+
+    case "$pkg_mgr" in
+        apt)
+            $need_sudo apt-get update -qq
+            $need_sudo apt-get install -y -qq build-essential libssl-dev git curl >/dev/null 2>&1
+            ;;
+        dnf|yum)
+            $need_sudo $pkg_mgr install -y gcc make openssl-devel git curl >/dev/null 2>&1
+            ;;
+        pacman)
+            $need_sudo pacman -Sy --noconfirm gcc make openssl git curl >/dev/null 2>&1
+            ;;
+        zypper)
+            $need_sudo zypper install -y gcc make libopenssl-devel git curl >/dev/null 2>&1
+            ;;
+    esac
+
+    # Verify critical dependencies
+    for cmd in gcc make git; do
+        if ! command -v $cmd &>/dev/null; then
+            error "Failed to install $cmd"
+            exit 1
+        fi
+    done
+
+    success "All dependencies installed"
+}
+
+# ============================================================================
+# Configuration Wizard
+# ============================================================================
+configure_miner() {
+    echo ""
+    echo -e "${BOLD}  ─── Configuration ───${NC}"
+    echo ""
+
+    # Wallet address
+    local wallet_addr=""
+    while true; do
+        echo -ne "  ${CYAN}Enter your wallet address (0x...):${NC} "
+        read -r wallet_addr
+        if [[ "$wallet_addr" =~ ^0x[0-9a-fA-F]{40}$ ]]; then
+            success "Wallet: $wallet_addr"
+            break
+        else
+            warn "Invalid wallet format. Must be 0x followed by 40 hex characters."
+            echo "  Example: 0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18"
+        fi
+    done
+
+    # Mining mode
+    echo ""
+    echo -e "  ${BOLD}Select mining mode:${NC}"
+    if (( GPU_AVAILABLE == 1 )); then
+        echo -e "    ${CYAN}1)${NC} CPU only"
+        echo -e "    ${CYAN}2)${NC} GPU only"
+        echo -e "    ${CYAN}3)${NC} CPU + GPU (recommended)"
+        echo ""
+        echo -ne "  ${CYAN}Choice [1-3]:${NC} "
+        read -r mode_choice
+    else
+        echo -e "    ${CYAN}1)${NC} CPU only (no GPU detected)"
+        echo ""
+        mode_choice="1"
+        info "Auto-selected CPU-only mode (no GPU found)"
+    fi
+
+    local mining_mode="cpu"
+    case "$mode_choice" in
+        2) mining_mode="gpu" ;;
+        3) mining_mode="both" ;;
+        *) mining_mode="cpu" ;;
+    esac
+    success "Mining mode: $mining_mode"
+
+    # Thread count (for CPU mining)
+    local thread_count=0
+    if [[ "$mining_mode" == "cpu" || "$mining_mode" == "both" ]]; then
+        local total_cores
+        total_cores=$(nproc 2>/dev/null || echo 4)
+        local default_threads=$(( total_cores / 2 ))
+        if (( default_threads < 1 )); then default_threads=1; fi
+
+        echo ""
+        echo -ne "  ${CYAN}CPU threads to use (1-$total_cores, default $default_threads):${NC} "
+        read -r thread_input
+        if [[ -z "$thread_input" ]]; then
+            thread_count=$default_threads
+        elif (( thread_input >= 1 && thread_input <= total_cores )); then
+            thread_count=$thread_input
+        else
+            warn "Invalid thread count, using default: $default_threads"
+            thread_count=$default_threads
+        fi
+        success "CPU threads: $thread_count"
+    fi
+
+    # Pool configuration
+    echo ""
+    local pool_addr="excalibur.dagtech.network"
+    local pool_port=3335
+    echo -ne "  ${CYAN}Pool address (default: $pool_addr):${NC} "
+    read -r pool_input
+    if [[ -n "$pool_input" ]]; then pool_addr="$pool_input"; fi
+
+    echo -ne "  ${CYAN}Pool port (default: $pool_port):${NC} "
+    read -r port_input
+    if [[ -n "$port_input" ]]; then pool_port="$port_input"; fi
+    success "Pool: $pool_addr:$pool_port"
+
+    # Worker name
+    echo ""
+    local worker="dagtech"
+    echo -ne "  ${CYAN}Worker name (default: dagtech):${NC} "
+    read -r worker_input
+    if [[ -n "$worker_input" ]]; then worker="$worker_input"; fi
+    success "Worker: $worker"
+
+    # Low priority option
+    echo ""
+    local low_priority=0
+    echo -ne "  ${CYAN}Run at low CPU priority? (y/N):${NC} "
+    read -r prio_input
+    if [[ "$prio_input" =~ ^[Yy] ]]; then low_priority=1; fi
+
+    # Save config
+    mkdir -p "$INSTALL_DIR"
+    cat > "$CONFIG_FILE" <<DAGTECH_CONFIG
+# DagTech Miner Configuration
+# Generated by DagTech Installer v${DAGTECH_VERSION}
+# https://dagtech.network
+
+WALLET=${wallet_addr}
+POOL_HOST=${pool_addr}
+POOL_PORT=${pool_port}
+MINING_MODE=${mining_mode}
+THREADS=${thread_count}
+WORKER_NAME=${worker}
+LOW_PRIORITY=${low_priority}
+METRICS_PORT=8880
+DAGTECH_CONFIG
+
+    success "Configuration saved to $CONFIG_FILE"
+}
+
+# ============================================================================
+# Build Miner
+# ============================================================================
+build_miner() {
+    info "Building DagTech Miner..."
+
+    mkdir -p "$BIN_DIR" "$LOG_DIR" "$DASHBOARD_DIR"
+
+    # Determine source directory
+    local src_dir
+    src_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/src"
+
+    if [[ ! -f "$src_dir/dagtech_miner.c" ]]; then
+        error "Source file not found: $src_dir/dagtech_miner.c"
+        error "Please run this installer from the dagtech-miner directory"
+        exit 1
+    fi
+
+    # Detect optimal compiler flags
+    local opt_flags="-O2"
+    if gcc -march=native -E -x c /dev/null &>/dev/null 2>&1; then
+        opt_flags="-O2 -march=native"
+    fi
+
+    info "Compiling with: gcc $opt_flags"
+    gcc $opt_flags -Wall -Wextra -o "$BIN_DIR/dagtech-miner" \
+        "$src_dir/dagtech_miner.c" \
+        -lssl -lcrypto -lpthread -lm 2>&1
+
+    if [[ $? -ne 0 ]]; then
+        error "Build failed!"
+        exit 1
+    fi
+
+    chmod +x "$BIN_DIR/dagtech-miner"
+    success "Build complete: $BIN_DIR/dagtech-miner"
+
+    # Quick self-test
+    info "Running self-test..."
+    if "$BIN_DIR/dagtech-miner" --help >/dev/null 2>&1; then
+        success "Self-test passed"
+    else
+        error "Self-test failed - binary may be corrupted"
+        exit 1
+    fi
+}
+
+# ============================================================================
+# Install Dashboard
+# ============================================================================
+install_dashboard() {
+    info "Installing DagTech Dashboard..."
+
+    local dash_src
+    dash_src="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/dashboard"
+
+    if [[ -f "$dash_src/index.html" ]]; then
+        cp "$dash_src/index.html" "$DASHBOARD_DIR/"
+        success "Dashboard installed to $DASHBOARD_DIR"
+    else
+        warn "Dashboard files not found in source, generating..."
+        # The dashboard HTML will be embedded in the release
+    fi
+}
+
+# ============================================================================
+# Create Launcher Script
+# ============================================================================
+create_launcher() {
+    info "Creating launcher script..."
+
+    cat > "$BIN_DIR/dagtech-start" <<'LAUNCHER_SCRIPT'
+#!/usr/bin/env bash
+# DagTech Miner Launcher - dagtech.network
+# Copyright (c) 2024-2026 DagTech Ltd / Dawie Nel
+
+INSTALL_DIR="$HOME/.dagtech-miner"
+CONFIG_FILE="$INSTALL_DIR/config.env"
+BIN="$INSTALL_DIR/bin/dagtech-miner"
+LOG_DIR="$INSTALL_DIR/logs"
+DASHBOARD_DIR="$INSTALL_DIR/dashboard"
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
+
+if [[ ! -f "$CONFIG_FILE" ]]; then
+    echo -e "${RED}[DagTech] Config not found. Run the installer first.${NC}"
+    exit 1
 fi
-RE
-    cat > "$INSTALL_DIR/stop_miner.sh" << 'SE'
-#!/bin/bash
-pkill -f "ref_miner.*--wallet" 2>/dev/null; pkill -f dashboard_server 2>/dev/null; echo "[DT] Stopped"
-SE
-    cat > "$INSTALL_DIR/uninstall.sh" << 'UE'
-#!/bin/bash
-read -rp "Remove DagTech Miner? [y/N]: " c
-if [[ "$c" =~ ^[Yy] ]]; then pkill -f ref_miner 2>/dev/null; pkill -f dashboard_server 2>/dev/null; rm -rf "$HOME/.dagtech-miner"; echo "Done"; fi
-UE
-    chmod +x "$INSTALL_DIR"/{run_miner,stop_miner,uninstall}.sh
-    log "Scripts ready"
+
+source "$CONFIG_FILE"
+
+# Build command line
+ARGS="--wallet $WALLET --pool $POOL_HOST --port $POOL_PORT --worker $WORKER_NAME"
+ARGS="$ARGS --metrics-port $METRICS_PORT"
+
+if [[ "$MINING_MODE" == "cpu" || "$MINING_MODE" == "both" ]]; then
+    if (( THREADS > 0 )); then
+        ARGS="$ARGS --threads $THREADS"
+    fi
+fi
+
+if (( LOW_PRIORITY == 1 )); then
+    ARGS="$ARGS --low-priority"
+fi
+
+echo ""
+echo -e "${BLUE}  ╔══════════════════════════════════════════╗${NC}"
+echo -e "${BLUE}  ║   ${BOLD}${CYAN}DagTech Miner${NC}${BLUE}                          ║${NC}"
+echo -e "${BLUE}  ║   ${NC}dagtech.network${BLUE}                       ║${NC}"
+echo -e "${BLUE}  ╚══════════════════════════════════════════╝${NC}"
+echo ""
+echo -e "  ${BOLD}Wallet:${NC}  $WALLET"
+echo -e "  ${BOLD}Pool:${NC}    $POOL_HOST:$POOL_PORT"
+echo -e "  ${BOLD}Mode:${NC}    $MINING_MODE"
+echo -e "  ${BOLD}Threads:${NC} $THREADS"
+echo ""
+
+# Start dashboard in background if available
+if [[ -f "$DASHBOARD_DIR/index.html" ]] && command -v python3 &>/dev/null; then
+    DASH_PORT=8881
+    echo -e "${GREEN}[DagTech]${NC} Dashboard: http://localhost:$DASH_PORT"
+    cd "$DASHBOARD_DIR" && python3 -m http.server $DASH_PORT --bind 127.0.0.1 &>/dev/null &
+    DASH_PID=$!
+    trap "kill $DASH_PID 2>/dev/null" EXIT
+fi
+
+# Log to file and stdout
+LOGFILE="$LOG_DIR/miner-$(date +%Y%m%d-%H%M%S).log"
+echo -e "${GREEN}[DagTech]${NC} Log: $LOGFILE"
+echo ""
+
+exec $BIN $ARGS 2>&1 | tee "$LOGFILE"
+LAUNCHER_SCRIPT
+
+    chmod +x "$BIN_DIR/dagtech-start"
+
+    # Create stop script
+    cat > "$BIN_DIR/dagtech-stop" <<'STOP_SCRIPT'
+#!/usr/bin/env bash
+# DagTech Miner Stop Script
+pkill -f dagtech-miner 2>/dev/null && echo "[DagTech] Miner stopped" || echo "[DagTech] Miner not running"
+STOP_SCRIPT
+    chmod +x "$BIN_DIR/dagtech-stop"
+
+    # Create status script
+    cat > "$BIN_DIR/dagtech-status" <<'STATUS_SCRIPT'
+#!/usr/bin/env bash
+# DagTech Miner Status
+source "$HOME/.dagtech-miner/config.env" 2>/dev/null
+METRICS_PORT=${METRICS_PORT:-8880}
+
+if pgrep -f dagtech-miner >/dev/null 2>&1; then
+    echo -e "\033[0;32m[DagTech] Miner is RUNNING\033[0m"
+    curl -s "http://127.0.0.1:$METRICS_PORT/metrics" 2>/dev/null | python3 -m json.tool 2>/dev/null || echo "  (metrics unavailable)"
+else
+    echo -e "\033[0;31m[DagTech] Miner is STOPPED\033[0m"
+fi
+STATUS_SCRIPT
+    chmod +x "$BIN_DIR/dagtech-status"
+
+    success "Launcher scripts created"
 }
-banner; detect_os; check_prereqs; get_config; create_dirs; extract_source; compile_miner; write_dashboard; write_scripts
-echo ""; echo -e "${GREEN}=== Installation Complete ===${NC}"
-echo "  Start: $INSTALL_DIR/run_miner.sh"
-echo "  Stop:  $INSTALL_DIR/stop_miner.sh"
-echo "  Web:   http://localhost:$DASHBOARD_PORT"
-read -rp "Start now? [Y/n]: " sn; if [[ ! "$sn" =~ ^[Nn] ]]; then bash "$INSTALL_DIR/run_miner.sh"; fi
+
+# ============================================================================
+# Add to PATH
+# ============================================================================
+setup_path() {
+    info "Setting up PATH..."
+
+    local shell_rc=""
+    if [[ -f "$HOME/.bashrc" ]]; then
+        shell_rc="$HOME/.bashrc"
+    elif [[ -f "$HOME/.zshrc" ]]; then
+        shell_rc="$HOME/.zshrc"
+    elif [[ -f "$HOME/.profile" ]]; then
+        shell_rc="$HOME/.profile"
+    fi
+
+    local path_line="export PATH=\"\$HOME/.dagtech-miner/bin:\$PATH\""
+
+    if [[ -n "$shell_rc" ]]; then
+        if ! grep -qF ".dagtech-miner/bin" "$shell_rc" 2>/dev/null; then
+            echo "" >> "$shell_rc"
+            echo "# DagTech Miner" >> "$shell_rc"
+            echo "$path_line" >> "$shell_rc"
+            success "Added to PATH in $shell_rc"
+        else
+            success "PATH already configured"
+        fi
+    fi
+
+    export PATH="$HOME/.dagtech-miner/bin:$PATH"
+}
+
+# ============================================================================
+# Create systemd service (optional)
+# ============================================================================
+setup_systemd_service() {
+    echo ""
+    echo -ne "  ${CYAN}Install as systemd service (auto-start on boot)? (y/N):${NC} "
+    read -r svc_input
+    if [[ ! "$svc_input" =~ ^[Yy] ]]; then return; fi
+
+    source "$CONFIG_FILE"
+
+    local service_file="/etc/systemd/system/${SERVICE_NAME}.service"
+    local need_sudo=""
+    if [[ $EUID -ne 0 ]]; then need_sudo="sudo"; fi
+
+    $need_sudo tee "$service_file" > /dev/null <<SYSTEMD_SVC
+[Unit]
+Description=DagTech Miner - dagtech.network
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=$USER
+ExecStart=$BIN_DIR/dagtech-miner --wallet $WALLET --pool $POOL_HOST --port $POOL_PORT --threads $THREADS --worker $WORKER_NAME --metrics-port $METRICS_PORT
+Restart=always
+RestartSec=30
+Nice=19
+
+[Install]
+WantedBy=multi-user.target
+SYSTEMD_SVC
+
+    $need_sudo systemctl daemon-reload
+    $need_sudo systemctl enable "$SERVICE_NAME"
+    success "Systemd service installed: $SERVICE_NAME"
+    info "Start with: sudo systemctl start $SERVICE_NAME"
+    info "Logs with:  sudo journalctl -u $SERVICE_NAME -f"
+}
+
+# ============================================================================
+# Print Summary
+# ============================================================================
+print_summary() {
+    echo ""
+    echo -e "${GREEN}  ╔══════════════════════════════════════════╗${NC}"
+    echo -e "${GREEN}  ║                                          ║${NC}"
+    echo -e "${GREEN}  ║   ${BOLD}Installation Complete!${NC}${GREEN}                 ║${NC}"
+    echo -e "${GREEN}  ║                                          ║${NC}"
+    echo -e "${GREEN}  ╚══════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "  ${BOLD}Quick Start:${NC}"
+    echo -e "    ${CYAN}dagtech-start${NC}    Start mining"
+    echo -e "    ${CYAN}dagtech-stop${NC}     Stop mining"
+    echo -e "    ${CYAN}dagtech-status${NC}   Check miner status"
+    echo ""
+    echo -e "  ${BOLD}Dashboard:${NC}"
+    echo -e "    Open ${CYAN}http://localhost:8881${NC} while mining"
+    echo ""
+    echo -e "  ${BOLD}Configuration:${NC}"
+    echo -e "    Edit ${CYAN}$CONFIG_FILE${NC}"
+    echo ""
+    echo -e "  ${BOLD}Logs:${NC}"
+    echo -e "    ${CYAN}$LOG_DIR/${NC}"
+    echo ""
+    echo -e "  ${BLUE}DagTech Mining Suite v${DAGTECH_VERSION}${NC}"
+    echo -e "  ${BLUE}By Dawie Nel / DagTech Ltd${NC}"
+    echo -e "  ${BLUE}https://dagtech.network${NC}"
+    echo ""
+}
+
+# ============================================================================
+# Main Installation Flow
+# ============================================================================
+main() {
+    print_banner
+
+    info "Starting DagTech Miner installation..."
+    echo ""
+
+    check_os
+    check_architecture
+    check_cpu
+    check_gpu
+    install_dependencies
+    configure_miner
+    build_miner
+    install_dashboard
+    create_launcher
+    setup_path
+    setup_systemd_service
+    print_summary
+}
+
+main "$@"
