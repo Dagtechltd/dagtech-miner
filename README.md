@@ -1,89 +1,95 @@
-# DagTech Miner
+# DagTech Miner v2.0.0
 
-High-performance mining software for the DagTech Network. CPU mining with built-in dashboard, simple installation, and automatic hardware detection.
+CPU miner for the BlockDAG Network (QNG/MeerDAG consensus). Uses scrypt(N=1024, r=1, p=1) with BDAG post-ROMix tweak. Connects to pool via stratum protocol.
 
-**By Dawie Nel / DagTech Ltd** — [dagtech.network](https://dagtech.network)
+## Features
 
-## Quick Start
+- Multi-threaded scrypt mining with BDAG post-ROMix tweak
+- Stratum V1 protocol (subscribe, authorize, submit)
+- Built-in HTTP metrics server (JSON endpoint)
+- Web dashboard with real-time hashrate, shares, balance, charts
+- Auto-reconnection with exponential backoff
+- Cross-platform: macOS (ARM/x86), Linux, Windows (WSL)
+- One-command installer with auto-prerequisite detection
 
-### Linux
+## Quick Install
+
 ```bash
-git clone https://github.com/Dagtechltd/dagtech-miner.git
-cd dagtech-miner
-chmod +x install.sh
-./install.sh
+curl -sL https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/install.sh | bash
 ```
 
-### macOS
-```bash
-git clone https://github.com/Dagtechltd/dagtech-miner.git
-cd dagtech-miner
-chmod +x install-mac.sh
-./install-mac.sh
-```
+Or download and run manually:
 
-### Windows
-```cmd
-git clone https://github.com/Dagtechltd/dagtech-miner.git
-cd dagtech-miner
-install.bat
+```bash
+wget https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/install.sh
+bash install.sh
 ```
 
 The installer will:
-1. Check your hardware (CPU cores, RAM, GPU availability)
-2. Ask for your wallet address
-3. Let you choose CPU, GPU, or both
-4. Build the miner (Linux/Mac) or use the pre-built binary (Windows — no compiler needed)
-5. Set up the dashboard and launcher scripts
-
-## After Installation
-
-| OS | Start | Stop |
-|---|---|---|
-| Linux/Mac | `dagtech-start` | `dagtech-stop` |
-| Windows | `dagtech-start.bat` | `dagtech-stop.bat` |
-
-> **Note:** On Windows, open a **new** terminal window after installation for the PATH to take effect. Or run directly: `%USERPROFILE%\.dagtech-miner\bin\dagtech-start.bat`
-
-## Manual Build (Linux/Mac only)
-
-```bash
-make
-./dagtech-miner --wallet 0xYOUR_WALLET_ADDRESS
-```
+1. Detect your OS and architecture
+2. Check/install prerequisites (C compiler, OpenSSL, Python3)
+3. Prompt for wallet address, worker name, pool, threads
+4. Compile the miner from source
+5. Set up dashboard and management scripts
 
 ## Usage
 
-```
-dagtech-miner [options]
+```bash
+# Start mining + dashboard
+~/.dagtech-miner/run_miner.sh
 
-Options:
-  --wallet <addr>      Your wallet address (REQUIRED)
-  --pool <host>        Pool hostname (default: excalibur.dagtech.network)
-  --port <n>           Pool port (default: 3334)
-  --threads <n>        Mining threads (default: auto-detect)
-  --worker <name>      Worker name (default: dagtech)
-  --low-priority       Run at lowest CPU priority
-  --metrics-port <n>   Dashboard metrics port (default: 8880)
-  --help               Show help
+# Stop
+~/.dagtech-miner/stop_miner.sh
+
+# Uninstall
+~/.dagtech-miner/uninstall.sh
 ```
 
 ## Dashboard
 
-The built-in dashboard runs at `http://localhost:8881` while the miner is active. It shows real-time hashrate, shares, uptime, and connection info.
+Open http://localhost:8881 after starting. Shows:
+- Real-time hashrate and share acceptance rate
+- Wallet balance (from RPC)
+- CPU usage and temperature
+- Estimated daily earnings
+- Hashrate and shares history charts
 
-## System Requirements
+## Manual Build
 
-- **Minimum**: 2 CPU cores, 512 MB RAM
-- **Recommended**: 4+ CPU cores, 2 GB+ RAM
-- **Linux**: Ubuntu 20.04+, Debian 11+, Fedora 36+, Arch (gcc auto-installed)
-- **macOS**: 11+ (Big Sur), Intel or Apple Silicon (Xcode CLT required)
-- **Windows**: 10+ (no compiler needed — pre-built binary included)
+```bash
+cc -O2 -o ref_miner src/dagtech_miner.c -lssl -lcrypto -lpthread
 
-## Configuration
+./ref_miner --host pool.dagtech.network --port 3335 \
+  --wallet YOUR_WALLET --worker myrig --threads 8
+```
 
-Configuration is stored in `~/.dagtech-miner/config.env`. Edit it to change pool, wallet, or thread count without reinstalling.
+## CLI Options
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| --host | 127.0.0.1 | Pool hostname |
+| --port | 3334 | Pool stratum port |
+| --wallet | - | Your BDAG wallet address |
+| --worker | default | Worker name |
+| --threads | 8 | Mining threads |
+| --metrics-port | 8880 | HTTP metrics port |
+| --password | x | Stratum password |
+
+## Pool Connection
+
+Default pool: `pool.dagtech.network:3335` (CPU/GPU port)
+
+The miner connects via stratum V1 protocol. CPU miners should use port 3335 (lower difficulty, PPLNS payout) rather than the ASIC port 3334.
+
+## Requirements
+
+- C compiler (gcc/clang)
+- OpenSSL development libraries
+- Python 3 (for dashboard)
+- macOS: Xcode Command Line Tools + Homebrew OpenSSL
+- Linux: `build-essential libssl-dev python3`
+- Windows: WSL2 with Ubuntu
 
 ## License
 
-MIT License — Copyright (c) 2024-2026 DagTech Ltd / Dawie Nel
+MIT License - see LICENSE file.
