@@ -57,39 +57,13 @@ if not errorlevel 1 (
     for /f "tokens=*" %%a in ('nvidia-smi --query-gpu^=name --format^=csv^,noheader 2^>nul') do echo   GPU: %%a
 )
 
-REM ---- Check for compiler ----
+REM ---- Verify miner binary is available ----
 echo.
-echo [DagTech] Checking build tools...
-set "HAS_GCC=0"
-set "HAS_MSVC=0"
-where gcc >nul 2>&1
-if not errorlevel 1 set "HAS_GCC=1"
-where cl >nul 2>&1
-if not errorlevel 1 set "HAS_MSVC=1"
-
-if "%HAS_GCC%"=="0" if "%HAS_MSVC%"=="0" (
-    echo [DagTech] No C compiler found - using pre-built binary...
-    if not exist "%BIN_DIR%" mkdir "%BIN_DIR%"
-    REM Try local repo copy first
-    if exist "%~dp0bin\windows\dagtech-miner.exe" (
-        copy /y "%~dp0bin\windows\dagtech-miner.exe" "%BIN_DIR%\dagtech-miner.exe" >nul
-        echo [DagTech] Pre-built binary copied from repo
-        set "SKIP_BUILD=1"
-    ) else (
-        echo [DagTech] Downloading pre-built binary from GitHub...
-        powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/bin/windows/dagtech-miner.exe' -OutFile '%BIN_DIR%\dagtech-miner.exe'"
-        if exist "%BIN_DIR%\dagtech-miner.exe" (
-            echo [DagTech] Pre-built binary downloaded successfully
-            set "SKIP_BUILD=1"
-        ) else (
-            echo [DagTech] Download failed. Please install MinGW-w64 manually:
-            echo           https://www.mingw-w64.org/downloads/
-            pause
-            exit /b 1
-        )
-    )
+if exist "%~dp0bin\windows\dagtech-miner.exe" (
+    echo [DagTech] Miner binary found in package
+) else (
+    echo [DagTech] WARNING: Miner binary not found in package - will download after config
 )
-if not defined SKIP_BUILD echo [DagTech] Compiler found
 
 REM ---- Configuration ----
 echo.
@@ -168,51 +142,22 @@ echo METRICS_PORT=8880
 ) > "%CONFIG_FILE%"
 echo [DagTech] Config saved
 
-REM ---- Build ----
-if defined SKIP_BUILD (
-    echo [DagTech] Using pre-built binary - skipping compile
+REM ---- Install miner binary ----
+REM Windows always uses pre-built binary (C source requires POSIX headers)
+echo [DagTech] Installing miner binary...
+if exist "%~dp0bin\windows\dagtech-miner.exe" (
+    copy /y "%~dp0bin\windows\dagtech-miner.exe" "%BIN_DIR%\dagtech-miner.exe" >nul
+    echo [DagTech] Miner binary installed from package
 ) else (
-    echo [DagTech] Building DagTech Miner...
-    set "SRC_DIR=%~dp0src"
-    if not exist "!SRC_DIR!\dagtech_miner.c" (
-        echo [DagTech] Source not found locally, downloading from GitHub...
-        set "TMP_SRC=%TEMP%\dagtech-miner-src"
-        if exist "!TMP_SRC!" rmdir /s /q "!TMP_SRC!"
-        git clone --depth 1 https://github.com/Dagtechltd/dagtech-miner.git "!TMP_SRC!" >nul 2>&1
-        if errorlevel 1 (
-            echo [DagTech] Git clone failed, trying PowerShell download...
-            mkdir "!TMP_SRC!\src" 2>nul
-            powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/src/dagtech_miner.c' -OutFile '!TMP_SRC!\src\dagtech_miner.c'" 2>nul
-            if not exist "!TMP_SRC!\src\dagtech_miner.c" (
-                echo [DagTech] ERROR: Could not download source. Check internet connection.
-                pause
-                exit /b 1
-            )
-            powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/src/dagtech_sha256.h' -OutFile '!TMP_SRC!\src\dagtech_sha256.h'" 2>nul
-        )
-        set "SRC_DIR=!TMP_SRC!\src"
-        if exist "%~dp0dashboard\index.html" (
-            REM keep local dashboard
-        ) else if exist "!TMP_SRC!\dashboard\index.html" (
-            copy /y "!TMP_SRC!\dashboard\index.html" "%DASHBOARD_DIR%\" >nul
-        )
-    )
-    if not exist "!SRC_DIR!\dagtech_miner.c" (
-        echo [DagTech] ERROR: Source not found after download attempt.
-        pause
-        exit /b 1
-    )
-    if "!HAS_GCC!"=="1" (
-        gcc -O2 -Wall -static -o "%BIN_DIR%\dagtech-miner.exe" "!SRC_DIR!\dagtech_miner.c" -lws2_32 -lpthread
+    echo [DagTech] Downloading miner binary from GitHub...
+    powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/bin/windows/dagtech-miner.exe' -OutFile '%BIN_DIR%\dagtech-miner.exe'"
+    if exist "%BIN_DIR%\dagtech-miner.exe" (
+        echo [DagTech] Miner binary downloaded successfully
     ) else (
-        cl /O2 /Fe:"%BIN_DIR%\dagtech-miner.exe" "!SRC_DIR!\dagtech_miner.c" ws2_32.lib
-    )
-    if errorlevel 1 (
-        echo [DagTech] BUILD FAILED
+        echo [DagTech] ERROR: Could not download miner binary. Check internet connection.
         pause
         exit /b 1
     )
-    echo [DagTech] Build successful
 )
 
 REM ---- Copy dashboard ----
