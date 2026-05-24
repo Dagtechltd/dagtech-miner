@@ -165,6 +165,15 @@ echo [DagTech] Installing dashboard...
 if exist "%~dp0dashboard\index.html" (
     copy /y "%~dp0dashboard\index.html" "%DASHBOARD_DIR%\" >nul
 )
+if exist "%~dp0dashboard\dashboard_server.py" (
+    copy /y "%~dp0dashboard\dashboard_server.py" "%DASHBOARD_DIR%\" >nul
+)
+
+REM ---- Copy icon ----
+echo [DagTech] Installing icon...
+if exist "%~dp0assets\dagtech.ico" (
+    copy /y "%~dp0assets\dagtech.ico" "%INSTALL_DIR%\dagtech.ico" >nul
+)
 
 REM ---- Create launcher batch files ----
 echo [DagTech] Creating launcher scripts...
@@ -182,11 +191,29 @@ echo [DagTech] Adding to PATH...
 echo %PATH% | findstr /i /c:"%BIN_DIR%" >nul 2>&1
 if errorlevel 1 (
     setx PATH "%PATH%;%BIN_DIR%" >nul 2>&1
-    echo [DagTech] PATH updated. Open a NEW terminal for dagtech-start.bat to work.
-    echo [DagTech] Or run directly: %BIN_DIR%\dagtech-start.bat
+    echo [DagTech] PATH updated
 ) else (
     echo [DagTech] PATH already configured
 )
+
+REM ---- Create Desktop Shortcut ----
+echo [DagTech] Creating desktop shortcut...
+set "ICON_PATH=%INSTALL_DIR%\dagtech.ico"
+set "SHORTCUT_TARGET=%BIN_DIR%\dagtech-start.bat"
+set "DESKTOP_DIR=%USERPROFILE%\Desktop"
+powershell -Command "$ws = New-Object -ComObject WScript.Shell; $sc = $ws.CreateShortcut('%DESKTOP_DIR%\DagTech Miner.lnk'); $sc.TargetPath = '%SHORTCUT_TARGET%'; $sc.WorkingDirectory = '%BIN_DIR%'; $sc.Description = 'Start DagTech Miner'; if (Test-Path '%ICON_PATH%') { $sc.IconLocation = '%ICON_PATH%,0' }; $sc.Save()"
+if errorlevel 1 (
+    echo [DagTech] WARNING: Could not create desktop shortcut
+) else (
+    echo [DagTech] Desktop shortcut created
+)
+
+REM ---- Create Start Menu Shortcut ----
+echo [DagTech] Creating Start Menu entry...
+set "START_MENU_DIR=%APPDATA%\Microsoft\Windows\Start Menu\Programs\DagTech"
+if not exist "%START_MENU_DIR%" mkdir "%START_MENU_DIR%"
+powershell -Command "$ws = New-Object -ComObject WScript.Shell; $sc = $ws.CreateShortcut('%START_MENU_DIR%\DagTech Miner.lnk'); $sc.TargetPath = '%SHORTCUT_TARGET%'; $sc.WorkingDirectory = '%BIN_DIR%'; $sc.Description = 'Start DagTech Miner'; if (Test-Path '%ICON_PATH%') { $sc.IconLocation = '%ICON_PATH%,0' }; $sc.Save(); $sc2 = $ws.CreateShortcut('%START_MENU_DIR%\Stop DagTech Miner.lnk'); $sc2.TargetPath = '%BIN_DIR%\dagtech-stop.bat'; $sc2.WorkingDirectory = '%BIN_DIR%'; $sc2.Description = 'Stop DagTech Miner'; if (Test-Path '%ICON_PATH%') { $sc2.IconLocation = '%ICON_PATH%,0' }; $sc2.Save()"
+echo [DagTech] Start Menu entries created
 
 REM ---- Done ----
 echo.
@@ -194,12 +221,10 @@ echo   =============================================
 echo     Installation Complete!
 echo   =============================================
 echo.
-echo   Quick Start:
-echo     dagtech-start.bat    Start mining
-echo     dagtech-stop.bat     Stop mining
-echo.
-echo   Dashboard:
-echo     Open http://localhost:8881 while mining
+echo   Shortcuts created:
+echo     Desktop:    DagTech Miner
+echo     Start Menu: DagTech ^> DagTech Miner
+echo     Start Menu: DagTech ^> Stop DagTech Miner
 echo.
 echo   Config: %CONFIG_FILE%
 echo   Logs:   %LOG_DIR%
@@ -207,5 +232,32 @@ echo.
 echo   DagTech Mining Suite v%DAGTECH_VERSION%
 echo   By Dawie Nel / DagTech Ltd
 echo   https://dagtech.network
+echo.
+
+REM ---- Ask to start mining now ----
+echo.
+set /p "START_NOW=  Start mining now? [Y/n]: "
+if /i "%START_NOW%"=="n" (
+    echo.
+    echo   To start mining later, double-click "DagTech Miner" on your Desktop.
+    echo.
+    pause
+    exit /b 0
+)
+
+REM ---- Launch miner ----
+echo.
+echo [DagTech] Starting miner...
+echo [DagTech] Opening dashboard at http://localhost:8881 ...
+echo.
+
+REM Open dashboard in default browser (give it a moment to start)
+start "" "%BIN_DIR%\dagtech-start.bat"
+timeout /t 3 /nobreak >nul
+start http://localhost:8881
+
+echo   Mining is running! Check the dashboard in your browser.
+echo   To stop mining: double-click "Stop DagTech Miner" in Start Menu
+echo   or run: dagtech-stop.bat
 echo.
 pause
