@@ -266,6 +266,7 @@ install_dashboard() {
     dash_src="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/dashboard"
     if [[ -f "$dash_src/index.html" ]]; then
         cp "$dash_src/index.html" "$DASHBOARD_DIR/"
+        [[ -f "$dash_src/dashboard_server.py" ]] && cp "$dash_src/dashboard_server.py" "$DASHBOARD_DIR/"
         success "Dashboard installed"
     fi
 }
@@ -304,12 +305,17 @@ echo "  Wallet: $WALLET"
 echo "  Threads: $THREADS"
 echo ""
 
-# Dashboard
-if [[ -f "$DASHBOARD/index.html" ]] && command -v python3 &>/dev/null; then
-    cd "$DASHBOARD" && python3 -m http.server 8881 --bind 127.0.0.1 &>/dev/null &
+# Dashboard (use dashboard_server.py for /api/metrics proxy)
+if [[ -f "$DASHBOARD/dashboard_server.py" ]] && command -v python3 &>/dev/null; then
+    python3 "$DASHBOARD/dashboard_server.py" 8881 $METRICS_PORT &>/dev/null &
     DASH_PID=$!
     trap "kill $DASH_PID 2>/dev/null; kill ${PROXY_PID:-0} 2>/dev/null" EXIT
     echo "[DagTech] Dashboard: http://localhost:8881"
+elif [[ -f "$DASHBOARD/index.html" ]] && command -v python3 &>/dev/null; then
+    cd "$DASHBOARD" && python3 -m http.server 8881 --bind 127.0.0.1 &>/dev/null &
+    DASH_PID=$!
+    trap "kill $DASH_PID 2>/dev/null; kill ${PROXY_PID:-0} 2>/dev/null" EXIT
+    echo "[DagTech] Dashboard: http://localhost:8881 (static mode)"
 fi
 
 ARGS="--wallet $WALLET --pool $CONNECT_HOST --port $CONNECT_PORT --threads $THREADS --worker $WORKER_NAME --metrics-port $METRICS_PORT"
@@ -580,6 +586,20 @@ main() {
     install_lan_proxy
     create_launchd_service
     print_summary
+
+    # Ask to start mining now
+    echo ""
+    echo -n "  Start mining now? (Y/n): "
+    read -r start_input
+    if [[ "$start_input" =~ ^[Nn] ]]; then
+        echo ""
+        echo "  To start mining later, run: dagtech-start"
+        echo ""
+    else
+        echo ""
+        echo "[DagTech] Starting miner..."
+        exec "$BIN_DIR/dagtech-start"
+    fi
 }
 
 main "$@"

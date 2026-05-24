@@ -382,6 +382,7 @@ install_dashboard() {
 
     if [[ -f "$dash_src/index.html" ]]; then
         cp "$dash_src/index.html" "$DASHBOARD_DIR/"
+        [[ -f "$dash_src/dashboard_server.py" ]] && cp "$dash_src/dashboard_server.py" "$DASHBOARD_DIR/"
         success "Dashboard installed to $DASHBOARD_DIR"
     else
         warn "Dashboard files not found in source, generating..."
@@ -447,9 +448,16 @@ echo -e "  ${BOLD}Threads:${NC} $THREADS"
 echo ""
 
 # Start dashboard in background if available
-if [[ -f "$DASHBOARD_DIR/index.html" ]] && command -v python3 &>/dev/null; then
+if [[ -f "$DASHBOARD_DIR/dashboard_server.py" ]] && command -v python3 &>/dev/null; then
     DASH_PORT=8881
+    METRICS_PORT=${METRICS_PORT:-8880}
     echo -e "${GREEN}[DagTech]${NC} Dashboard: http://localhost:$DASH_PORT"
+    python3 "$DASHBOARD_DIR/dashboard_server.py" $DASH_PORT $METRICS_PORT &>/dev/null &
+    DASH_PID=$!
+    trap "kill $DASH_PID 2>/dev/null" EXIT
+elif [[ -f "$DASHBOARD_DIR/index.html" ]] && command -v python3 &>/dev/null; then
+    DASH_PORT=8881
+    echo -e "${GREEN}[DagTech]${NC} Dashboard: http://localhost:$DASH_PORT (static mode)"
     cd "$DASHBOARD_DIR" && python3 -m http.server $DASH_PORT --bind 127.0.0.1 &>/dev/null &
     DASH_PID=$!
     trap "kill $DASH_PID 2>/dev/null" EXIT
@@ -615,6 +623,20 @@ main() {
     setup_path
     setup_systemd_service
     print_summary
+
+    # Ask to start mining now
+    echo ""
+    echo -ne "  ${CYAN}Start mining now? (Y/n):${NC} "
+    read -r start_input
+    if [[ "$start_input" =~ ^[Nn] ]]; then
+        echo ""
+        echo -e "  To start mining later, run: ${CYAN}dagtech-start${NC}"
+        echo ""
+    else
+        echo ""
+        info "Starting miner..."
+        exec "$BIN_DIR/dagtech-start"
+    fi
 }
 
 main "$@"
