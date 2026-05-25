@@ -22,7 +22,7 @@
 
 /* ---- Config ---- */
 static char POOL_HOST[256] = "127.0.0.1";
-static int POOL_PORT = 3334;
+static int POOL_PORT = 3335;
 static char WALLET[64] = "0x6387C32ccDD60BfBa00EC70A67715Dcd52E8083f";
 static char WORKER[64] = "default";
 static char PASSWORD[32] = "x";

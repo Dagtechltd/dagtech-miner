@@ -1,10 +1,11 @@
 # DagTech Miner v2.0.0
 
-CPU miner for the BlockDAG Network (QNG/MeerDAG consensus). Uses scrypt(N=1024, r=1, p=1) with BDAG post-ROMix tweak. Connects to pool via stratum protocol.
+CPU/GPU mining software for the BlockDAG Network (QNG/MeerDAG consensus). Uses scrypt(N=1024, r=1, p=1) with BDAG post-ROMix tweak. Connects to pool via stratum protocol. One-command install, built-in dashboard, zero configuration headaches.
 
 ## Features
 
 - Multi-threaded scrypt mining with BDAG post-ROMix tweak
+- GPU mining support (NVIDIA CUDA, AMD ROCm)
 - Stratum V1 protocol (subscribe, authorize, submit)
 - Built-in HTTP metrics server (JSON endpoint)
 - Web dashboard with real-time hashrate, shares, balance, charts
@@ -68,7 +69,7 @@ cc -O2 -o ref_miner src/dagtech_miner.c -lssl -lcrypto -lpthread
 | Flag | Default | Description |
 |------|---------|-------------|
 | --host | 127.0.0.1 | Pool hostname |
-| --port | 3334 | Pool stratum port |
+| --port | 3335 | Pool stratum port |
 | --wallet | - | Your BDAG wallet address |
 | --worker | default | Worker name |
 | --threads | 8 | Mining threads |
