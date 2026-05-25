@@ -422,7 +422,7 @@ fi
 source "$CONFIG_FILE"
 
 # Build command line
-ARGS="--wallet $WALLET --pool $POOL_HOST --port $POOL_PORT --worker $WORKER_NAME"
+ARGS="--wallet $WALLET --host $POOL_HOST --port $POOL_PORT --worker $WORKER_NAME"
 ARGS="$ARGS --metrics-port $METRICS_PORT"
 
 if [[ "$MINING_MODE" == "cpu" || "$MINING_MODE" == "both" ]]; then
@@ -555,7 +555,7 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=$USER
-ExecStart=$BIN_DIR/dagtech-miner --wallet $WALLET --pool $POOL_HOST --port $POOL_PORT --threads $THREADS --worker $WORKER_NAME --metrics-port $METRICS_PORT
+ExecStart=$BIN_DIR/dagtech-miner --wallet $WALLET --host $POOL_HOST --port $POOL_PORT --threads $THREADS --worker $WORKER_NAME --metrics-port $METRICS_PORT
 Restart=always
 RestartSec=30
 Nice=19

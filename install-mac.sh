@@ -318,7 +318,7 @@ elif [[ -f "$DASHBOARD/index.html" ]] && command -v python3 &>/dev/null; then
     echo "[DagTech] Dashboard: http://localhost:8881 (static mode)"
 fi
 
-ARGS="--wallet $WALLET --pool $CONNECT_HOST --port $CONNECT_PORT --threads $THREADS --worker $WORKER_NAME --metrics-port $METRICS_PORT"
+ARGS="--wallet $WALLET --host $CONNECT_HOST --port $CONNECT_PORT --threads $THREADS --worker $WORKER_NAME --metrics-port $METRICS_PORT"
 exec $BIN $ARGS
 LAUNCHER
     chmod +x "$BIN_DIR/dagtech-start"
@@ -522,7 +522,7 @@ create_launchd_service() {
         <string>${BIN_DIR}/dagtech-miner</string>
         <string>--wallet</string>
         <string>${WALLET}</string>
-        <string>--pool</string>
+        <string>--host</string>
         <string>${connect_host}</string>
         <string>--port</string>
         <string>${connect_port}</string>

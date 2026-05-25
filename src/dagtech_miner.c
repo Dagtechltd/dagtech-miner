@@ -566,7 +566,7 @@ int main(int argc, char **argv) {
     signal(SIGPIPE, SIG_IGN);
 
     for (int i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--host") == 0 && i+1 < argc) strncpy(POOL_HOST, argv[++i], sizeof(POOL_HOST)-1);
+        if ((strcmp(argv[i], "--host") == 0 || strcmp(argv[i], "--pool") == 0) && i+1 < argc) strncpy(POOL_HOST, argv[++i], sizeof(POOL_HOST)-1);
         else if (strcmp(argv[i], "--port") == 0 && i+1 < argc) POOL_PORT = atoi(argv[++i]);
         else if (strcmp(argv[i], "--wallet") == 0 && i+1 < argc) strncpy(WALLET, argv[++i], sizeof(WALLET)-1);
         else if (strcmp(argv[i], "--threads") == 0 && i+1 < argc) NUM_THREADS = atoi(argv[++i]);

@@ -25,4 +25,4 @@ if exist "%DASHBOARD%\dashboard_server.py" (
     echo [DagTech] Dashboard: http://localhost:8881 ^(static mode - no live metrics^)
 )
 
-"!BIN!" --wallet !WALLET! --pool !POOL_HOST! --port !POOL_PORT! --threads !THREADS! --worker !WORKER_NAME! --metrics-port !METRICS_PORT!
+"!BIN!" --wallet !WALLET! --host !POOL_HOST! --port !POOL_PORT! --threads !THREADS! --worker !WORKER_NAME! --metrics-port !METRICS_PORT!
