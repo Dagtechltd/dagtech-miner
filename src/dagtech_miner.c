@@ -333,7 +333,7 @@ static int extract_quoted_strings(const char *line, char out[][256], int max) {
 }
 
 static void parse_line(const char *line) {
-    if (strstr(line, "mining.subscribe") == NULL && strstr(line, "\"result\"") && strstr(line, "\"id\":1")) {
+    if (strstr(line, "mining.subscribe") == NULL && strstr(line, "\"result\"") && (strstr(line, "\"id\":1,") || strstr(line, "\"id\":1}"))) {
         char strings[20][256];
         int n = extract_quoted_strings(line, strings, 20);
         for (int i = 0; i < n; i++) {
@@ -370,10 +370,15 @@ static void parse_line(const char *line) {
         }
     }
     else if (strstr(line, "\"result\"") && strstr(line, "true")) {
-        pthread_mutex_lock(&stats_mtx);
-        total_accepted++;
-        pthread_mutex_unlock(&stats_mtx);
-        printf("[ACCEPTED] total=%lu\n", (unsigned long)total_accepted);
+        /* Skip authorize response (id:2) — not a share acceptance */
+        if (strstr(line, "\"id\":2,") || strstr(line, "\"id\":2}")) {
+            printf("[AUTHORIZED] login accepted\n");
+        } else {
+            pthread_mutex_lock(&stats_mtx);
+            total_accepted++;
+            pthread_mutex_unlock(&stats_mtx);
+            printf("[ACCEPTED] total=%lu\n", (unsigned long)total_accepted);
+        }
     }
     else if (strstr(line, "\"error\"") && !strstr(line, "null")) {
         if (strstr(line, "21") || strstr(line, "stale")) {
