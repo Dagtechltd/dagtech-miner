@@ -1,4 +1,4 @@
-# DagTech Miner v2.0.0
+# DagTech Miner v2.1.0
 
 CPU/GPU mining software for the BlockDAG Network (QNG/MeerDAG consensus). Uses scrypt(N=1024, r=1, p=1) with BDAG post-ROMix tweak. Connects to pool via stratum protocol. One-command install, built-in dashboard, zero configuration headaches.
 

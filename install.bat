@@ -6,7 +6,7 @@ REM https://dagtech.network
 REM ============================================================================
 setlocal enabledelayedexpansion
 
-set "DAGTECH_VERSION=2.0.0"
+set "DAGTECH_VERSION=2.1.0"
 set "INSTALL_DIR=%USERPROFILE%\.dagtech-miner"
 set "CONFIG_FILE=%INSTALL_DIR%\config.env"
 set "BIN_DIR=%INSTALL_DIR%\bin"
