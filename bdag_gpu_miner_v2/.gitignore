@@ -1,0 +1,4 @@
+*.o
+bdag_kepler_live_miner
+.env
+gpu-miner.*.json
