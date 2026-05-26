@@ -35,6 +35,10 @@ This project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Stratum protocol (v1, vardiff, clean_jobs semantics)
 - Pool defaults: `excalibur.dagtech.network:3335`
 
+### Known limitations
+- Native Windows binary not bundled in v2.1.0 - Windows users continue to
+  use WSL2 path. Native build planned for v2.2.
+
 ## [2.0.0] - 2025
 
 Complete rewrite with cross-platform installer (Linux, macOS, Windows),
