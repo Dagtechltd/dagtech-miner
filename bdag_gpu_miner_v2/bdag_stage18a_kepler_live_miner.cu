@@ -48,6 +48,11 @@ static std::atomic<uint64_t> total_stale_skipped(0);
 static std::atomic<uint64_t> total_nohit_batches(0);
 static std::atomic<uint64_t> total_hit_batches(0);
 
+// Lock-free monotonic counter incremented on every mining.notify.
+// Used by the scan loop to abandon in-flight batches when the pool
+// rotates the tip (BlockDAG DAG consensus retires jobs aggressively).
+static std::atomic<uint64_t> g_job_seq(0);
+
 static std::atomic<int> rpc_id_counter(1000);
 
 struct Job {
@@ -235,6 +240,11 @@ static void parse_notify(const std::string &line) {
         std::lock_guard<std::mutex> lk(job_mtx);
         current_job = j;
     }
+
+    // Bump the lock-free seq AFTER current_job is published so any scan-loop
+    // thread that observes the new seq is guaranteed to see the new job on
+    // its next snapshot under job_mtx.
+    g_job_seq.fetch_add(1, std::memory_order_release);
 
     std::cout << "\n[NEW JOB18A] id=" << j.job_id
               << " valid=true"
@@ -476,11 +486,16 @@ int main(int argc, char **argv) {
         }
 
         Job j;
+        uint64_t start_seq;
 
         {
             std::lock_guard<std::mutex> lk(job_mtx);
             j = current_job;
         }
+        // Snapshot the lock-free seq BEFORE we build the header and launch the
+        // GPU kernel. If it advances by the time the kernel returns, the pool
+        // has rotated the tip and any nonce we found is in-flight stale work.
+        start_seq = g_job_seq.load(std::memory_order_acquire);
 
         if (!j.valid) {
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -513,22 +528,38 @@ int main(int argc, char **argv) {
         total_checked += batchsize;
         batches++;
 
-        Job latest;
-        {
-            std::lock_guard<std::mutex> lk(job_mtx);
-            latest = current_job;
-        }
-
         if (rc >= 0) {
             uint32_t found_nonce_word = start_nonce_word + (uint32_t)rc;
             total_hit_batches++;
 
-            bool stale_batch = (!latest.valid || latest.seq != j.seq || latest.job_id != j.job_id);
+            // Two-step abandonment check:
+            //  1) Lock-free: did g_job_seq advance during the kernel run?
+            //  2) Defensive: snapshot current_job under the mutex and compare
+            //     job_id/seq, to catch the (narrow) window between notify
+            //     publishing current_job and the seq bump.
+            uint64_t end_seq = g_job_seq.load(std::memory_order_acquire);
+            bool stale_batch = (end_seq != start_seq);
+
+            if (!stale_batch) {
+                Job latest;
+                {
+                    std::lock_guard<std::mutex> lk(job_mtx);
+                    latest = current_job;
+                }
+                stale_batch = (!latest.valid || latest.seq != j.seq || latest.job_id != j.job_id);
+            }
 
             if (stale_batch) {
                 total_stale_skipped++;
             } else {
-                submit_nonce(j, found_nonce_word);
+                // Final tight-window re-check immediately before the TCP send
+                // to minimise the time between "job is still current" and
+                // the bytes actually leaving the socket.
+                if (g_job_seq.load(std::memory_order_acquire) != start_seq) {
+                    total_stale_skipped++;
+                } else {
+                    submit_nonce(j, found_nonce_word);
+                }
             }
         } else {
             total_nohit_batches++;
