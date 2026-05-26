@@ -9,7 +9,7 @@
 # ============================================================================
 set -euo pipefail
 
-DAGTECH_VERSION="2.0.0"
+DAGTECH_VERSION="2.1.0"
 INSTALL_DIR="$HOME/.dagtech-miner"
 CONFIG_FILE="$INSTALL_DIR/config.env"
 BIN_DIR="$INSTALL_DIR/bin"
@@ -114,6 +114,8 @@ check_gpu() {
     local has_nvidia=0
     local has_amd=0
     local gpu_name=""
+    HAS_NVIDIA=${HAS_NVIDIA:-0}
+    CUDA_TOOLKIT=${CUDA_TOOLKIT:-0}
 
     # Check NVIDIA
     if command -v nvidia-smi &>/dev/null; then
@@ -124,6 +126,18 @@ check_gpu() {
         echo -e "  GPU:     ${CYAN}$gpu_name${NC}"
         echo -e "  VRAM:    ${CYAN}$vram${NC}"
         success "NVIDIA GPU detected with CUDA support"
+        HAS_NVIDIA=1
+        # CUDA toolkit (nvcc) needed to build the GPU miner
+        if command -v nvcc &>/dev/null; then
+            CUDA_TOOLKIT=1
+            local nvcc_ver
+            nvcc_ver=$(nvcc --version 2>/dev/null | grep -oE "release [0-9.]+" | head -1 || echo "unknown")
+            echo -e "  CUDA:    ${CYAN}$nvcc_ver${NC}"
+        else
+            CUDA_TOOLKIT=0
+            warn "CUDA toolkit (nvcc) not found - GPU miner cannot be built"
+            warn "Install CUDA Toolkit >= 11.0 to enable opt-in GPU mining"
+        fi
     fi
 
     # Check AMD
@@ -317,6 +331,7 @@ POOL_PORT=${pool_port}
 MINING_MODE=${mining_mode}
 THREADS=${thread_count}
 WORKER_NAME=${worker}
+GPU_WORKER_NAME=${worker}-gpu
 LOW_PRIORITY=${low_priority}
 METRICS_PORT=8880
 DAGTECH_CONFIG
@@ -368,6 +383,63 @@ build_miner() {
     else
         error "Self-test failed - binary may be corrupted"
         exit 1
+    fi
+}
+
+# ============================================================================
+# Build GPU Miner (opt-in, NVIDIA CUDA only) -- v2.1
+# ============================================================================
+build_gpu_miner() {
+    if (( ${HAS_NVIDIA:-0} == 0 )); then return 0; fi
+    if (( ${CUDA_TOOLKIT:-0} == 0 )); then
+        warn "Skipping GPU miner build: CUDA toolkit not available"
+        return 0
+    fi
+
+    local mode=""
+    [[ -f "$CONFIG_FILE" ]] && mode=$(grep -E "^MINING_MODE=" "$CONFIG_FILE" | cut -d= -f2)
+    if [[ "$mode" != "gpu" && "$mode" != "both" ]]; then return 0; fi
+
+    echo ""
+    echo -ne "  ${CYAN}NVIDIA GPU detected. Install GPU miner alongside CPU miner? [Y/n]:${NC} "
+    read -r gpu_confirm
+    if [[ "$gpu_confirm" =~ ^[Nn] ]]; then
+        info "GPU miner build skipped by user"
+        return 0
+    fi
+
+    info "Building bdag_gpu_miner_v2 (CUDA)..."
+    local gpu_src
+    gpu_src="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/bdag_gpu_miner_v2"
+    if [[ ! -d "$gpu_src" ]]; then
+        warn "bdag_gpu_miner_v2 source not found at $gpu_src - skipping"
+        return 0
+    fi
+
+    ( cd "$gpu_src" && ./build.sh ) || {
+        error "GPU miner build failed (see output above). CPU miner remains usable."
+        return 1
+    }
+
+    if [[ -f "$gpu_src/bdag_kepler_live_miner" ]]; then
+        cp "$gpu_src/bdag_kepler_live_miner" "$BIN_DIR/dagtech-gpu-miner"
+        chmod +x "$BIN_DIR/dagtech-gpu-miner"
+        success "GPU miner installed: $BIN_DIR/dagtech-gpu-miner"
+        if [[ ! -f "$gpu_src/.env" && -f "$gpu_src/.env.example" ]]; then
+            cp "$gpu_src/.env.example" "$gpu_src/.env"
+            if [[ -f "$CONFIG_FILE" ]]; then
+                # shellcheck disable=SC1090
+                source "$CONFIG_FILE"
+                sed -i "s|^POOL_HOST=.*|POOL_HOST=${POOL_HOST:-excalibur.dagtech.network}|" "$gpu_src/.env" 2>/dev/null || true
+                sed -i "s|^POOL_PORT=.*|POOL_PORT=${POOL_PORT:-3335}|" "$gpu_src/.env" 2>/dev/null || true
+                sed -i "s|^WORKER_NAME=.*|WORKER_NAME=${GPU_WORKER_NAME:-$(hostname)-gpu}|" "$gpu_src/.env" 2>/dev/null || true
+                sed -i "s|^WALLET=.*|WALLET=${WALLET}|" "$gpu_src/.env" 2>/dev/null || true
+            fi
+            success "GPU .env initialised at $gpu_src/.env"
+        fi
+    else
+        error "GPU build did not produce bdag_kepler_live_miner"
+        return 1
     fi
 }
 
@@ -618,6 +690,7 @@ main() {
     install_dependencies
     configure_miner
     build_miner
+    build_gpu_miner
     install_dashboard
     create_launcher
     setup_path

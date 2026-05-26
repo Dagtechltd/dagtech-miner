@@ -1,4 +1,4 @@
-# DagTech Miner v2.0.0
+# DagTech Miner v2.1.0
 
 CPU/GPU mining software for the BlockDAG Network (QNG/MeerDAG consensus). Uses scrypt(N=1024, r=1, p=1) with BDAG post-ROMix tweak. Connects to pool via stratum protocol. One-command install, built-in dashboard, zero configuration headaches.
 
@@ -60,7 +60,7 @@ Open http://localhost:8881 after starting. Shows:
 ```bash
 cc -O2 -o ref_miner src/dagtech_miner.c -lssl -lcrypto -lpthread
 
-./ref_miner --host pool.dagtech.network --port 3335 \
+./ref_miner --host excalibur.dagtech.network --port 3335 \
   --wallet YOUR_WALLET --worker myrig --threads 8
 ```
 
@@ -78,7 +78,7 @@ cc -O2 -o ref_miner src/dagtech_miner.c -lssl -lcrypto -lpthread
 
 ## Pool Connection
 
-Default pool: `pool.dagtech.network:3335` (CPU/GPU port)
+Default pool: `excalibur.dagtech.network:3335` (CPU/GPU port)
 
 The miner connects via stratum V1 protocol. CPU miners should use port 3335 (lower difficulty, PPLNS payout) rather than the ASIC port 3334.
 

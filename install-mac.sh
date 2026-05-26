@@ -8,7 +8,7 @@
 # ============================================================================
 set -euo pipefail
 
-DAGTECH_VERSION="2.0.0"
+DAGTECH_VERSION="2.1.0"
 INSTALL_DIR="$HOME/.dagtech-miner"
 CONFIG_FILE="$INSTALL_DIR/config.env"
 BIN_DIR="$INSTALL_DIR/bin"
