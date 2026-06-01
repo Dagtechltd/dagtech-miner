@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DagTech Miner — Official Mining Software for the BlockDAG Network</title>
-  <meta name="description" content="High-performance CPU mining software for the BlockDAG Network. Custom Scrypt implementation with automatic hardware detection, built-in dashboard, and one-command installation for Linux, macOS, and Windows.">
+  <meta name="description" content="High-performance CPU and GPU mining software for the BlockDAG Network. Custom Scrypt implementation with automatic hardware detection, CUDA GPU support, built-in dashboard, and one-command installation for Linux, macOS, and Windows.">
   <link rel="icon" href="https://dapps.dagtech.network/icon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -228,7 +228,6 @@
     }
     .platform-card:hover { border-color: hsl(210 100% 56% / 0.25); transform: translateY(-3px); }
     .platform-card:hover::before { opacity: 1; }
-    .platform-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
     .platform-icon { font-size: 2rem; }
     .platform-name { font-size: 1.4rem; font-weight: 600; }
     .platform-reqs { color: var(--muted-fg); font-size: 0.85rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
@@ -260,6 +259,19 @@
       position: relative;
     }
     .code-block .comment { color: var(--muted-fg); }
+    .platform-version {
+      display: inline-block;
+      background: hsl(210 100% 56% / 0.1);
+      border: 1px solid hsl(210 100% 56% / 0.2);
+      border-radius: 9999px;
+      padding: 0.2rem 0.75rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--primary-glow);
+      font-family: 'JetBrains Mono', monospace;
+      margin-left: auto;
+    }
+    .platform-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
     .copy-btn {
       position: absolute; top: 0.6rem; right: 0.6rem;
       background: var(--secondary);
@@ -422,7 +434,7 @@
   <!-- HERO -->
   <section class="hero">
     <div class="container">
-      <div class="hero-badge">Production Release v1.0.0</div>
+      <div class="hero-badge">Production Release</div>
       <h1>Mine BlockDAG.<br>Your Hardware. Your Coins.</h1>
       <p>Purpose-built mining software for the BlockDAG Network. Custom Scrypt implementation, automatic hardware optimization, built-in dashboard. One command to install, one command to mine.</p>
       <div class="hero-buttons">
@@ -447,10 +459,10 @@
           <div><span class="prompt">$</span> ./install.sh</div>
           <div class="output">&nbsp;&nbsp;Detecting hardware...</div>
           <div class="success">&nbsp;&nbsp;CPU: Apple M1 Pro (10 cores) | RAM: 32 GB</div>
-          <div class="output">&nbsp;&nbsp;Building DagTech Miner v1.0.0...</div>
+          <div class="output">&nbsp;&nbsp;Building DagTech Miner...</div>
           <div class="success">&nbsp;&nbsp;Build complete. Optimized for Apple Silicon.</div>
           <div><span class="prompt">$</span> dagtech-start</div>
-          <div class="success">&nbsp;&nbsp;Mining started | Pool: excalibur.dagtech.network:3334</div>
+          <div class="success">&nbsp;&nbsp;Mining started | Pool: excalibur.dagtech.network:3335</div>
           <div class="success">&nbsp;&nbsp;Hashrate: 23.4 KH/s | Shares: 2179 accepted</div>
         </div>
       </div>
@@ -535,6 +547,7 @@
           <div class="platform-header">
             <div class="platform-icon">&#128039;</div>
             <div class="platform-name">Linux</div>
+            <span class="platform-version">v2.1.0</span>
           </div>
           <div class="platform-reqs">Ubuntu 20.04+ / Debian 11+ / Fedora 36+ / Arch &bull; 2+ cores, 512MB RAM &bull; gcc auto-installed</div>
           <ul class="platform-steps">
@@ -558,6 +571,7 @@
           <div class="platform-header">
             <div class="platform-icon">&#63743;</div>
             <div class="platform-name">macOS</div>
+            <span class="platform-version">v2.1.0</span>
           </div>
           <div class="platform-reqs">macOS 11+ (Big Sur) &bull; Intel or Apple Silicon &bull; Xcode CLT auto-installed</div>
           <ul class="platform-steps">
@@ -581,6 +595,7 @@
           <div class="platform-header">
             <div class="platform-icon">&#128187;</div>
             <div class="platform-name">Windows</div>
+            <span class="platform-version">v2.1.0</span>
           </div>
           <div class="platform-reqs">Windows 10+ &bull; No compiler needed &bull; Pre-built binary included</div>
           <ul class="platform-steps">
@@ -650,7 +665,7 @@
           <div class="step-number">4</div>
           <div class="step-content">
             <h4>Configuration Wizard</h4>
-            <p>The wizard asks for your wallet address, lets you choose CPU or GPU mode, select thread count, and set your pool. Default pool: <code>excalibur.dagtech.network:3334</code></p>
+            <p>The wizard asks for your wallet address, lets you choose CPU or GPU mode, select thread count, and set your pool. Default pool: <code>excalibur.dagtech.network:3335</code></p>
           </div>
         </div>
 
@@ -774,7 +789,7 @@
           <li><span class="spec-label">Protocol</span><span class="spec-value">Stratum v1 + VarDiff</span></li>
           <li><span class="spec-label">Threading</span><span class="spec-value">POSIX pthreads / Win32 Threads</span></li>
           <li><span class="spec-label">Crypto Library</span><span class="spec-value">OpenSSL (optional) / Built-in SHA256</span></li>
-          <li><span class="spec-label">Default Pool</span><span class="spec-value">excalibur.dagtech.network:3334</span></li>
+          <li><span class="spec-label">Default Pool</span><span class="spec-value">excalibur.dagtech.network:3335</span></li>
           <li><span class="spec-label">Dashboard</span><span class="spec-value">HTTP :8881 (built-in)</span></li>
           <li><span class="spec-label">Config Storage</span><span class="spec-value">~/.dagtech-miner/config.env</span></li>
           <li><span class="spec-label">License</span><span class="spec-value">MIT</span></li>
