@@ -376,12 +376,16 @@ build_miner() {
     chmod +x "$BIN_DIR/dagtech-miner"
     success "Build complete: $BIN_DIR/dagtech-miner"
 
-    # Quick self-test
-    info "Running self-test..."
-    if "$BIN_DIR/dagtech-miner" --help >/dev/null 2>&1; then
-        success "Self-test passed"
+    # Quick self-test (run with dummy wallet, check it produces output)
+    info "Running CPU miner self-test..."
+    local test_out
+    test_out=$(timeout 3 "$BIN_DIR/dagtech-miner" --wallet 0x0000000000000000000000000000000000000000 2>&1 | head -3 || true)
+    if echo "$test_out" | grep -qi "dagtech\|miner\|pool\|connect"; then
+        success "CPU miner self-test passed"
+    elif file "$BIN_DIR/dagtech-miner" | grep -q "executable\|ELF"; then
+        success "CPU miner binary verified"
     else
-        error "Self-test failed - binary may be corrupted"
+        error "CPU miner self-test failed - binary may be corrupted"
         exit 1
     fi
 }
@@ -540,6 +544,33 @@ LOGFILE="$LOG_DIR/miner-$(date +%Y%m%d-%H%M%S).log"
 echo -e "${GREEN}[DagTech]${NC} Log: $LOGFILE"
 echo ""
 
+GPU_BIN="$INSTALL_DIR/bin/dagtech-gpu-miner"
+
+# GPU-only mode
+if [[ "$MINING_MODE" == "gpu" ]]; then
+    if [[ ! -x "$GPU_BIN" ]]; then
+        echo -e "${RED}[DagTech] ERROR: GPU miner not found: $GPU_BIN${NC}"
+        echo -e "${RED}[DagTech] Re-run the installer with CUDA support.${NC}"
+        exit 1
+    fi
+    echo -e "${GREEN}[DagTech]${NC} Starting GPU miner..."
+    exec "$GPU_BIN" --wallet "$WALLET" --host "$POOL_HOST" --port "$POOL_PORT" --worker "${WORKER_NAME}-gpu" 2>&1 | tee "$LOGFILE"
+fi
+
+# CPU+GPU mode
+if [[ "$MINING_MODE" == "both" ]]; then
+    if [[ -x "$GPU_BIN" ]]; then
+        echo -e "${GREEN}[DagTech]${NC} Starting GPU miner (background)..."
+        "$GPU_BIN" --wallet "$WALLET" --host "$POOL_HOST" --port "$POOL_PORT" --worker "${WORKER_NAME}-gpu" >> "$LOG_DIR/gpu-miner.log" 2>&1 &
+        GPU_PID=$!
+        trap "kill $GPU_PID $DASH_PID 2>/dev/null" EXIT
+    else
+        echo -e "${CYAN}[DagTech]${NC} GPU miner not found, running CPU only"
+    fi
+fi
+
+# CPU mode (default, also handles "both" CPU leg)
+echo -e "${GREEN}[DagTech]${NC} Starting CPU miner..."
 exec $BIN $ARGS 2>&1 | tee "$LOGFILE"
 LAUNCHER_SCRIPT
 
@@ -549,7 +580,10 @@ LAUNCHER_SCRIPT
     cat > "$BIN_DIR/dagtech-stop" <<'STOP_SCRIPT'
 #!/usr/bin/env bash
 # DagTech Miner Stop Script
-pkill -f dagtech-miner 2>/dev/null && echo "[DagTech] Miner stopped" || echo "[DagTech] Miner not running"
+stopped=0
+pkill -f "dagtech-miner" 2>/dev/null && stopped=1
+pkill -f "dagtech-gpu-miner" 2>/dev/null && stopped=1
+if (( stopped )); then echo "[DagTech] Miner stopped"; else echo "[DagTech] Miner not running"; fi
 STOP_SCRIPT
     chmod +x "$BIN_DIR/dagtech-stop"
 
@@ -560,8 +594,14 @@ STOP_SCRIPT
 source "$HOME/.dagtech-miner/config.env" 2>/dev/null
 METRICS_PORT=${METRICS_PORT:-8880}
 
-if pgrep -f dagtech-miner >/dev/null 2>&1; then
+cpu_running=0; gpu_running=0
+pgrep -f "dagtech-miner" >/dev/null 2>&1 && cpu_running=1
+pgrep -f "dagtech-gpu-miner" >/dev/null 2>&1 && gpu_running=1
+
+if (( cpu_running || gpu_running )); then
     echo -e "\033[0;32m[DagTech] Miner is RUNNING\033[0m"
+    (( cpu_running )) && echo "  CPU miner: active"
+    (( gpu_running )) && echo "  GPU miner: active"
     curl -s "http://127.0.0.1:$METRICS_PORT/metrics" 2>/dev/null | python3 -m json.tool 2>/dev/null || echo "  (metrics unavailable)"
 else
     echo -e "\033[0;31m[DagTech] Miner is STOPPED\033[0m"

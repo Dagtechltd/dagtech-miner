@@ -142,23 +142,47 @@ echo METRICS_PORT=8880
 ) > "%CONFIG_FILE%"
 echo [DagTech] Config saved
 
-REM ---- Install miner binary ----
+REM ---- Install CPU miner binary ----
 REM Windows always uses pre-built binary (C source requires POSIX headers)
-echo [DagTech] Installing miner binary...
+echo [DagTech] Installing CPU miner binary...
 if exist "%~dp0bin\windows\dagtech-miner.exe" (
     copy /y "%~dp0bin\windows\dagtech-miner.exe" "%BIN_DIR%\dagtech-miner.exe" >nul
-    echo [DagTech] Miner binary installed from package
+    echo [DagTech] CPU miner binary installed from package
 ) else (
-    echo [DagTech] Downloading miner binary from GitHub...
+    echo [DagTech] Downloading CPU miner binary from GitHub...
     powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/bin/windows/dagtech-miner.exe' -OutFile '%BIN_DIR%\dagtech-miner.exe'"
     if exist "%BIN_DIR%\dagtech-miner.exe" (
-        echo [DagTech] Miner binary downloaded successfully
+        echo [DagTech] CPU miner binary downloaded successfully
     ) else (
-        echo [DagTech] ERROR: Could not download miner binary. Check internet connection.
+        echo [DagTech] ERROR: Could not download CPU miner binary. Check internet connection.
         pause
         exit /b 1
     )
 )
+
+REM ---- Install GPU miner binary (if GPU mode selected) ----
+if "%MINING_MODE%"=="gpu" goto :install_gpu
+if "%MINING_MODE%"=="both" goto :install_gpu
+goto :skip_gpu
+
+:install_gpu
+echo [DagTech] Installing GPU miner binary...
+if exist "%~dp0bin\windows\dagtech-gpu-miner.exe" (
+    copy /y "%~dp0bin\windows\dagtech-gpu-miner.exe" "%BIN_DIR%\dagtech-gpu-miner.exe" >nul
+    echo [DagTech] GPU miner binary installed from package
+) else (
+    echo [DagTech] Downloading GPU miner binary from GitHub...
+    powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/bin/windows/dagtech-gpu-miner.exe' -OutFile '%BIN_DIR%\dagtech-gpu-miner.exe'"
+    if exist "%BIN_DIR%\dagtech-gpu-miner.exe" (
+        echo [DagTech] GPU miner binary downloaded successfully
+    ) else (
+        echo [DagTech] WARNING: Could not install GPU miner binary.
+        echo [DagTech] GPU mining will not be available. CPU mining will still work.
+        if "%MINING_MODE%"=="gpu" set "MINING_MODE=cpu"
+        if "%MINING_MODE%"=="both" set "MINING_MODE=cpu"
+    )
+)
+:skip_gpu
 
 REM ---- Copy dashboard ----
 echo [DagTech] Installing dashboard...

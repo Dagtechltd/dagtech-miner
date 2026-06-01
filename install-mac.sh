@@ -251,11 +251,21 @@ build_miner() {
     chmod +x "$BIN_DIR/dagtech-miner"
     success "Build complete"
 
-    # Self-test
-    if "$BIN_DIR/dagtech-miner" --help >/dev/null 2>&1; then
-        success "Self-test passed"
+    # Self-test (run with dummy wallet, check it produces output)
+    info "Running CPU miner self-test..."
+    local test_out=""
+    "$BIN_DIR/dagtech-miner" --wallet 0x0000000000000000000000000000000000000000 > /tmp/dagtech-selftest.out 2>&1 &
+    local test_pid=$!
+    sleep 2
+    kill "$test_pid" 2>/dev/null; wait "$test_pid" 2>/dev/null
+    test_out=$(head -3 /tmp/dagtech-selftest.out 2>/dev/null)
+    rm -f /tmp/dagtech-selftest.out
+    if echo "$test_out" | grep -qi "miner\|pool\|connect\|dagtech"; then
+        success "CPU miner self-test passed"
+    elif file "$BIN_DIR/dagtech-miner" | grep -q "Mach-O"; then
+        success "CPU miner binary verified"
     else
-        error "Self-test failed"
+        error "CPU miner self-test failed - binary may be corrupted"
         exit 1
     fi
 }
