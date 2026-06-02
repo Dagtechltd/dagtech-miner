@@ -197,18 +197,26 @@ install_dependencies() {
     case "$pkg_mgr" in
         apt)
             $need_sudo apt-get update -qq
-            $need_sudo apt-get install -y -qq build-essential libssl-dev git curl >/dev/null 2>&1
+            $need_sudo apt-get install -y -qq build-essential libssl-dev git curl python3 >/dev/null 2>&1
             ;;
         dnf|yum)
-            $need_sudo $pkg_mgr install -y gcc make openssl-devel git curl >/dev/null 2>&1
+            $need_sudo $pkg_mgr install -y gcc make openssl-devel git curl python3 >/dev/null 2>&1
             ;;
         pacman)
-            $need_sudo pacman -Sy --noconfirm gcc make openssl git curl >/dev/null 2>&1
+            $need_sudo pacman -Sy --noconfirm gcc make openssl git curl python >/dev/null 2>&1
             ;;
         zypper)
-            $need_sudo zypper install -y gcc make libopenssl-devel git curl >/dev/null 2>&1
+            $need_sudo zypper install -y gcc make libopenssl-devel git curl python3 >/dev/null 2>&1
             ;;
     esac
+
+    # Check Python (required for dashboard)
+    if command -v python3 &>/dev/null; then
+        success "Python3: $(python3 --version 2>&1)"
+    else
+        warn "Python3 not found — dashboard will not be available"
+        warn "Install it with: sudo apt install python3 (or equivalent)"
+    fi
 
     # Verify critical dependencies
     for cmd in gcc make git; do

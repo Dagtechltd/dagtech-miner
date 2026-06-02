@@ -48,6 +48,46 @@ if %RAM_MB% LSS 512 (
     exit /b 1
 )
 
+REM ---- Check for Python (required for dashboard) ----
+set "PYTHON_OK=0"
+python --version >nul 2>&1
+if not errorlevel 1 (
+    set "PYTHON_OK=1"
+    for /f "tokens=*" %%v in ('python --version 2^>^&1') do echo   Python:  %%v
+) else (
+    python3 --version >nul 2>&1
+    if not errorlevel 1 (
+        set "PYTHON_OK=1"
+        for /f "tokens=*" %%v in ('python3 --version 2^>^&1') do echo   Python:  %%v
+    )
+)
+if "%PYTHON_OK%"=="0" (
+    echo.
+    echo [DagTech] Python not found. Installing Python for dashboard support...
+    echo [DagTech] Downloading Python installer...
+    powershell -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.12.7/python-3.12.7-amd64.exe' -OutFile '%TEMP%\python-installer.exe'"
+    if exist "%TEMP%\python-installer.exe" (
+        echo [DagTech] Running Python installer ^(this may take a minute^)...
+        "%TEMP%\python-installer.exe" /quiet InstallAllUsers=0 PrependPath=1 Include_test=0 Include_doc=0
+        echo [DagTech] Python installed. Refreshing PATH...
+        REM Refresh PATH in current session
+        for /f "tokens=2,*" %%a in ('reg query "HKCU\Environment" /v PATH 2^>nul') do set "PATH=%%b;%PATH%"
+        python --version >nul 2>&1
+        if not errorlevel 1 (
+            echo [DagTech] Python is ready
+            set "PYTHON_OK=1"
+        ) else (
+            echo [DagTech] WARNING: Python installed but PATH not updated yet.
+            echo [DagTech] Dashboard will work after you restart your computer.
+        )
+        del "%TEMP%\python-installer.exe" 2>nul
+    ) else (
+        echo [DagTech] WARNING: Could not download Python. Dashboard will not be available.
+        echo [DagTech] Install Python manually from https://python.org and re-run the installer.
+    )
+)
+echo.
+
 REM ---- Check for GPU ----
 set "GPU_AVAILABLE=0"
 nvidia-smi >nul 2>&1
