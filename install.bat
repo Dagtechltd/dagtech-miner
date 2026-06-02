@@ -72,9 +72,14 @@ echo.
 
 :wallet_prompt
 set /p "WALLET=  Enter wallet address (0x...): "
-    powershell -Command "if ('%WALLET%' -match '^0x[0-9a-fA-F]{40}$') { exit 0 } else { exit 1 }"
+powershell -Command ^
+  "$w = '%WALLET%'; " ^
+  "if ($w -match '^0x[0-9a-fA-F]{40}$') { exit 0 } " ^
+  "elseif ($w -notmatch '^0x') { Write-Host '[DagTech] Address must start with 0x'; exit 1 } " ^
+  "elseif ($w.Length -lt 42) { Write-Host \"[DagTech] Address too short ($($w.Length) chars, need 42). Check you copied the full address.\"; exit 1 } " ^
+  "elseif ($w.Length -gt 42) { Write-Host \"[DagTech] Address too long ($($w.Length) chars, need 42). Remove extra characters.\"; exit 1 } " ^
+  "else { Write-Host '[DagTech] Address contains invalid characters. Use only 0-9 and a-f after 0x.'; exit 1 }"
 if errorlevel 1 (
-    echo [DagTech] Invalid wallet format. Must start with 0x
     goto :wallet_prompt
 )
 
