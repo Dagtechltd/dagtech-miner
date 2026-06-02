@@ -236,10 +236,13 @@ build_miner() {
     local cflags="-O2 -Wall"
     local ldflags="-lpthread"
 
-    # Use OpenSSL if available
+    # Use OpenSSL if available, otherwise use built-in SHA256
     if [[ "${HAS_OPENSSL:-0}" == "1" ]]; then
-        cflags="$cflags -DUSE_OPENSSL $CPPFLAGS"
+        cflags="$cflags $CPPFLAGS"
         ldflags="$ldflags $LDFLAGS -lssl -lcrypto"
+    else
+        cflags="$cflags -DNO_OPENSSL"
+        warn "OpenSSL not found — using built-in SHA256 (install Homebrew OpenSSL for better performance)"
     fi
 
     info "Compiling with: $cc $cflags"

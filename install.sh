@@ -371,10 +371,19 @@ build_miner() {
         opt_flags="-O2 -march=native"
     fi
 
+    # Check if OpenSSL dev headers are available
+    local ssl_flags="-lssl -lcrypto"
+    local ssl_cflags=""
+    if ! echo '#include <openssl/sha.h>' | gcc -E -x c - &>/dev/null 2>&1; then
+        warn "OpenSSL headers not found — using built-in SHA256"
+        ssl_flags=""
+        ssl_cflags="-DNO_OPENSSL"
+    fi
+
     info "Compiling with: gcc $opt_flags"
-    gcc $opt_flags -Wall -Wextra -o "$BIN_DIR/dagtech-miner" \
+    gcc $opt_flags $ssl_cflags -Wall -Wextra -o "$BIN_DIR/dagtech-miner" \
         "$src_dir/dagtech_miner.c" \
-        -lssl -lcrypto -lpthread -lm 2>&1
+        $ssl_flags -lpthread -lm 2>&1
 
     if [[ $? -ne 0 ]]; then
         error "Build failed!"
