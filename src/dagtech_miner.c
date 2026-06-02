@@ -2,14 +2,40 @@
  * Uses standard scrypt(N=1024,r=1,p=1) + BDAG post-ROMix tweak
  * Connects to pool via stratum (same protocol as GPU miner)
  * Designed to run at lowest CPU priority (nice 19, limited threads)
+ * Cross-platform: Linux/macOS (POSIX) and Windows (Winsock2/pthreads-win32)
  */
 
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <netinet/in.h>
+#ifdef _WIN32
+  #include <winsock2.h>
+  #include <ws2tcpip.h>
+  #include <windows.h>
+  #pragma comment(lib, "ws2_32.lib")
+  #define close(s) closesocket(s)
+  #define sleep(n) Sleep((n)*1000)
+  #define usleep(n) Sleep((n)/1000)
+  #ifndef SO_REUSEPORT
+    #define SO_REUSEPORT 0
+  #endif
+  /* setsockopt on Windows uses char* not void* for optval */
+  #define SOCKOPT_CAST (const char*)
+  typedef int socklen_t;
+  static int wsa_init_done = 0;
+  static void wsa_init(void) {
+    if (!wsa_init_done) { WSADATA d; WSAStartup(MAKEWORD(2,2), &d); wsa_init_done = 1; }
+  }
+  static void wsa_cleanup(void) { if (wsa_init_done) { WSACleanup(); wsa_init_done = 0; } }
+#else
+  #include <arpa/inet.h>
+  #include <netdb.h>
+  #include <netinet/in.h>
+  #include <sys/socket.h>
+  #include <unistd.h>
+  #define SOCKOPT_CAST
+  #define wsa_init()
+  #define wsa_cleanup()
+#endif
+
 #include <openssl/sha.h>
-#include <sys/socket.h>
-#include <unistd.h>
 #include <pthread.h>
 #include <signal.h>
 
@@ -200,13 +226,14 @@ static void bdag_scrypt_hash(const uint8_t *input, uint8_t *output) {
 /* ---- Metrics HTTP Server ---- */
 static void *metrics_thread(void *arg) {
     (void)arg;
+    wsa_init();
     int srv = socket(AF_INET, SOCK_STREAM, 0);
     if (srv < 0) { perror("metrics socket"); return NULL; }
 
     int opt = 1;
-    setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-#ifdef SO_REUSEPORT
-    setsockopt(srv, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+    setsockopt(srv, SOL_SOCKET, SO_REUSEADDR, SOCKOPT_CAST &opt, sizeof(opt));
+#if defined(SO_REUSEPORT) && SO_REUSEPORT != 0
+    setsockopt(srv, SOL_SOCKET, SO_REUSEPORT, SOCKOPT_CAST &opt, sizeof(opt));
 #endif
 
     struct sockaddr_in addr;
@@ -279,6 +306,7 @@ static void *metrics_thread(void *arg) {
 
 /* ---- Networking / Stratum ---- */
 static int connect_pool(void) {
+    wsa_init();
     if (sockfd >= 0) { close(sockfd); sockfd = -1; }
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) return -1;
