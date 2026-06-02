@@ -157,6 +157,35 @@ const steps = [
     subtitle: 'Once synced, verify your node is healthy by checking block count, peer count, and EVM RPC. Your node is now a full participant in BlockDAG consensus!',
     cmd: 'curl -s -u test:test -H "Content-Type: application/json" \\\n  -d \'{"jsonrpc":"1.0","id":1,"method":"getBlockCount"}\' \\\n  http://127.0.0.1:38131',
     preview: ['<span class="b">$</span> curl -s ... getBlockCount', '<span class="g">{"result": 1847293, "error": null}</span>', '', '<span class="b">$</span> curl -s ... getNodeInfo', '<span class="g">{"result": {"peers": 47, "version": "1.3.21"}}</span>', '', '<span class="b">$</span> curl -s -X POST -H "Content-Type: application/json" \\', '  -d \'{"jsonrpc":"2.0","method":"eth_blockNumber","params":[],"id":1}\' \\', '  http://127.0.0.1:18545', '<span class="g">{"result": "0x1c2d3e"}</span>'],
+    nodeComplete: true
+  },
+  // ---- POOL STEPS (optional continuation) ----
+  {
+    title: 'Set Up PostgreSQL',
+    subtitle: 'The pool needs a database to track miner shares, credits, and payouts. Create a PostgreSQL container alongside your node.',
+    cmd: 'docker run -d --name pool-db \\\n  --restart always \\\n  -e POSTGRES_DB=pool \\\n  -e POSTGRES_USER=pool_admin \\\n  -e POSTGRES_PASSWORD=YOUR_SECURE_PASSWORD \\\n  -v pool-pgdata:/var/lib/postgresql/data \\\n  postgres:16',
+    warn: 'Change <strong>YOUR_SECURE_PASSWORD</strong> to a real password. This database stores all mining share records and payout history.',
+    preview: ['<span class="b">$</span> docker run -d --name pool-db ...', '<span class="g">✓ Container pool-db started</span>', '', '<span class="b">$</span> docker exec pool-db pg_isready', '<span class="g">accepting connections</span>']
+  },
+  {
+    title: 'Deploy Pool Software',
+    subtitle: 'The pool software sits between miners and your node. It speaks <strong>stratum protocol</strong> to miners and <strong>JSON-RPC</strong> to the node. Configure it with your wallet and ports.',
+    cmd: 'docker run -d --name blockdag-pool \\\n  --restart always \\\n  --network host \\\n  -e NODE_RPC=http://127.0.0.1:38131 \\\n  -e NODE_RPC_USER=test \\\n  -e NODE_RPC_PASS=test \\\n  -e DB_HOST=127.0.0.1 \\\n  -e DB_NAME=pool \\\n  -e DB_USER=pool_admin \\\n  -e DB_PASS=YOUR_SECURE_PASSWORD \\\n  -e WALLET=0xYOUR_WALLET_ADDRESS \\\n  -e STRATUM_PORT=3334 \\\n  -e POOL_FEE=1 \\\n  dagtech/blockdag-pool:latest',
+    tip: 'Port <strong>3334</strong> is the stratum port miners connect to. Make sure it\'s open on your firewall. The pool fetches block templates from your node via RPC and distributes work to connected miners.',
+    preview: ['<span class="b">$</span> docker run -d --name blockdag-pool ...', '<span class="g">✓ Container blockdag-pool started</span>', '', '<span class="b">$</span> docker logs blockdag-pool --tail 5', '<span class="c">[POOL] Stratum server listening on :3334</span>', '<span class="c">[POOL] Connected to node RPC at 127.0.0.1:38131</span>', '<span class="g">[POOL] Block template received, ready for miners</span>']
+  },
+  {
+    title: 'Configure Vardiff & Payout',
+    subtitle: 'Tune the pool difficulty for your expected miners. <strong>ASIC miners</strong> (MH/s) need higher starting difficulty than <strong>CPU/GPU miners</strong> (KH/s). Set your payout scheme.',
+    cmd: 'docker exec blockdag-pool pool-config set \\\n  --starting-diff 1 \\\n  --min-diff 0.001 \\\n  --target-time 15 \\\n  --retarget-time 90 \\\n  --payout-scheme PROP',
+    tip: 'For a mixed ASIC + CPU/GPU pool, consider running two stratum ports: <strong>:3334</strong> for ASICs (pdiff 1) and <strong>:3335</strong> for CPU/GPU (pdiff 0.001) with separate credit accounting so CPU miners aren\'t drowned out.',
+    preview: ['<span class="c"># Vardiff settings</span>', '<span class="b">Starting difficulty:</span> 1', '<span class="b">Min difficulty:</span>     0.001', '<span class="b">Target share time:</span> 15 seconds', '<span class="b">Retarget window:</span>  90 seconds', '<span class="b">Payout scheme:</span>    PROP (proportional)', '', '<span class="g">Pool configuration updated</span>']
+  },
+  {
+    title: 'Connect Miners to Your Pool',
+    subtitle: 'Your pool is live! Point your <strong>DagTech Miner</strong> (or any stratum-compatible miner) at your server\'s IP on the stratum port. Miners will start receiving work and submitting shares.',
+    cmd: 'dagtech-start --pool YOUR_SERVER_IP --port 3334',
+    preview: ['<span class="c"># On the miner machine, update config:</span>', '<span class="b">POOL_HOST</span>=YOUR_SERVER_IP', '<span class="b">POOL_PORT</span>=3334', '', '<span class="b">$</span> dagtech-start', '<span class="g">[CONNECT] Connecting to YOUR_SERVER_IP:3334...</span>', '<span class="g">[CONNECT] Connected, subscribing...</span>', '<span class="g">[SUBSCRIBE] extranonce1=01000000</span>', '<span class="g">[SHARE] ACCEPTED ✓</span>', '<span class="b">[HASHRATE] Mining to your own pool!</span>'],
     final: true,
     dashUrl: null
   }
@@ -196,10 +225,20 @@ function render() {
       html += `<div class="term-preview"><div class="term-bar"><span style="color:var(--green);font-size:.8rem;font-weight:700">&#9638;</span><span class="term-bar-label">node@server: ~</span></div>`;
       html += `<div class="term-out">${s.preview.join('<br>')}</div></div>`;
     }
-    if (s.final) {
+    if (s.nodeComplete) {
       html += `<div class="final-box"><h2>&#9889; Node Running!</h2>`;
       html += `<p>Your QNG node is synced and participating in BlockDAG consensus. You can query the chain, deploy smart contracts, or run a block explorer.</p>`;
-      html += `<p style="color:var(--muted);font-size:.85rem;margin-top:1.5rem;">Want to start earning BDAG? Install <a href="install.html" style="color:var(--glow);font-weight:600;">DagTech Miner</a> and connect to our community pool — no extra setup needed.</p>`;
+      html += `<p style="color:var(--muted);font-size:.85rem;margin-top:1.5rem;">Just want to mine? Install <a href="install.html" style="color:var(--glow);font-weight:600;">DagTech Miner</a> and connect to our community pool — no extra setup needed.</p>`;
+      html += `</div>`;
+      html += `<div style="margin-top:2rem;padding:1.5rem;background:hsl(210 100% 56%/0.06);border:1px solid hsl(210 100% 56%/0.15);border-radius:.75rem;text-align:center;">`;
+      html += `<h3 style="color:var(--glow);margin-bottom:.5rem;">Want to run a pool on your node?</h3>`;
+      html += `<p style="color:var(--muted);font-size:.9rem;">Continue with the steps below to deploy pool software, configure stratum, and accept miners.</p>`;
+      html += `</div>`;
+    }
+    if (s.final) {
+      html += `<div class="final-box"><h2>&#9889; Pool Running!</h2>`;
+      html += `<p>Your pool is accepting miners and distributing work from your node. Shares are being tracked and credited.</p>`;
+      html += `<p style="color:var(--muted);font-size:.85rem;margin-top:1rem;">Share your pool address with the community: <code style="color:var(--glow)">YOUR_SERVER_IP:3334</code></p>`;
       html += `</div>`;
     }
     html += `<div class="step-nav">`;
