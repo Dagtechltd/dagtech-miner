@@ -4,429 +4,125 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DagTech Miner — Official Mining Software for the BlockDAG Network</title>
-  <meta name="description" content="High-performance CPU and GPU mining software for the BlockDAG Network. Custom Scrypt implementation with automatic hardware detection, CUDA GPU support, built-in dashboard, and one-command installation for Linux, macOS, and Windows.">
+  <meta name="description" content="Purpose-built CPU and GPU mining software for the BlockDAG Network. Custom Scrypt engine, CUDA GPU support, automatic hardware optimization, built-in dashboard. One command to install, one command to mine.">
   <link rel="icon" href="https://dapps.dagtech.network/icon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg: #080b14;
-      --fg: #f4f7fb;
-      --primary: #1e90ff;
-      --primary-glow: #66b3ff;
-      --accent: #0a4cbf;
-      --card: #0a0f1a;
-      --card-hover: #0f1726;
-      --secondary: #111b2e;
-      --muted: #171e2e;
-      --muted-fg: #607080;
-      --border: #171e2e;
-    }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-
-    html { scroll-behavior: smooth; }
-
-    body {
-      font-family: 'Inter', -apple-system, sans-serif;
-      background: var(--bg);
-      color: var(--fg);
-      line-height: 1.6;
-      overflow-x: hidden;
-    }
-
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background: radial-gradient(ellipse 100% 60% at 50% 0%, hsl(210 100% 56% / 0.05) 0%, transparent 60%);
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    h1, h2, h3, h4 { font-family: 'Space Grotesk', sans-serif; }
-
-    a { color: var(--primary); text-decoration: none; transition: color 0.2s; }
-    a:hover { color: var(--primary-glow); }
-
-    .container { max-width: 1200px; margin: 0 auto; padding: 0 2rem; position: relative; z-index: 1; }
+    :root{--bg:#080b14;--fg:#f4f7fb;--primary:#1e90ff;--glow:#66b3ff;--accent:#0a4cbf;--card:#0a0f1a;--card-hover:#0f1726;--secondary:#111b2e;--muted:#607080;--border:#171e2e}
+    *{margin:0;padding:0;box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--fg);line-height:1.6;overflow-x:hidden}
+    body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 100% 60% at 50% 0%,hsl(210 100% 56%/0.05) 0%,transparent 60%);pointer-events:none;z-index:0}
+    h1,h2,h3,h4{font-family:'Space Grotesk',sans-serif}
+    a{color:var(--primary);text-decoration:none;transition:color .2s}a:hover{color:var(--glow)}
+    .container{max-width:1200px;margin:0 auto;padding:0 2rem;position:relative;z-index:1}
 
     /* NAV */
-    nav {
-      position: fixed; top: 0; left: 0; right: 0;
-      background: hsl(220 50% 4% / 0.85);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid hsl(210 100% 56% / 0.08);
-      z-index: 100;
-      padding: 1rem 0;
-    }
-    nav .container { display: flex; align-items: center; justify-content: space-between; }
-    .nav-logo { display: flex; align-items: center; gap: 0.75rem; }
-    .nav-logo img { height: 32px; }
-    .nav-logo span { font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 1.1rem; }
-    .nav-links { display: flex; gap: 2rem; align-items: center; }
-    .nav-links a { color: var(--muted-fg); font-size: 0.9rem; font-weight: 500; }
-    .nav-links a:hover { color: var(--fg); }
-    .nav-cta {
-      background: linear-gradient(135deg, var(--primary), var(--accent));
-      color: white !important;
-      padding: 0.6rem 1.4rem;
-      border-radius: 0.85rem;
-      font-weight: 600;
-      font-size: 0.85rem;
-      box-shadow: 0 0 24px hsl(210 100% 56% / 0.25);
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .nav-cta:hover { transform: translateY(-1px); box-shadow: 0 0 32px hsl(210 100% 56% / 0.4); }
+    nav{position:fixed;top:0;left:0;right:0;background:hsl(220 50% 4%/0.85);backdrop-filter:blur(20px);border-bottom:1px solid hsl(210 100% 56%/0.08);z-index:100;padding:1rem 0}
+    nav .container{display:flex;align-items:center;justify-content:space-between}
+    .nav-logo{display:flex;align-items:center;gap:.75rem;text-decoration:none}
+    .nav-logo img{height:32px}.nav-logo span{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.1rem;color:var(--fg)}
+    .nav-links{display:flex;gap:2rem;align-items:center}
+    .nav-links a{color:var(--muted);font-size:.9rem;font-weight:500}
+    .nav-links a:hover{color:var(--fg)}
+    .nav-cta{background:linear-gradient(135deg,var(--primary),var(--accent));color:white!important;padding:.6rem 1.4rem;border-radius:.85rem;font-weight:600;font-size:.85rem;box-shadow:0 0 24px hsl(210 100% 56%/0.25);transition:transform .2s,box-shadow .2s}
+    .nav-cta:hover{transform:translateY(-1px);box-shadow:0 0 32px hsl(210 100% 56%/0.4)}
 
     /* HERO */
-    .hero {
-      padding: 10rem 0 6rem;
-      text-align: center;
-      position: relative;
-    }
-    .hero::after {
-      content: '';
-      position: absolute;
-      top: 50%; left: 50%;
-      transform: translate(-50%, -50%);
-      width: 600px; height: 600px;
-      background: radial-gradient(circle, hsl(210 100% 56% / 0.08) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 0.5rem;
-      background: hsl(210 100% 56% / 0.08);
-      border: 1px solid hsl(210 100% 56% / 0.2);
-      border-radius: 9999px;
-      padding: 0.4rem 1.2rem;
-      font-size: 0.8rem;
-      font-weight: 500;
-      color: var(--primary-glow);
-      margin-bottom: 2rem;
-    }
-    .hero-badge::before { content: ''; width: 6px; height: 6px; background: var(--primary); border-radius: 50%; animation: pulse 2s infinite; }
-    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
-    .hero h1 {
-      font-size: clamp(2.5rem, 6vw, 4.5rem);
-      font-weight: 700;
-      line-height: 1.1;
-      margin-bottom: 1.5rem;
-      background: linear-gradient(135deg, var(--fg) 0%, var(--primary-glow) 50%, var(--primary) 100%);
-      background-size: 200% 200%;
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      animation: shimmer 5s ease infinite;
-    }
-    @keyframes shimmer { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-    .hero p {
-      font-size: 1.2rem;
-      color: var(--muted-fg);
-      max-width: 650px;
-      margin: 0 auto 3rem;
-      line-height: 1.7;
-    }
-    .hero-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
-    .btn-primary {
-      background: linear-gradient(135deg, var(--primary), var(--accent));
-      color: white;
-      padding: 1rem 2.5rem;
-      border-radius: 0.85rem;
-      font-weight: 600;
-      font-size: 1rem;
-      box-shadow: 0 0 24px hsl(210 100% 56% / 0.35), 0 4px 16px hsl(220 50% 2% / 0.4);
-      transition: all 0.2s;
-      display: inline-flex; align-items: center; gap: 0.6rem;
-    }
-    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 40px hsl(210 100% 56% / 0.5), 0 8px 24px hsl(220 50% 2% / 0.5); color: white; }
-    .btn-secondary {
-      background: var(--secondary);
-      border: 1px solid var(--border);
-      color: var(--fg);
-      padding: 1rem 2.5rem;
-      border-radius: 0.85rem;
-      font-weight: 500;
-      font-size: 1rem;
-      transition: all 0.2s;
-      display: inline-flex; align-items: center; gap: 0.6rem;
-    }
-    .btn-secondary:hover { border-color: hsl(210 100% 56% / 0.3); background: var(--card-hover); color: white; }
+    .hero{padding:10rem 0 5rem;text-align:center;position:relative}
+    .hero::after{content:'';position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:600px;height:600px;background:radial-gradient(circle,hsl(210 100% 56%/0.08) 0%,transparent 70%);pointer-events:none}
+    .hero-badge{display:inline-flex;align-items:center;gap:.5rem;background:hsl(210 100% 56%/0.08);border:1px solid hsl(210 100% 56%/0.2);border-radius:9999px;padding:.4rem 1.2rem;font-size:.8rem;font-weight:500;color:var(--glow);margin-bottom:2rem}
+    .hero-badge::before{content:'';width:6px;height:6px;background:var(--primary);border-radius:50%;animation:pulse 2s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .hero h1{font-size:clamp(2.5rem,6vw,4.5rem);font-weight:700;line-height:1.1;margin-bottom:1.5rem;background:linear-gradient(135deg,var(--fg) 0%,var(--glow) 50%,var(--primary) 100%);background-size:200% 200%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 5s ease infinite}
+    @keyframes shimmer{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+    .hero p{font-size:1.2rem;color:var(--muted);max-width:700px;margin:0 auto 3rem;line-height:1.8}
+    .hero-buttons{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+    .btn-primary{background:linear-gradient(135deg,var(--primary),var(--accent));color:white;padding:1rem 2.5rem;border-radius:.85rem;font-weight:600;font-size:1rem;box-shadow:0 0 24px hsl(210 100% 56%/0.35),0 4px 16px hsl(220 50% 2%/0.4);transition:all .2s;display:inline-flex;align-items:center;gap:.6rem}
+    .btn-primary:hover{transform:translateY(-2px);box-shadow:0 0 40px hsl(210 100% 56%/0.5),0 8px 24px hsl(220 50% 2%/0.5);color:white}
+    .btn-secondary{background:var(--secondary);border:1px solid var(--border);color:var(--fg);padding:1rem 2.5rem;border-radius:.85rem;font-weight:500;font-size:1rem;transition:all .2s;display:inline-flex;align-items:center;gap:.6rem}
+    .btn-secondary:hover{border-color:hsl(210 100% 56%/0.3);background:var(--card-hover);color:white}
 
-    /* STATS BAR */
-    .stats-bar {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1px;
-      background: var(--border);
-      border-radius: 1rem;
-      overflow: hidden;
-      margin: 4rem 0;
-    }
-    .stat {
-      background: var(--card);
-      padding: 2rem;
-      text-align: center;
-    }
-    .stat-value { font-family: 'Space Grotesk', sans-serif; font-size: 2rem; font-weight: 700; color: var(--primary); }
-    .stat-label { font-size: 0.8rem; color: var(--muted-fg); margin-top: 0.3rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    /* TERMINAL */
+    .terminal{background:hsl(220 50% 3%);border:1px solid var(--border);border-radius:1rem;overflow:hidden;margin:3rem auto 0;max-width:700px}
+    .terminal-header{background:var(--secondary);padding:.75rem 1rem;display:flex;align-items:center;gap:.5rem}
+    .terminal-dot{width:10px;height:10px;border-radius:50%}
+    .terminal-dot:nth-child(1){background:#ff5f56}.terminal-dot:nth-child(2){background:#ffbd2e}.terminal-dot:nth-child(3){background:#27c93f}
+    .terminal-body{padding:1.5rem;font-family:'JetBrains Mono',monospace;font-size:.82rem;line-height:2;color:hsl(215 25% 70%)}
+    .terminal-body .prompt{color:var(--primary)}.terminal-body .success{color:var(--glow)}
 
-    /* FEATURES */
-    .features { padding: 5rem 0; }
-    .section-header { text-align: center; margin-bottom: 4rem; }
-    .section-header h2 { font-size: 2.5rem; font-weight: 700; margin-bottom: 1rem; }
-    .section-header p { color: var(--muted-fg); font-size: 1.1rem; max-width: 600px; margin: 0 auto; }
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 1.5rem;
-    }
-    .feature-card {
-      background: linear-gradient(160deg, hsl(220 45% 9% / 0.9) 0%, hsl(220 50% 5% / 0.95) 100%);
-      border: 1px solid hsl(210 100% 56% / 0.08);
-      border-radius: 1rem;
-      padding: 2.5rem;
-      transition: all 0.3s;
-    }
-    .feature-card:hover {
-      border-color: hsl(210 100% 56% / 0.25);
-      box-shadow: 0 0 50px hsl(210 100% 56% / 0.08), 0 12px 40px hsl(220 50% 2% / 0.5);
-      transform: translateY(-3px);
-    }
-    .feature-icon {
-      width: 48px; height: 48px;
-      background: hsl(210 100% 56% / 0.1);
-      border: 1px solid hsl(210 100% 56% / 0.2);
-      border-radius: 0.75rem;
-      display: flex; align-items: center; justify-content: center;
-      margin-bottom: 1.5rem;
-      font-size: 1.4rem;
-    }
-    .feature-card h3 { font-size: 1.2rem; font-weight: 600; margin-bottom: 0.75rem; }
-    .feature-card p { color: var(--muted-fg); font-size: 0.95rem; line-height: 1.6; }
+    /* STATS */
+    .stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;background:var(--border);border-radius:1rem;overflow:hidden;margin:5rem 0}
+    .stat{background:var(--card);padding:2rem;text-align:center}
+    .stat-value{font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;color:var(--primary)}
+    .stat-label{font-size:.8rem;color:var(--muted);margin-top:.3rem;text-transform:uppercase;letter-spacing:.05em}
+
+    /* WHY SECTION */
+    .why{padding:5rem 0}
+    .section-header{text-align:center;margin-bottom:4rem}
+    .section-header h2{font-size:2.5rem;font-weight:700;margin-bottom:1rem}
+    .section-header p{color:var(--muted);font-size:1.1rem;max-width:600px;margin:0 auto}
+    .why-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.5rem}
+    .why-card{background:linear-gradient(160deg,hsl(220 45% 9%/0.9) 0%,hsl(220 50% 5%/0.95) 100%);border:1px solid hsl(210 100% 56%/0.08);border-radius:1rem;padding:2.5rem;transition:all .3s}
+    .why-card:hover{border-color:hsl(210 100% 56%/0.25);box-shadow:0 0 50px hsl(210 100% 56%/0.08),0 12px 40px hsl(220 50% 2%/0.5);transform:translateY(-3px)}
+    .why-icon{width:48px;height:48px;background:hsl(210 100% 56%/0.1);border:1px solid hsl(210 100% 56%/0.2);border-radius:.75rem;display:flex;align-items:center;justify-content:center;margin-bottom:1.5rem;font-size:1.4rem}
+    .why-card h3{font-size:1.2rem;font-weight:600;margin-bottom:.75rem}
+    .why-card p{color:var(--muted);font-size:.95rem;line-height:1.7}
 
     /* PLATFORMS */
-    .platforms { padding: 5rem 0; }
-    .platform-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 2rem; }
-    .platform-card {
-      background: linear-gradient(160deg, hsl(220 45% 9% / 0.9) 0%, hsl(220 50% 5% / 0.95) 100%);
-      border: 1px solid hsl(210 100% 56% / 0.08);
-      border-radius: 1rem;
-      padding: 2.5rem;
-      transition: all 0.3s;
-      position: relative;
-      overflow: hidden;
-    }
-    .platform-card::before {
-      content: '';
-      position: absolute; top: 0; left: 0; right: 0;
-      height: 3px;
-      background: linear-gradient(90deg, var(--primary), var(--accent));
-      opacity: 0;
-      transition: opacity 0.3s;
-    }
-    .platform-card:hover { border-color: hsl(210 100% 56% / 0.25); transform: translateY(-3px); }
-    .platform-card:hover::before { opacity: 1; }
-    .platform-icon { font-size: 2rem; }
-    .platform-name { font-size: 1.4rem; font-weight: 600; }
-    .platform-reqs { color: var(--muted-fg); font-size: 0.85rem; margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
-    .platform-steps { list-style: none; margin-bottom: 2rem; }
-    .platform-steps li {
-      padding: 0.6rem 0;
-      padding-left: 1.8rem;
-      position: relative;
-      color: hsl(215 25% 70%);
-      font-size: 0.9rem;
-    }
-    .platform-steps li::before {
-      content: '';
-      position: absolute; left: 0; top: 50%;
-      width: 8px; height: 8px;
-      border: 2px solid var(--primary);
-      border-radius: 50%;
-      transform: translateY(-50%);
-    }
-    .code-block {
-      background: hsl(220 50% 3%);
-      border: 1px solid var(--border);
-      border-radius: 0.6rem;
-      padding: 1.2rem 1.5rem;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.82rem;
-      color: var(--primary-glow);
-      overflow-x: auto;
-      position: relative;
-    }
-    .code-block .comment { color: var(--muted-fg); }
-    .platform-version {
-      display: inline-block;
-      background: hsl(210 100% 56% / 0.1);
-      border: 1px solid hsl(210 100% 56% / 0.2);
-      border-radius: 9999px;
-      padding: 0.2rem 0.75rem;
-      font-size: 0.72rem;
-      font-weight: 600;
-      color: var(--primary-glow);
-      font-family: 'JetBrains Mono', monospace;
-      margin-left: auto;
-    }
-    .platform-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; }
-    .copy-btn {
-      position: absolute; top: 0.6rem; right: 0.6rem;
-      background: var(--secondary);
-      border: 1px solid var(--border);
-      color: var(--muted-fg);
-      padding: 0.3rem 0.6rem;
-      border-radius: 0.4rem;
-      font-size: 0.7rem;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .copy-btn:hover { color: var(--fg); border-color: var(--primary); }
+    .platforms{padding:5rem 0}
+    .platform-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:2rem}
+    .platform-card{background:linear-gradient(160deg,hsl(220 45% 9%/0.9) 0%,hsl(220 50% 5%/0.95) 100%);border:1px solid hsl(210 100% 56%/0.08);border-radius:1rem;padding:2.5rem;transition:all .3s;position:relative;overflow:hidden}
+    .platform-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--primary),var(--accent));opacity:0;transition:opacity .3s}
+    .platform-card:hover{border-color:hsl(210 100% 56%/0.25);transform:translateY(-3px)}.platform-card:hover::before{opacity:1}
+    .platform-header{display:flex;align-items:center;gap:1rem;margin-bottom:1rem}
+    .platform-icon{font-size:2rem}
+    .platform-name{font-size:1.4rem;font-weight:600}
+    .platform-version{display:inline-block;background:hsl(210 100% 56%/0.1);border:1px solid hsl(210 100% 56%/0.2);border-radius:9999px;padding:.2rem .75rem;font-size:.72rem;font-weight:600;color:var(--glow);font-family:'JetBrains Mono',monospace;margin-left:auto}
+    .platform-desc{color:var(--muted);font-size:.9rem;line-height:1.6;margin-bottom:1.5rem}
+    .platform-btn{display:inline-flex;align-items:center;gap:.5rem;background:hsl(210 100% 56%/0.1);border:1px solid hsl(210 100% 56%/0.25);color:var(--glow);padding:.7rem 1.5rem;border-radius:.75rem;font-weight:600;font-size:.9rem;transition:all .2s}
+    .platform-btn:hover{background:hsl(210 100% 56%/0.2);border-color:hsl(210 100% 56%/0.4);color:white;transform:translateY(-1px)}
 
-    /* TECH SPECS */
-    .specs { padding: 5rem 0; }
-    .specs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: start; }
-    .spec-list { list-style: none; }
-    .spec-list li {
-      padding: 1rem 0;
-      border-bottom: 1px solid var(--border);
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    .spec-label { color: var(--muted-fg); font-size: 0.9rem; }
-    .spec-value { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; color: var(--primary-glow); }
-    .spec-code {
-      background: hsl(220 50% 3%);
-      border: 1px solid var(--border);
-      border-radius: 1rem;
-      padding: 2rem;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.8rem;
-      line-height: 1.8;
-      color: hsl(215 25% 70%);
-      overflow-x: auto;
-    }
-    .spec-code .kw { color: var(--primary); }
-    .spec-code .fn { color: var(--primary-glow); }
-    .spec-code .cm { color: var(--muted-fg); }
-    .spec-code .str { color: hsl(210 80% 70%); }
+    /* DAGTECH STORY */
+    .story{padding:5rem 0}
+    .story-grid{display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center}
+    .story-text h2{font-size:2rem;margin-bottom:1.5rem}
+    .story-text p{color:var(--muted);line-height:1.8;margin-bottom:1rem;font-size:.95rem}
+    .story-visual{background:linear-gradient(160deg,hsl(220 45% 9%/0.9) 0%,hsl(220 50% 5%/0.95) 100%);border:1px solid hsl(210 100% 56%/0.08);border-radius:1rem;padding:2rem}
+    .story-stat{padding:1.5rem 0;border-bottom:1px solid var(--border)}
+    .story-stat:last-child{border-bottom:none}
+    .story-stat-val{font-family:'Space Grotesk',sans-serif;font-size:1.8rem;font-weight:700;color:var(--primary)}
+    .story-stat-label{color:var(--muted);font-size:.85rem;margin-top:.2rem}
 
-    /* GUIDE SECTION */
-    .guide { padding: 5rem 0; }
-    .guide-tabs { display: flex; gap: 0.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
-    .guide-tab {
-      padding: 0.7rem 1.5rem;
-      background: var(--secondary);
-      border: 1px solid var(--border);
-      border-radius: 0.85rem;
-      font-size: 0.85rem;
-      font-weight: 500;
-      color: var(--muted-fg);
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .guide-tab.active, .guide-tab:hover {
-      background: hsl(210 100% 56% / 0.1);
-      border-color: hsl(210 100% 56% / 0.3);
-      color: var(--primary-glow);
-    }
-    .guide-content {
-      background: linear-gradient(160deg, hsl(220 45% 9% / 0.9) 0%, hsl(220 50% 5% / 0.95) 100%);
-      border: 1px solid hsl(210 100% 56% / 0.08);
-      border-radius: 1rem;
-      padding: 3rem;
-    }
-    .guide-content h3 { font-size: 1.3rem; margin-bottom: 1.5rem; }
-    .guide-step {
-      display: flex; gap: 1.5rem; margin-bottom: 2rem;
-      padding-bottom: 2rem;
-      border-bottom: 1px solid var(--border);
-    }
-    .guide-step:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
-    .step-number {
-      min-width: 36px; height: 36px;
-      background: hsl(210 100% 56% / 0.1);
-      border: 1px solid hsl(210 100% 56% / 0.3);
-      border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-family: 'Space Grotesk', sans-serif;
-      font-weight: 700; font-size: 0.85rem;
-      color: var(--primary);
-      flex-shrink: 0;
-    }
-    .step-content h4 { font-size: 1rem; margin-bottom: 0.5rem; }
-    .step-content p { color: var(--muted-fg); font-size: 0.9rem; margin-bottom: 0.75rem; }
+    /* CTA */
+    .cta{padding:5rem 0;text-align:center}
 
     /* FOOTER */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 3rem 0;
-      margin-top: 4rem;
-    }
-    .footer-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; }
-    .footer-left { display: flex; align-items: center; gap: 0.75rem; }
-    .footer-left img { height: 24px; }
-    .footer-left span { color: var(--muted-fg); font-size: 0.85rem; }
-    .footer-links { display: flex; gap: 1.5rem; }
-    .footer-links a { color: var(--muted-fg); font-size: 0.85rem; }
+    footer{border-top:1px solid var(--border);padding:3rem 0;margin-top:2rem}
+    .footer-content{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}
+    .footer-left{display:flex;align-items:center;gap:.75rem}
+    .footer-left img{height:24px}.footer-left span{color:var(--muted);font-size:.85rem}
+    .footer-links{display:flex;gap:1.5rem}.footer-links a{color:var(--muted);font-size:.85rem}
 
-    /* RESPONSIVE */
-    @media (max-width: 768px) {
-      .nav-links { display: none; }
-      .specs-grid { grid-template-columns: 1fr; }
-      .hero { padding: 8rem 0 4rem; }
-      .guide-content { padding: 2rem; }
-    }
-
-    /* TERMINAL ANIMATION */
-    .terminal {
-      background: hsl(220 50% 3%);
-      border: 1px solid var(--border);
-      border-radius: 1rem;
-      overflow: hidden;
-      margin: 3rem 0;
-      max-width: 700px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-    .terminal-header {
-      background: var(--secondary);
-      padding: 0.75rem 1rem;
-      display: flex; align-items: center; gap: 0.5rem;
-    }
-    .terminal-dot { width: 10px; height: 10px; border-radius: 50%; }
-    .terminal-dot:nth-child(1) { background: #ff5f56; }
-    .terminal-dot:nth-child(2) { background: #ffbd2e; }
-    .terminal-dot:nth-child(3) { background: #27c93f; }
-    .terminal-body {
-      padding: 1.5rem;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 0.82rem;
-      line-height: 2;
-      color: hsl(215 25% 70%);
-    }
-    .terminal-body .prompt { color: var(--primary); }
-    .terminal-body .output { color: var(--muted-fg); }
-    .terminal-body .success { color: var(--primary-glow); }
+    @media(max-width:768px){.nav-links{display:none}.story-grid{grid-template-columns:1fr}.hero{padding:8rem 0 4rem}}
   </style>
 </head>
 <body>
 
-  <!-- NAV -->
   <nav>
     <div class="container">
       <a href="/" class="nav-logo">
-        <img src="https://dapps.dagtech.network/logo.svg" alt="DagTech">
+        <img src="https://dapps.dagtech.network/icon.svg" alt="DagTech">
         <span>DagTech Miner</span>
       </a>
       <div class="nav-links">
-        <a href="#features">Features</a>
-        <a href="#platforms">Downloads</a>
-        <a href="#guide">Guide</a>
-        <a href="#specs">Specs</a>
+        <a href="#why">Why DagTech</a>
+        <a href="#platforms">Platforms</a>
+        <a href="install.html">Install Guide</a>
         <a href="https://github.com/Dagtechltd/dagtech-miner" target="_blank">GitHub</a>
-        <a href="#platforms" class="nav-cta">Download Now</a>
+        <a href="install.html" class="nav-cta">Start Mining</a>
       </div>
     </div>
   </nav>
@@ -435,12 +131,12 @@
   <section class="hero">
     <div class="container">
       <div class="hero-badge">Production Release</div>
-      <h1>Mine BlockDAG.<br>Your Hardware. Your Coins.</h1>
-      <p>Purpose-built mining software for the BlockDAG Network. Custom Scrypt implementation, automatic hardware optimization, built-in dashboard. One command to install, one command to mine.</p>
+      <h1>The Miner BlockDAG<br>Deserves.</h1>
+      <p>We didn't fork someone else's miner and slap a logo on it. DagTech Miner is built from scratch — every hash function, every stratum handshake, every line of C — purpose-engineered for the BlockDAG Network. Because this chain deserves software that takes it seriously.</p>
       <div class="hero-buttons">
-        <a href="#platforms" class="btn-primary">
+        <a href="install.html" class="btn-primary">
           <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Download for Your Platform
+          Start Mining — Free
         </a>
         <a href="https://github.com/Dagtechltd/dagtech-miner" class="btn-secondary" target="_blank">
           <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
@@ -448,21 +144,16 @@
         </a>
       </div>
 
-      <!-- Terminal Preview -->
       <div class="terminal">
         <div class="terminal-header">
-          <div class="terminal-dot"></div>
-          <div class="terminal-dot"></div>
-          <div class="terminal-dot"></div>
+          <div class="terminal-dot"></div><div class="terminal-dot"></div><div class="terminal-dot"></div>
         </div>
         <div class="terminal-body">
           <div><span class="prompt">$</span> ./install.sh</div>
-          <div class="output">&nbsp;&nbsp;Detecting hardware...</div>
-          <div class="success">&nbsp;&nbsp;CPU: Apple M1 Pro (10 cores) | RAM: 32 GB</div>
-          <div class="output">&nbsp;&nbsp;Building DagTech Miner...</div>
-          <div class="success">&nbsp;&nbsp;Build complete. Optimized for Apple Silicon.</div>
+          <div class="success">&nbsp;&nbsp;CPU: AMD Ryzen 9 9950X3D (32 threads) | GPU: RTX 4080</div>
+          <div class="success">&nbsp;&nbsp;Building DagTech Miner... done.</div>
           <div><span class="prompt">$</span> dagtech-start</div>
-          <div class="success">&nbsp;&nbsp;Mining started | Pool: excalibur.dagtech.network:3335</div>
+          <div class="success">&nbsp;&nbsp;Mining active | Pool: excalibur.dagtech.network:3335</div>
           <div class="success">&nbsp;&nbsp;Hashrate: 23.4 KH/s | Shares: 2179 accepted</div>
         </div>
       </div>
@@ -472,361 +163,130 @@
   <!-- STATS -->
   <section class="container">
     <div class="stats-bar">
-      <div class="stat">
-        <div class="stat-value">3</div>
-        <div class="stat-label">Platforms</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">23+ KH/s</div>
-        <div class="stat-label">Hash Rate (M1)</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">&lt;60s</div>
-        <div class="stat-label">Install Time</div>
-      </div>
-      <div class="stat">
-        <div class="stat-value">MIT</div>
-        <div class="stat-label">License</div>
-      </div>
+      <div class="stat"><div class="stat-value">3</div><div class="stat-label">Platforms</div></div>
+      <div class="stat"><div class="stat-value">CPU + GPU</div><div class="stat-label">Mining Modes</div></div>
+      <div class="stat"><div class="stat-value">&lt; 60s</div><div class="stat-label">Install Time</div></div>
+      <div class="stat"><div class="stat-value">Open Source</div><div class="stat-label">MIT License</div></div>
     </div>
   </section>
 
-  <!-- FEATURES -->
-  <section class="features" id="features">
+  <!-- WHY DAGTECH -->
+  <section class="why" id="why">
     <div class="container">
       <div class="section-header">
-        <h2>Built for Miners, by Miners</h2>
-        <p>Every line of code written specifically for BlockDAG. No forks, no wrappers — custom from the ground up.</p>
+        <h2>Why We Built This</h2>
+        <p>BlockDAG is a fundamentally different chain. It deserved mining software that understands that difference.</p>
       </div>
-      <div class="features-grid">
-        <div class="feature-card">
-          <div class="feature-icon">&#9889;</div>
-          <h3>Custom Scrypt Engine</h3>
-          <p>Proprietary Modified Scrypt (N=1024, r=1, p=1) with post-ROMix transformation. Written in pure C for maximum throughput on any hardware.</p>
+      <div class="why-grid">
+        <div class="why-card">
+          <div class="why-icon">&#9889;</div>
+          <h3>Custom Hash Engine</h3>
+          <p>Not a copy-paste from Litecoin. Our Scrypt implementation (N=1024, r=1, p=1) includes BlockDAG's proprietary post-ROMix transformation — the exact algorithm the network validates. Written in pure C for maximum throughput.</p>
         </div>
-        <div class="feature-card">
-          <div class="feature-icon">&#128736;</div>
-          <h3>Auto Hardware Detection</h3>
-          <p>Detects your CPU architecture, core count, available RAM, and GPU capability. Automatically configures optimal thread count and memory allocation.</p>
+        <div class="why-card">
+          <div class="why-icon">&#128736;</div>
+          <h3>Hardware-Aware</h3>
+          <p>The installer detects your CPU architecture, core count, L2/L3 cache, and NVIDIA GPU. It auto-configures thread count, compiles natively for your chip (x86, ARM64, Apple Silicon), and offers CPU + GPU mixed-mode mining.</p>
         </div>
-        <div class="feature-card">
-          <div class="feature-icon">&#128202;</div>
+        <div class="why-card">
+          <div class="why-icon">&#128202;</div>
           <h3>Built-in Dashboard</h3>
-          <p>Real-time web dashboard at localhost:8881 showing hashrate, accepted/rejected shares, uptime, pool connection status, and per-thread performance.</p>
+          <p>Real-time web dashboard at localhost:8881 — hashrate, accepted shares, pool connection, per-thread stats. No third-party monitoring needed. Just open your browser.</p>
         </div>
-        <div class="feature-card">
-          <div class="feature-icon">&#128274;</div>
-          <h3>Stratum Protocol</h3>
-          <p>Full stratum implementation with vardiff support. Automatic reconnection, job switching, and clean share submission. Compatible with standard mining pools.</p>
+        <div class="why-card">
+          <div class="why-icon">&#128274;</div>
+          <h3>Full Stratum Protocol</h3>
+          <p>Complete stratum v1 implementation with vardiff support. Auto-reconnection, clean job switching, nonce range management. Compatible with any BlockDAG mining pool.</p>
         </div>
-        <div class="feature-card">
-          <div class="feature-icon">&#127968;</div>
+        <div class="why-card">
+          <div class="why-icon">&#127968;</div>
           <h3>One-Command Install</h3>
-          <p>Clone, run installer, start mining. The installer handles dependencies, compilation, configuration, and service setup — zero manual config required.</p>
+          <p>Clone, run installer, mine. Three commands. Under sixty seconds. Dependencies, compilation, configuration, PATH setup, systemd service, desktop shortcuts — all handled. Zero manual config.</p>
         </div>
-        <div class="feature-card">
-          <div class="feature-icon">&#128640;</div>
-          <h3>Production Tested</h3>
-          <p>Running in production on our own infrastructure. Battle-tested against real pool operations with thousands of accepted shares confirmed.</p>
+        <div class="why-card">
+          <div class="why-icon">&#128640;</div>
+          <h3>Battle-Tested</h3>
+          <p>Running on our own infrastructure in production — Ras Al Khaimah, Cape Town, and community miners worldwide. Thousands of accepted shares. Real blocks. Real earnings. Not a testnet toy.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- PLATFORMS / DOWNLOAD -->
+  <!-- OUR STORY -->
+  <section class="story">
+    <div class="container">
+      <div class="story-grid">
+        <div class="story-text">
+          <h2>Built by DagTech.<br>For the Community.</h2>
+          <p>When we started mining BlockDAG, there was no miner. No pool software. No documentation. Just a chain with potential and a community waiting for someone to build the tools.</p>
+          <p>So we did. DagTech Ltd reverse-engineered the hash function, built the stratum implementation from packet captures, deployed pool infrastructure across three continents, and open-sourced everything — because that's how crypto is supposed to work.</p>
+          <p>This isn't a side project. It's infrastructure for a network we believe in. Every commit, every optimization, every bug fix is driven by one goal: make it as easy as possible for anyone to participate in the BlockDAG Network.</p>
+          <p style="color:var(--glow);font-weight:600;">Your hardware. Your coins. Your network.</p>
+        </div>
+        <div class="story-visual">
+          <div class="story-stat"><div class="story-stat-val">Custom Scrypt</div><div class="story-stat-label">Hash algorithm reverse-engineered and implemented from scratch</div></div>
+          <div class="story-stat"><div class="story-stat-val">3 Continents</div><div class="story-stat-label">Pool infrastructure: UAE, South Africa, US West</div></div>
+          <div class="story-stat"><div class="story-stat-val">130+ Skills</div><div class="story-stat-label">AI-powered development toolkit behind DagTech engineering</div></div>
+          <div class="story-stat"><div class="story-stat-val">100% Open Source</div><div class="story-stat-label">MIT licensed. Fork it, audit it, improve it.</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PLATFORMS -->
   <section class="platforms" id="platforms">
     <div class="container">
       <div class="section-header">
-        <h2>Download &amp; Install</h2>
-        <p>Choose your platform. Each installer handles everything from dependencies to optimization.</p>
+        <h2>Choose Your Platform</h2>
+        <p>Each platform has a dedicated step-by-step installation guide. Click your OS to get started.</p>
       </div>
       <div class="platform-cards">
-
-        <!-- LINUX -->
         <div class="platform-card">
           <div class="platform-header">
             <div class="platform-icon">&#128039;</div>
             <div class="platform-name">Linux</div>
             <span class="platform-version">v2.1.0</span>
           </div>
-          <div class="platform-reqs">Ubuntu 20.04+ / Debian 11+ / Fedora 36+ / Arch &bull; 2+ cores, 512MB RAM &bull; gcc auto-installed</div>
-          <ul class="platform-steps">
-            <li>Auto-installs gcc, build-essential, libssl-dev</li>
-            <li>Detects NVIDIA GPU for mixed-mode mining</li>
-            <li>Creates systemd service for auto-start on boot</li>
-            <li>Configuration wizard for wallet, pool, threads</li>
-          </ul>
-          <div class="code-block">
-            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-            <span class="comment"># Clone and install</span><br>
-            git clone https://github.com/Dagtechltd/dagtech-miner.git<br>
-            cd dagtech-miner<br>
-            chmod +x install.sh<br>
-            ./install.sh
-          </div>
+          <p class="platform-desc">Ubuntu 20.04+, Debian 11+, Fedora 36+, Arch. CPU + CUDA GPU support. Auto-installs gcc, OpenSSL. Systemd service for auto-start on boot.</p>
+          <a href="install.html" class="platform-btn">Step-by-Step Guide &rarr;</a>
         </div>
-
-        <!-- macOS -->
         <div class="platform-card">
           <div class="platform-header">
             <div class="platform-icon">&#63743;</div>
             <div class="platform-name">macOS</div>
             <span class="platform-version">v2.1.0</span>
           </div>
-          <div class="platform-reqs">macOS 11+ (Big Sur) &bull; Intel or Apple Silicon &bull; Xcode CLT auto-installed</div>
-          <ul class="platform-steps">
-            <li>Detects M1/M2/M3 or Intel architecture</li>
-            <li>Installs Xcode Command Line Tools if missing</li>
-            <li>Detects Homebrew OpenSSL for acceleration</li>
-            <li>Creates launchd service for auto-start on login</li>
-          </ul>
-          <div class="code-block">
-            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-            <span class="comment"># Clone and install</span><br>
-            git clone https://github.com/Dagtechltd/dagtech-miner.git<br>
-            cd dagtech-miner<br>
-            chmod +x install-mac.sh<br>
-            ./install-mac.sh
-          </div>
+          <p class="platform-desc">macOS 11+ (Big Sur). Intel and Apple Silicon (M1/M2/M3/M4). Auto-detects Xcode CLT and Homebrew OpenSSL. Optimized for ARM64.</p>
+          <a href="install.html" class="platform-btn">Step-by-Step Guide &rarr;</a>
         </div>
-
-        <!-- WINDOWS -->
         <div class="platform-card">
           <div class="platform-header">
             <div class="platform-icon">&#128187;</div>
             <div class="platform-name">Windows</div>
             <span class="platform-version">v2.1.0</span>
           </div>
-          <div class="platform-reqs">Windows 10+ &bull; No compiler needed &bull; Pre-built binary included</div>
-          <ul class="platform-steps">
-            <li>Detects CPU/RAM/GPU via system queries</li>
-            <li>Uses pre-built binary automatically (no compiler required)</li>
-            <li>Creates .bat launcher scripts for easy start/stop</li>
-            <li>Configuration wizard with GPU detection</li>
-          </ul>
-          <div class="code-block">
-            <button class="copy-btn" onclick="copyCode(this)">Copy</button>
-            <span class="comment">:: Clone and install</span><br>
-            git clone https://github.com/Dagtechltd/dagtech-miner.git<br>
-            cd dagtech-miner<br>
-            install.bat
-          </div>
-        </div>
-
-      </div>
-    </div>
-  </section>
-
-  <!-- INSTALLATION GUIDE -->
-  <section class="guide" id="guide">
-    <div class="container">
-      <div class="section-header">
-        <h2>Step-by-Step Guide</h2>
-        <p>From zero to mining in under 60 seconds.</p>
-      </div>
-
-      <div class="guide-tabs">
-        <div class="guide-tab active" onclick="showGuide('linux')">Linux</div>
-        <div class="guide-tab" onclick="showGuide('mac')">macOS</div>
-        <div class="guide-tab" onclick="showGuide('windows')">Windows</div>
-      </div>
-
-      <div class="guide-content" id="guide-linux">
-        <h3>Linux Installation Guide</h3>
-
-        <div class="guide-step">
-          <div class="step-number">1</div>
-          <div class="step-content">
-            <h4>Prerequisites</h4>
-            <p>You need git installed. Most Linux distros include it. If not:</p>
-            <div class="code-block">sudo apt install git <span class="comment"># Debian/Ubuntu</span></div>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="step-number">2</div>
-          <div class="step-content">
-            <h4>Clone the Repository</h4>
-            <p>Download the miner source code from GitHub:</p>
-            <div class="code-block">git clone https://github.com/Dagtechltd/dagtech-miner.git && cd dagtech-miner</div>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="step-number">3</div>
-          <div class="step-content">
-            <h4>Run the Installer</h4>
-            <p>The installer checks your hardware, installs dependencies (gcc, OpenSSL), then walks you through configuration:</p>
-            <div class="code-block">chmod +x install.sh && ./install.sh</div>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="step-number">4</div>
-          <div class="step-content">
-            <h4>Configuration Wizard</h4>
-            <p>The wizard asks for your wallet address, lets you choose CPU or GPU mode, select thread count, and set your pool. Default pool: <code>excalibur.dagtech.network:3335</code></p>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="step-number">5</div>
-          <div class="step-content">
-            <h4>Start Mining</h4>
-            <p>After installation completes, start mining with one command:</p>
-            <div class="code-block">dagtech-start</div>
-            <p>Other commands: <code>dagtech-stop</code> to stop, <code>dagtech-status</code> to check stats. Dashboard at <code>http://localhost:8881</code></p>
-          </div>
-        </div>
-      </div>
-
-      <div class="guide-content" id="guide-mac" style="display:none;">
-        <h3>macOS Installation Guide</h3>
-
-        <div class="guide-step">
-          <div class="step-number">1</div>
-          <div class="step-content">
-            <h4>Prerequisites</h4>
-            <p>You need git (comes with macOS) and a terminal. Open Terminal.app from Applications > Utilities.</p>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="step-number">2</div>
-          <div class="step-content">
-            <h4>Clone the Repository</h4>
-            <div class="code-block">git clone https://github.com/Dagtechltd/dagtech-miner.git && cd dagtech-miner</div>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="step-number">3</div>
-          <div class="step-content">
-            <h4>Run the macOS Installer</h4>
-            <p>Installs Xcode Command Line Tools if needed, detects Apple Silicon vs Intel, finds Homebrew OpenSSL:</p>
-            <div class="code-block">chmod +x install-mac.sh && ./install-mac.sh</div>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="step-number">4</div>
-          <div class="step-content">
-            <h4>Configuration</h4>
-            <p>Enter your wallet address when prompted. macOS uses CPU mining (optimized for Apple Silicon). The installer detects your M-series chip and sets optimal thread count automatically.</p>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="step-number">5</div>
-          <div class="step-content">
-            <h4>Start Mining</h4>
-            <div class="code-block">dagtech-start</div>
-            <p>Optional: The installer offers to create a LaunchAgent for auto-start on login. Your Mac will mine automatically every time you log in.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="guide-content" id="guide-windows" style="display:none;">
-        <h3>Windows Installation Guide</h3>
-
-        <div class="guide-step">
-          <div class="step-number">1</div>
-          <div class="step-content">
-            <h4>Prerequisites</h4>
-            <p>Install Git for Windows from <a href="https://git-scm.com/download/win" target="_blank">git-scm.com</a>. Open Command Prompt or PowerShell as Administrator.</p>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="step-number">2</div>
-          <div class="step-content">
-            <h4>Clone the Repository</h4>
-            <div class="code-block">git clone https://github.com/Dagtechltd/dagtech-miner.git<br>cd dagtech-miner</div>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="step-number">3</div>
-          <div class="step-content">
-            <h4>Run the Installer</h4>
-            <p>The batch installer automatically uses the pre-built binary from the repo. If a C compiler is available, it can optionally build from source:</p>
-            <div class="code-block">install.bat</div>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="step-number">4</div>
-          <div class="step-content">
-            <h4>Configuration</h4>
-            <p>Enter your wallet address, choose GPU/CPU mode. The installer detects NVIDIA GPUs via WMIC and offers GPU-accelerated mining if available.</p>
-          </div>
-        </div>
-
-        <div class="guide-step">
-          <div class="step-number">5</div>
-          <div class="step-content">
-            <h4>Start Mining</h4>
-            <div class="code-block">dagtech-start.bat</div>
-            <p>Other scripts: <code>dagtech-stop.bat</code> and <code>dagtech-status.bat</code>. Dashboard at <code>http://localhost:8881</code></p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- TECHNICAL SPECS -->
-  <section class="specs" id="specs">
-    <div class="container">
-      <div class="section-header">
-        <h2>Under the Hood</h2>
-        <p>No black boxes. Here's exactly what powers your mining operations.</p>
-      </div>
-      <div class="specs-grid">
-        <ul class="spec-list">
-          <li><span class="spec-label">Hash Algorithm</span><span class="spec-value">Modified Scrypt (N=1024, r=1, p=1)</span></li>
-          <li><span class="spec-label">Post-Processing</span><span class="spec-value">Proprietary ROMix Transform</span></li>
-          <li><span class="spec-label">Language</span><span class="spec-value">ANSI C99</span></li>
-          <li><span class="spec-label">Protocol</span><span class="spec-value">Stratum v1 + VarDiff</span></li>
-          <li><span class="spec-label">Threading</span><span class="spec-value">POSIX pthreads / Win32 Threads</span></li>
-          <li><span class="spec-label">Crypto Library</span><span class="spec-value">OpenSSL (optional) / Built-in SHA256</span></li>
-          <li><span class="spec-label">Default Pool</span><span class="spec-value">excalibur.dagtech.network:3335</span></li>
-          <li><span class="spec-label">Dashboard</span><span class="spec-value">HTTP :8881 (built-in)</span></li>
-          <li><span class="spec-label">Config Storage</span><span class="spec-value">~/.dagtech-miner/config.env</span></li>
-          <li><span class="spec-label">License</span><span class="spec-value">MIT</span></li>
-        </ul>
-        <div class="spec-code">
-          <span class="cm">/* DagTech Mining Engine — Core Hash Loop */</span><br><br>
-          <span class="kw">static void</span> <span class="fn">dagtech_hash</span>(<span class="kw">const</span> uint8_t *input, uint8_t *output) {<br>
-          &nbsp;&nbsp;<span class="cm">/* Modified Scrypt with post-ROMix transform */</span><br>
-          &nbsp;&nbsp;uint8_t B[128];<br>
-          &nbsp;&nbsp;uint32_t *V = malloc(N * 128);<br><br>
-          &nbsp;&nbsp;<span class="fn">PBKDF2_SHA256</span>(input, 80, input, 80, 1, B, 128);<br>
-          &nbsp;&nbsp;<span class="fn">scrypt_ROMix</span>(B, V, N);<br>
-          &nbsp;&nbsp;<span class="fn">dagtech_post_transform</span>(B, 128);<br>
-          &nbsp;&nbsp;<span class="fn">PBKDF2_SHA256</span>(input, 80, B, 128, 1, output, 32);<br><br>
-          &nbsp;&nbsp;free(V);<br>
-          }
+          <p class="platform-desc">Windows 10+. Pre-built binary included — no compiler needed. NVIDIA GPU auto-detection. Desktop shortcut and Start Menu integration.</p>
+          <a href="install.html" class="platform-btn">Step-by-Step Guide &rarr;</a>
         </div>
       </div>
     </div>
   </section>
 
   <!-- CTA -->
-  <section style="padding: 5rem 0;">
-    <div class="container" style="text-align: center;">
-      <h2 style="font-size: 2.5rem; margin-bottom: 1rem;">Ready to Mine?</h2>
-      <p style="color: var(--muted-fg); font-size: 1.1rem; margin-bottom: 2.5rem; max-width: 500px; margin-left: auto; margin-right: auto;">Join the BlockDAG network. Three commands. Under sixty seconds. Start earning.</p>
+  <section class="cta">
+    <div class="container">
+      <h2 style="font-size:2.5rem;margin-bottom:1rem;">Ready to Mine?</h2>
+      <p style="color:var(--muted);font-size:1.1rem;margin-bottom:2.5rem;max-width:500px;margin-left:auto;margin-right:auto;">Join the BlockDAG network. Three commands. Under sixty seconds. Start earning BDAG.</p>
       <div class="hero-buttons">
-        <a href="https://github.com/Dagtechltd/dagtech-miner" class="btn-primary" target="_blank">
-          <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-          Get DagTech Miner
+        <a href="install.html" class="btn-primary">
+          <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Follow the Install Guide
         </a>
-        <a href="#guide" class="btn-secondary">Read the Guide</a>
+        <a href="https://github.com/Dagtechltd/dagtech-miner" class="btn-secondary" target="_blank">View on GitHub</a>
       </div>
     </div>
   </section>
 
-  <!-- FOOTER -->
   <footer>
     <div class="container">
       <div class="footer-content">
@@ -839,27 +299,11 @@
           <a href="https://dapps.dagtech.network">Staking</a>
           <a href="https://explorer.dagtech.network">Explorer</a>
           <a href="https://stats.dagtech.network">Node Stats</a>
+          <a href="node.html">Run a Node</a>
           <a href="https://github.com/Dagtechltd" target="_blank">GitHub</a>
         </div>
       </div>
     </div>
   </footer>
-
-  <script>
-    function showGuide(platform) {
-      document.querySelectorAll('.guide-content').forEach(el => el.style.display = 'none');
-      document.querySelectorAll('.guide-tab').forEach(el => el.classList.remove('active'));
-      document.getElementById('guide-' + platform).style.display = 'block';
-      event.target.classList.add('active');
-    }
-
-    function copyCode(btn) {
-      const block = btn.parentElement;
-      const text = block.innerText.replace('Copy', '').trim();
-      navigator.clipboard.writeText(text);
-      btn.textContent = 'Copied!';
-      setTimeout(() => btn.textContent = 'Copy', 2000);
-    }
-  </script>
 </body>
 </html>

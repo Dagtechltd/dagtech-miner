@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DagTech Miner — Step-by-Step Installation Guide</title>
+<link rel="icon" href="https://dapps.dagtech.network/icon.svg" type="image/svg+xml">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #080b14;
+  --fg: #f4f7fb;
+  --primary: hsl(210 100% 56%);
+  --glow: #66b3ff;
+  --accent: #0a4cbf;
+  --card: #0d1220;
+  --card-hover: #111929;
+  --border: #1a2236;
+  --green: #4ade80;
+  --yellow: #fbbf24;
+  --cyan: #22d3ee;
+  --muted: #607080;
+  --step-done: #4ade80;
+  --step-active: var(--primary);
+  --step-pending: #2a3548;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+html { scroll-behavior:smooth; }
+body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--fg); min-height:100vh; }
+body::before { content:''; position:fixed; inset:0; background:radial-gradient(ellipse 100% 50% at 50% 0%, hsl(210 100% 56%/0.04) 0%, transparent 60%); pointer-events:none; }
+h1,h2,h3,h4 { font-family:'Space Grotesk',sans-serif; }
+
+/* NAV */
+nav { position:sticky; top:0; z-index:100; background:hsl(220 50% 4%/0.9); backdrop-filter:blur(20px); border-bottom:1px solid hsl(210 100% 56%/0.08); padding:0.8rem 0; }
+nav .inner { max-width:900px; margin:0 auto; padding:0 1.5rem; display:flex; align-items:center; justify-content:space-between; }
+.logo { display:flex; align-items:center; gap:0.6rem; }
+.logo img { height:28px; }
+.logo span { font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:1rem; }
+.nav-links { display:flex; gap:1.5rem; align-items:center; }
+.nav-links a { color:var(--muted); font-size:0.85rem; font-weight:500; text-decoration:none; transition:color 0.2s; }
+.nav-links a:hover { color:var(--fg); }
+
+/* HEADER */
+.header { text-align:center; padding:4rem 1.5rem 2rem; position:relative; z-index:1; }
+.header h1 { font-size:clamp(1.8rem,5vw,2.8rem); font-weight:700; background:linear-gradient(135deg,var(--fg) 30%,var(--glow)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+.header p { color:var(--muted); margin-top:0.6rem; font-size:1.05rem; max-width:550px; margin-left:auto; margin-right:auto; }
+
+/* PLATFORM TABS */
+.platform-tabs { display:flex; justify-content:center; gap:0.6rem; margin:1.5rem 0 2.5rem; flex-wrap:wrap; padding:0 1rem; }
+.ptab {
+  padding:0.9rem 2rem; background:var(--card); border:1px solid var(--border);
+  border-radius:1rem; font-weight:600; cursor:pointer; transition:all 0.25s;
+  font-family:'Space Grotesk',sans-serif; font-size:1rem; color:var(--muted);
+  display:flex; align-items:center; gap:0.6rem;
+}
+.ptab.active { background:hsl(210 100% 56%/0.1); border-color:hsl(210 100% 56%/0.4); color:var(--glow); box-shadow:0 0 30px hsl(210 100% 56%/0.1); }
+.ptab:hover:not(.active) { border-color:hsl(210 100% 56%/0.2); color:var(--fg); }
+.ptab-icon { font-size:1.4rem; }
+
+.container { max-width:750px; margin:0 auto; padding:0 1.5rem 5rem; position:relative; z-index:1; }
+
+/* PROGRESS BAR */
+.progress-bar { display:flex; align-items:center; margin-bottom:2.5rem; padding:0 0.5rem; }
+.progress-dot {
+  width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:0.85rem;
+  border:2px solid var(--step-pending); color:var(--muted); background:var(--bg);
+  transition:all 0.3s; flex-shrink:0; cursor:pointer; position:relative;
+}
+.progress-dot.active { border-color:var(--step-active); color:var(--primary); background:hsl(210 100% 56%/0.1); box-shadow:0 0 16px hsl(210 100% 56%/0.3); }
+.progress-dot.done { border-color:var(--step-done); color:var(--bg); background:var(--step-done); }
+.progress-dot.done::after { content:'✓'; position:absolute; font-size:0.9rem; }
+.progress-dot.done span { visibility:hidden; }
+.progress-line { flex:1; height:2px; background:var(--step-pending); transition:background 0.3s; margin:0 4px; }
+.progress-line.done { background:var(--step-done); }
+.progress-line.active { background:linear-gradient(90deg,var(--step-done),var(--step-active)); }
+
+/* STEP CARD */
+.step-card {
+  background:linear-gradient(160deg, hsl(220 45% 9%/0.95) 0%, hsl(220 50% 5%) 100%);
+  border:1px solid var(--border); border-radius:1.2rem;
+  padding:2.5rem; transition:all 0.3s; display:none;
+}
+.step-card.active { display:block; animation:slideIn 0.35s ease-out; }
+@keyframes slideIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+.step-header { display:flex; align-items:center; gap:1rem; margin-bottom:1.5rem; }
+.step-number {
+  min-width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+  background:hsl(210 100% 56%/0.1); border:2px solid hsl(210 100% 56%/0.3);
+  font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:1rem; color:var(--primary);
+}
+.step-title { font-size:1.35rem; font-weight:700; }
+.step-subtitle { color:var(--muted); font-size:0.95rem; line-height:1.7; margin-bottom:1.5rem; }
+.step-subtitle strong { color:var(--fg); font-weight:600; }
+
+/* CODE BLOCK */
+.code-wrapper { position:relative; margin:1rem 0 1.5rem; }
+.code-block {
+  background:#0a0a12; border:1px solid #1e2638; border-radius:0.75rem;
+  padding:1.2rem 1.5rem; padding-right:4.5rem;
+  font-family:'JetBrains Mono',monospace; font-size:0.88rem; line-height:1.8;
+  color:var(--glow); overflow-x:auto; white-space:pre-wrap; word-break:break-all;
+}
+.code-block .comment { color:#4a5568; }
+.copy-btn {
+  position:absolute; top:0.7rem; right:0.7rem;
+  background:hsl(210 100% 56%/0.15); border:1px solid hsl(210 100% 56%/0.3);
+  color:var(--glow); padding:0.4rem 0.9rem; border-radius:0.5rem;
+  font-size:0.75rem; font-weight:600; cursor:pointer; transition:all 0.2s;
+  font-family:'Inter',sans-serif;
+}
+.copy-btn:hover { background:hsl(210 100% 56%/0.25); border-color:hsl(210 100% 56%/0.5); }
+.copy-btn.copied { background:hsl(140 60% 40%/0.2); border-color:var(--green); color:var(--green); }
+
+/* TIP BOX */
+.tip-box {
+  background:hsl(210 100% 56%/0.06); border:1px solid hsl(210 100% 56%/0.15);
+  border-radius:0.75rem; padding:1rem 1.2rem; margin:1rem 0;
+  display:flex; gap:0.8rem; align-items:flex-start;
+}
+.tip-box .tip-icon { font-size:1.2rem; flex-shrink:0; margin-top:0.1rem; }
+.tip-box p { color:hsl(215 30% 70%); font-size:0.88rem; line-height:1.6; }
+
+.warn-box {
+  background:hsl(40 100% 50%/0.06); border:1px solid hsl(40 100% 50%/0.15);
+  border-radius:0.75rem; padding:1rem 1.2rem; margin:1rem 0;
+  display:flex; gap:0.8rem; align-items:flex-start;
+}
+.warn-box .tip-icon { font-size:1.2rem; flex-shrink:0; }
+.warn-box p { color:hsl(40 80% 70%); font-size:0.88rem; line-height:1.6; }
+
+/* TERMINAL PREVIEW */
+.term-preview {
+  background:#0c0c0c; border:1px solid #1e2638; border-radius:0.75rem;
+  overflow:hidden; margin:1rem 0;
+}
+.term-bar { background:#1a1a2e; padding:0.5rem 0.8rem; display:flex; align-items:center; gap:0.4rem; }
+.term-bar-label { margin-left:0.6rem; color:var(--muted); font-size:0.72rem; font-family:'JetBrains Mono',monospace; }
+.tdot { width:10px; height:10px; border-radius:50%; }
+.tdot.r { background:#ff5f56; } .tdot.y { background:#ffbd2e; } .tdot.g { background:#27c93f; }
+/* Linux terminal bar */
+.term-bar.linux-bar { gap:0.5rem; }
+.term-bar.linux-bar .term-icon { color:var(--green); font-size:0.8rem; font-family:'JetBrains Mono',monospace; font-weight:700; }
+/* Windows terminal bar */
+.term-bar.win-bar { background:#0c0c0c; border-bottom:1px solid #333; }
+.term-bar.win-bar .term-icon { color:#ccc; font-size:0.75rem; font-family:'JetBrains Mono',monospace; }
+.win-btns { margin-left:auto; display:flex; gap:0.8rem; color:#888; font-size:0.75rem; font-family:'JetBrains Mono',monospace; }
+.win-btns span { cursor:default; }
+.term-out { padding:1rem 1.2rem; font-family:'JetBrains Mono',monospace; font-size:0.8rem; line-height:1.8; color:#9ca3af; }
+.term-out .g { color:var(--green); } .term-out .b { color:var(--glow); } .term-out .c { color:var(--cyan); } .term-out .w { color:var(--yellow); }
+
+/* NAV BUTTONS */
+.step-nav { display:flex; justify-content:space-between; align-items:center; margin-top:2rem; padding-top:1.5rem; border-top:1px solid var(--border); }
+.btn {
+  padding:0.85rem 2rem; border-radius:0.85rem; font-weight:600; cursor:pointer;
+  font-family:'Space Grotesk',sans-serif; font-size:0.95rem; border:none; transition:all 0.2s;
+  display:inline-flex; align-items:center; gap:0.5rem;
+}
+.btn-next {
+  background:linear-gradient(135deg,var(--primary),var(--accent)); color:white;
+  box-shadow:0 0 20px hsl(210 100% 56%/0.3);
+}
+.btn-next:hover { transform:translateY(-2px); box-shadow:0 0 30px hsl(210 100% 56%/0.5); }
+.btn-prev { background:var(--card); color:var(--muted); border:1px solid var(--border); }
+.btn-prev:hover { color:var(--fg); border-color:hsl(210 100% 56%/0.2); }
+.btn-dash {
+  background:linear-gradient(135deg,var(--green),#059669); color:#0a0f1a;
+  box-shadow:0 0 24px hsl(140 60% 40%/0.3); font-size:1rem; padding:1rem 2.5rem;
+}
+.btn-dash:hover { transform:translateY(-2px); box-shadow:0 0 36px hsl(140 60% 40%/0.5); }
+.btn-hidden { visibility:hidden; }
+
+/* FINAL CARD */
+.final-box {
+  text-align:center; padding:1rem 0;
+}
+.final-box h2 { font-size:1.8rem; margin-bottom:0.5rem; color:var(--green); }
+.final-box p { color:var(--muted); margin-bottom:2rem; font-size:1rem; }
+
+/* RESPONSIVE */
+@media (max-width:600px) {
+  .step-card { padding:1.5rem; }
+  .ptab { padding:0.7rem 1.2rem; font-size:0.85rem; }
+  .progress-dot { width:30px; height:30px; font-size:0.75rem; }
+  .code-block { font-size:0.78rem; padding-right:1rem; }
+  .copy-btn { position:static; display:block; margin-top:0.5rem; text-align:center; }
+  .nav-links { display:none; }
+}
+
+footer { text-align:center; padding:2rem; color:var(--muted); font-size:0.8rem; border-top:1px solid var(--border); }
+footer a { color:var(--primary); text-decoration:none; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="inner">
+    <div class="logo">
+      <img src="https://dapps.dagtech.network/icon.svg" alt="DagTech">
+      <span>DagTech Miner</span>
+    </div>
+    <div class="nav-links">
+      <a href="https://miners.dagtech.network">Downloads</a>
+      <a href="https://github.com/Dagtechltd/dagtech-miner" target="_blank">GitHub</a>
+      <a href="https://dagtech.network">dagtech.network</a>
+    </div>
+  </div>
+</nav>
+
+<div class="header">
+  <h1>Installation Guide</h1>
+  <p>Follow the steps below. Click each command to copy it, then click Next to continue.</p>
+</div>
+
+<div class="platform-tabs">
+  <div class="ptab active" onclick="switchPlatform('linux')"><span class="ptab-icon">&#128039;</span> Linux</div>
+  <div class="ptab" onclick="switchPlatform('mac')"><span class="ptab-icon">&#63743;</span> macOS</div>
+  <div class="ptab" onclick="switchPlatform('windows')"><span class="ptab-icon">&#128187;</span> Windows</div>
+</div>
+
+<div class="container">
+  <!-- Progress bar rendered dynamically -->
+  <div class="progress-bar" id="progress-bar"></div>
+
+  <!-- Steps rendered dynamically -->
+  <div id="steps-container"></div>
+</div>
+
+<footer>
+  &copy; 2024-2026 <a href="https://dagtech.network">DagTech Ltd</a> &bull; By Dawie Nel &bull; <a href="https://github.com/Dagtechltd/dagtech-miner">View Source</a>
+</footer>
+
+<script>
+const platforms = {
+  linux: {
+    steps: [
+      {
+        title: 'Open a Terminal',
+        subtitle: 'Open your Linux terminal. On Ubuntu/Debian you can press <strong>Ctrl + Alt + T</strong>. On other distros, find Terminal in your app menu.',
+        tip: 'Any Linux distro with 2+ CPU cores and 512MB RAM will work. Ubuntu 20.04+, Debian 11+, Fedora 36+, Arch — all supported.',
+        preview: ['<span class="b">$</span> _', '', '<span class="g">Ready to go!</span>']
+      },
+      {
+        title: 'Clone the Repository',
+        subtitle: 'Download the DagTech Miner source code from GitHub. This creates a <strong>dagtech-miner</strong> folder with everything you need.',
+        cmd: 'git clone https://github.com/Dagtechltd/dagtech-miner.git && cd dagtech-miner',
+        tip: 'Don\'t have git? Run <code style="color:var(--glow)">sudo apt install git</code> first (Ubuntu/Debian) or <code style="color:var(--glow)">sudo dnf install git</code> (Fedora).',
+        preview: ['<span class="b">$</span> git clone https://github.com/Dagtechltd/dagtech-miner.git', 'Cloning into \'dagtech-miner\'...', 'remote: Enumerating objects: 847, done.', '<span class="g">Receiving objects: 100% (847/847), 2.1 MiB, done.</span>', '<span class="b">$</span> cd dagtech-miner']
+      },
+      {
+        title: 'Run the Installer',
+        subtitle: 'Make the installer executable and run it. It will <strong>auto-detect your hardware</strong>, install any missing dependencies (gcc, OpenSSL), and walk you through configuration.',
+        cmd: 'chmod +x install.sh && ./install.sh',
+        preview: ['<span class="b">$</span> ./install.sh', '', '<span class="b">  ╔══════════════════════════════════════════════╗</span>', '<span class="c">  ║   DagTech Miner v2.1.0 — Installer           ║</span>', '<span class="b">  ╚══════════════════════════════════════════════╝</span>', '', '<span class="c">[DagTech]</span> Detecting hardware...', '<span class="g">  ✓ CPU: AMD Ryzen 9 9950X3D (32 threads)</span>', '<span class="g">  ✓ GPU: NVIDIA GeForce RTX 4080</span>', '<span class="g">  ✓ CUDA: v12.0</span>']
+      },
+      {
+        title: 'Enter Your Wallet Address',
+        subtitle: 'The installer will ask for your <strong>BlockDAG wallet address</strong>. This is where your mining rewards go. It starts with <strong>0x</strong> followed by 40 characters.',
+        warn: 'Make sure your wallet address is correct! If you enter the wrong address, your mining rewards will go to someone else and cannot be recovered.',
+        preview: ['<span class="c">  --- Configuration ---</span>', '', '<span class="b">  Enter wallet address (0x...):</span> <span class="g">0x6387C32ccDD60BfBa00EC70A67715Dcd52E8083f</span>', '', '<span class="g">  ✓ Wallet address accepted</span>']
+      },
+      {
+        title: 'Choose Mining Mode & Threads',
+        subtitle: 'Pick your mining mode. If you have an <strong>NVIDIA GPU</strong>, choose option 3 (CPU + GPU) for maximum hashrate. Then set your thread count — start with half your cores.',
+        preview: ['<span class="c">  Mining mode:</span>', '    1) CPU only', '    2) GPU only', '    <span class="b">3) CPU + GPU [recommended]</span>', '', '<span class="b">  Choice [1-3]:</span> <span class="g">3</span>', '<span class="g">  [DagTech] Mode: both</span>', '', '<span class="b">  CPU threads (1-32, default 16):</span> <span class="g">16</span>'],
+        tip: 'Not sure how many threads? The default is usually fine. Using too many threads can make your computer sluggish for other tasks.'
+      },
+      {
+        title: 'Wait for Build & Self-Test',
+        subtitle: 'The installer compiles the miner for your specific CPU and runs a self-test. If you have CUDA, it also builds the GPU miner. This takes about <strong>10-30 seconds</strong>.',
+        preview: ['<span class="c">[DagTech]</span> Installing dependencies...', '<span class="g">  ✓ gcc, build-essential, libssl-dev</span>', '<span class="c">[DagTech]</span> Building CPU miner from source...', '<span class="g">  ✓ Build complete</span>', '<span class="c">[DagTech]</span> Running CPU miner self-test...', '<span class="g">  ✓ CPU miner self-test passed</span>', '', '<span class="c">[DagTech]</span> Building GPU miner (CUDA)...', '<span class="g">  ✓ GPU miner installed</span>']
+      },
+      {
+        title: 'Start Mining!',
+        subtitle: 'Say <strong>Y</strong> when asked to start mining. Your miner connects to the pool, starts hashing, and opens the dashboard. You\'re now earning BDAG!',
+        cmd: 'dagtech-start',
+        preview: ['<span class="b">  Start mining now? (Y/n):</span> <span class="g">Y</span>', '', '<span class="g">[DagTech] Starting GPU miner (background)...</span>', '<span class="g">[DagTech] Starting CPU miner...</span>', '<span class="g">[DagTech] Dashboard: http://localhost:8881</span>', '', '<span class="b">BDAG CPU Miner v2 - 16 threads</span>', '<span class="c">Pool: excalibur.dagtech.network:3335</span>', '<span class="g">[CONNECT] Connected, subscribing...</span>', '<span class="g">[SHARE] ACCEPTED ✓</span>', '<span class="g">[SHARE] ACCEPTED ✓</span>', '<span class="b">[HASHRATE] 23.4 KH/s | Shares: 2179 accepted</span>'],
+        final: true,
+        dashUrl: 'http://localhost:8881'
+      }
+    ]
+  },
+
+  mac: {
+    steps: [
+      {
+        title: 'Open Terminal',
+        subtitle: 'Open <strong>Terminal.app</strong> on your Mac. You can find it in <strong>Applications &rarr; Utilities &rarr; Terminal</strong>, or press <strong>Cmd + Space</strong> and type "Terminal".',
+        tip: 'Works on any Mac — Intel or Apple Silicon (M1/M2/M3/M4). macOS 11 (Big Sur) or newer required.',
+        preview: ['<span class="b">%</span> _', '', '<span class="g">Ready to go!</span>']
+      },
+      {
+        title: 'Clone the Repository',
+        subtitle: 'Download the miner source code. Git comes pre-installed on macOS — if prompted to install Xcode Command Line Tools, click <strong>Install</strong> and wait.',
+        cmd: 'git clone https://github.com/Dagtechltd/dagtech-miner.git && cd dagtech-miner',
+        preview: ['<span class="b">%</span> git clone https://github.com/Dagtechltd/dagtech-miner.git', 'Cloning into \'dagtech-miner\'...', '<span class="g">Receiving objects: 100% (847/847), 2.1 MiB, done.</span>', '<span class="b">%</span> cd dagtech-miner']
+      },
+      {
+        title: 'Run the macOS Installer',
+        subtitle: 'Run the Mac-specific installer. It detects your chip (Intel vs Apple Silicon), installs Xcode CLT if needed, and finds Homebrew OpenSSL for acceleration.',
+        cmd: 'chmod +x install-mac.sh && ./install-mac.sh',
+        preview: ['<span class="b">%</span> ./install-mac.sh', '', '<span class="b">  ╔══════════════════════════════════════════════╗</span>', '<span class="c">  ║   DagTech Miner v2.1.0 — macOS Installer      ║</span>', '<span class="b">  ╚══════════════════════════════════════════════╝</span>', '', '<span class="c">[DagTech]</span> Detecting macOS hardware...', '<span class="g">  Chip:    Apple M1 Pro</span>', '<span class="g">  Cores:   10 (8P + 2E)</span>', '<span class="g">  RAM:     16 GB unified</span>', '<span class="w">  Note: GPU mining requires NVIDIA CUDA (not available on macOS)</span>', '<span class="g">  ✓ CPU mining optimized for Apple Silicon</span>']
+      },
+      {
+        title: 'Enter Your Wallet Address',
+        subtitle: 'Enter your <strong>BlockDAG wallet address</strong> (starts with 0x). This is where your mining rewards are sent.',
+        warn: 'Double-check your wallet address! Rewards sent to the wrong address cannot be recovered.',
+        preview: ['<span class="b">  Enter wallet address (0x...):</span> <span class="g">0x17e9a46702af1e5cef0f0d496a539d3eba9b50ac</span>', '<span class="g">  ✓ Wallet accepted</span>']
+      },
+      {
+        title: 'Set Thread Count',
+        subtitle: 'macOS uses <strong>CPU-only mining</strong> (Apple Silicon doesn\'t support CUDA). Choose how many CPU cores to dedicate. The default uses your performance cores only.',
+        preview: ['<span class="c">  Mining mode: CPU only (Apple Silicon optimized)</span>', '', '<span class="b">  CPU threads (1-8, default 6):</span> <span class="g">8</span>', '<span class="g">  [DagTech] Using all 8 performance cores</span>'],
+        tip: 'Using all performance cores gives the best hashrate. Your Mac may get warm — that\'s normal. It won\'t damage your hardware.'
+      },
+      {
+        title: 'Wait for Build',
+        subtitle: 'The installer compiles the miner natively for your chip architecture (<strong>arm64</strong> for Apple Silicon, <strong>x86_64</strong> for Intel). Takes about 10 seconds.',
+        preview: ['<span class="c">[DagTech]</span> Checking Xcode Command Line Tools...', '<span class="g">  ✓ Xcode CLT installed</span>', '<span class="c">[DagTech]</span> Detecting OpenSSL...', '<span class="g">  ✓ Homebrew OpenSSL 3.2.1</span>', '<span class="c">[DagTech]</span> Building for Apple Silicon (arm64)...', '<span class="g">  ✓ Build complete</span>', '<span class="c">[DagTech]</span> Running self-test...', '<span class="g">  ✓ CPU miner self-test passed</span>']
+      },
+      {
+        title: 'Start Mining!',
+        subtitle: 'Say <strong>Y</strong> to start mining. Your Mac connects to the pool and starts earning BDAG. The dashboard opens in your browser automatically.',
+        cmd: 'dagtech-start',
+        preview: ['<span class="b">  Start mining now? (Y/n):</span> <span class="g">Y</span>', '', '<span class="g">[DagTech] Dashboard: http://localhost:8881</span>', '<span class="b">BDAG CPU Miner v2 - 8 threads</span>', '<span class="c">Pool: excalibur.dagtech.network:3335</span>', '<span class="g">[CONNECT] Connected, subscribing...</span>', '<span class="g">[SHARE] ACCEPTED ✓</span>', '<span class="g">[SHARE] ACCEPTED ✓</span>', '<span class="b">[HASHRATE] 18.7 KH/s | Shares: 1842 accepted</span>'],
+        final: true,
+        dashUrl: 'http://localhost:8881'
+      }
+    ]
+  },
+
+  windows: {
+    steps: [
+      {
+        title: 'Open Command Prompt',
+        subtitle: 'Press <strong>Win + R</strong>, type <strong>cmd</strong>, and press Enter. Or search for "Command Prompt" in the Start Menu.',
+        tip: 'You need <strong>Git for Windows</strong> installed. Download it free from <a href="https://git-scm.com/download/win" target="_blank" style="color:var(--glow)">git-scm.com</a> if you don\'t have it.',
+        preview: ['<span class="b">C:\\Users\\You></span> _', '', '<span class="g">Ready to go!</span>']
+      },
+      {
+        title: 'Clone the Repository',
+        subtitle: 'Download the DagTech Miner package from GitHub. This includes a <strong>pre-built Windows binary</strong> — no compiler needed.',
+        cmd: 'git clone https://github.com/Dagtechltd/dagtech-miner.git\ncd dagtech-miner',
+        preview: ['<span class="b">C:\\Users\\You></span> git clone https://github.com/Dagtechltd/dagtech-miner.git', 'Cloning into \'dagtech-miner\'...', '<span class="g">Receiving objects: 100% (847/847), 2.1 MiB, done.</span>', '<span class="b">C:\\Users\\You></span> cd dagtech-miner']
+      },
+      {
+        title: 'Run the Installer',
+        subtitle: 'Run the Windows batch installer. It auto-detects your CPU, RAM, and NVIDIA GPU. No admin rights required.',
+        cmd: 'install.bat',
+        preview: ['<span class="b">C:\\Users\\You\\dagtech-miner></span> install.bat', '', '<span class="b">  =============================================</span>', '<span class="c">    DagTech Miner v2.1.0 - Windows Installer</span>', '<span class="b">  =============================================</span>', '', '<span class="c">[DagTech]</span> Detecting hardware...', '<span class="g">  CPU:     13th Gen Intel Core i7-13800H</span>', '<span class="g">  Cores:   20</span>', '<span class="g">  RAM:     32768 MB</span>', '<span class="g">[DagTech] NVIDIA GPU detected</span>', '<span class="g">  GPU:     NVIDIA GeForce RTX 4050 Laptop GPU</span>']
+      },
+      {
+        title: 'Enter Your Wallet Address',
+        subtitle: 'Type your <strong>BlockDAG wallet address</strong>. It must start with <strong>0x</strong> followed by exactly 40 hex characters.',
+        warn: 'Triple-check your address! Mining rewards sent to the wrong wallet cannot be recovered.',
+        preview: ['<span class="b">  Enter wallet address (0x...):</span> <span class="g">0x6387C32ccDD60BfBa00EC70A67715Dcd52E8083f</span>', '<span class="g">  ✓ Wallet address accepted</span>']
+      },
+      {
+        title: 'Choose Mining Mode',
+        subtitle: 'If you have an <strong>NVIDIA GPU</strong>, choose option 3 for maximum hashrate. CPU-only works on any Windows machine. Set your thread count (default is half your cores).',
+        preview: ['<span class="c">  Mining mode:</span>', '    1) CPU only', '    2) GPU only', '    <span class="b">3) CPU + GPU [recommended]</span>', '', '<span class="b">  Choice [1-3]:</span> <span class="g">3</span>', '<span class="g">[DagTech] Mode: both</span>', '<span class="b">  CPU threads (1-20, default 10):</span> <span class="g">10</span>'],
+        tip: 'No NVIDIA GPU? No problem — just pick option 1 (CPU only). AMD GPUs are not yet supported.'
+      },
+      {
+        title: 'Installation Completes',
+        subtitle: 'The installer copies the pre-built binaries, creates <strong>Desktop and Start Menu shortcuts</strong>, and configures everything. No compiling needed on Windows!',
+        preview: ['<span class="g">[DagTech] CPU miner binary installed ✓</span>', '<span class="g">[DagTech] GPU miner binary installed ✓</span>', '<span class="g">[DagTech] Dashboard installed ✓</span>', '<span class="g">[DagTech] Desktop shortcut created ✓</span>', '<span class="g">[DagTech] Start Menu entries created ✓</span>', '', '<span class="b">  =============================================</span>', '<span class="g">    Installation Complete!</span>', '<span class="b">  =============================================</span>']
+      },
+      {
+        title: 'Start Mining!',
+        subtitle: 'Say <strong>Y</strong> to start now, or later just <strong>double-click "DagTech Miner"</strong> on your Desktop. The dashboard opens in your browser automatically.',
+        cmd: 'dagtech-start.bat',
+        preview: ['<span class="b">  Start mining now? [Y/n]:</span> <span class="g">Y</span>', '', '<span class="g">[DagTech] Starting GPU miner (background)...</span>', '<span class="g">[DagTech] Starting CPU miner...</span>', '<span class="g">[DagTech] Dashboard: http://localhost:8881</span>', '', '<span class="b">  DagTech Miner - dagtech.network</span>', '<span class="c">  Pool: excalibur.dagtech.network:3335</span>', '<span class="g">[CONNECT] Connected, subscribing...</span>', '<span class="g">[SHARE] ACCEPTED ✓</span>', '<span class="g">[SHARE] ACCEPTED ✓</span>', '<span class="b">[HASHRATE] 31.2 KH/s | Shares: 3047 accepted</span>'],
+        final: true,
+        dashUrl: 'http://localhost:8881'
+      }
+    ]
+  }
+};
+
+let currentPlatform = 'linux';
+let currentStep = 0;
+
+function switchPlatform(p) {
+  currentPlatform = p;
+  currentStep = 0;
+  document.querySelectorAll('.ptab').forEach(t => t.classList.remove('active'));
+  event.target.closest('.ptab').classList.add('active');
+  render();
+}
+
+function render() {
+  const steps = platforms[currentPlatform].steps;
+  const total = steps.length;
+
+  // Progress bar
+  const pb = document.getElementById('progress-bar');
+  let pbHtml = '';
+  for (let i = 0; i < total; i++) {
+    const cls = i < currentStep ? 'done' : i === currentStep ? 'active' : '';
+    pbHtml += `<div class="progress-dot ${cls}" onclick="goToStep(${i})" title="Step ${i+1}: ${steps[i].title}"><span>${i+1}</span></div>`;
+    if (i < total - 1) {
+      const lineCls = i < currentStep ? 'done' : i === currentStep ? 'active' : '';
+      pbHtml += `<div class="progress-line ${lineCls}"></div>`;
+    }
+  }
+  pb.innerHTML = pbHtml;
+
+  // Step cards
+  const sc = document.getElementById('steps-container');
+  let html = '';
+  for (let i = 0; i < total; i++) {
+    const s = steps[i];
+    const active = i === currentStep ? 'active' : '';
+    html += `<div class="step-card ${active}" id="step-${i}">`;
+    html += `<div class="step-header"><div class="step-number">${i+1}</div><h3 class="step-title">${s.title}</h3></div>`;
+    html += `<p class="step-subtitle">${s.subtitle}</p>`;
+
+    if (s.warn) {
+      html += `<div class="warn-box"><span class="tip-icon">&#9888;&#65039;</span><p>${s.warn}</p></div>`;
+    }
+
+    if (s.cmd) {
+      html += `<div class="code-wrapper"><div class="code-block" id="code-${currentPlatform}-${i}">${escHtml(s.cmd)}</div>`;
+      html += `<button class="copy-btn" onclick="copyCmd(this,'${currentPlatform}',${i})">Copy</button></div>`;
+    }
+
+    if (s.tip) {
+      html += `<div class="tip-box"><span class="tip-icon">&#128161;</span><p>${s.tip}</p></div>`;
+    }
+
+    if (s.preview) {
+      let termBar = '';
+      if (currentPlatform === 'mac') {
+        termBar = `<div class="term-bar"><div class="tdot r"></div><div class="tdot y"></div><div class="tdot g"></div><span class="term-bar-label">Terminal — zsh</span></div>`;
+      } else if (currentPlatform === 'linux') {
+        termBar = `<div class="term-bar linux-bar"><span class="term-icon">&#9638;</span><span class="term-bar-label">bdag@node1: ~</span></div>`;
+      } else {
+        termBar = `<div class="term-bar win-bar"><span class="term-icon">&#9646;</span><span class="term-bar-label">Command Prompt</span><div class="win-btns"><span>&#8212;</span><span>&#9634;</span><span>&#10005;</span></div></div>`;
+      }
+      html += `<div class="term-preview">${termBar}`;
+      html += `<div class="term-out">${s.preview.join('<br>')}</div></div>`;
+    }
+
+    if (s.final) {
+      html += `<div class="final-box">`;
+      html += `<h2>&#9889; You're Mining!</h2>`;
+      html += `<p>Your miner is connected and earning BDAG. Open the dashboard to see your stats.</p>`;
+      html += `<a href="${s.dashUrl}" target="_blank" class="btn btn-dash" onclick="return true;">Open Dashboard &rarr; ${s.dashUrl}</a>`;
+      html += `</div>`;
+    }
+
+    // Nav buttons
+    html += `<div class="step-nav">`;
+    html += i > 0 ? `<button class="btn btn-prev" onclick="prevStep()">&larr; Back</button>` : `<span class="btn-hidden btn"></span>`;
+    html += i < total - 1 ? `<button class="btn btn-next" onclick="nextStep()">Next Step &rarr;</button>` : `<span></span>`;
+    html += `</div>`;
+
+    html += `</div>`;
+  }
+  sc.innerHTML = html;
+}
+
+function nextStep() {
+  const steps = platforms[currentPlatform].steps;
+  if (currentStep < steps.length - 1) { currentStep++; render(); window.scrollTo({top:200, behavior:'smooth'}); }
+}
+function prevStep() {
+  if (currentStep > 0) { currentStep--; render(); window.scrollTo({top:200, behavior:'smooth'}); }
+}
+function goToStep(i) {
+  currentStep = i; render(); window.scrollTo({top:200, behavior:'smooth'});
+}
+
+function copyCmd(btn, platform, step) {
+  const s = platforms[platform].steps[step];
+  navigator.clipboard.writeText(s.cmd).then(() => {
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// Initial render
+render();
+</script>
+</body>
+</html>
