@@ -37,7 +37,8 @@
 #endif
 
 #ifdef NO_OPENSSL
-  /* Minimal built-in SHA-256 for Windows cross-compilation */
+  #include <string.h>
+  /* Minimal built-in SHA-256 — no OpenSSL dependency */
   typedef struct { uint32_t state[8]; uint64_t count; uint8_t buf[64]; } SHA256_CTX;
   static const uint32_t K256[64] = {
     0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,
