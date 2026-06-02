@@ -6,6 +6,7 @@
  */
 
 #ifdef _WIN32
+  #include <stdint.h>
   #include <winsock2.h>
   #include <ws2tcpip.h>
   #include <windows.h>
@@ -658,7 +659,9 @@ int main(int argc, char **argv) {
     setvbuf(stdout, NULL, _IOLBF, 0);
     signal(SIGINT, sighandler);
     signal(SIGTERM, sighandler);
+#ifndef _WIN32
     signal(SIGPIPE, SIG_IGN);
+#endif
 
     for (int i = 1; i < argc; i++) {
         if ((strcmp(argv[i], "--host") == 0 || strcmp(argv[i], "--pool") == 0) && i+1 < argc) strncpy(POOL_HOST, argv[++i], sizeof(POOL_HOST)-1);
