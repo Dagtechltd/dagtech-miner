@@ -197,11 +197,12 @@ footer a { color:var(--primary); text-decoration:none; }
 <nav>
   <div class="inner">
     <div class="logo">
-      <img src="https://dapps.dagtech.network/icon.svg" alt="DagTech">
+      <img src="https://dapps.dagtech.network/logo.svg" alt="DagTech">
       <span>DagTech Miner</span>
     </div>
     <div class="nav-links">
-      <a href="https://miners.dagtech.network">Downloads</a>
+      <a href="/">Home</a>
+      <a href="mesh/">Network Mesh</a>
       <a href="https://github.com/Dagtechltd/dagtech-miner" target="_blank">GitHub</a>
       <a href="https://dagtech.network">dagtech.network</a>
     </div>
@@ -252,7 +253,7 @@ const platforms = {
         title: 'Run the Installer',
         subtitle: 'Make the installer executable and run it. It will <strong>auto-detect your hardware</strong>, install any missing dependencies (gcc, OpenSSL), and walk you through configuration.',
         cmd: 'chmod +x install.sh && ./install.sh',
-        preview: ['<span class="b">$</span> ./install.sh', '', '<span class="b">  ╔══════════════════════════════════════════════╗</span>', '<span class="c">  ║   DagTech Miner v2.1.0 — Installer           ║</span>', '<span class="b">  ╚══════════════════════════════════════════════╝</span>', '', '<span class="c">[DagTech]</span> Detecting hardware...', '<span class="g">  ✓ CPU: AMD Ryzen 9 9950X3D (32 threads)</span>', '<span class="g">  ✓ GPU: NVIDIA GeForce RTX 4080</span>', '<span class="g">  ✓ CUDA: v12.0</span>']
+        preview: ['<span class="b">$</span> ./install.sh', '', '<span class="b">  ╔══════════════════════════════════════════════╗</span>', '<span class="c">  ║   DagTech Miner — Installer                  ║</span>', '<span class="b">  ╚══════════════════════════════════════════════╝</span>', '', '<span class="c">[DagTech]</span> Detecting hardware...', '<span class="g">  ✓ CPU detected (your hardware auto-detected)</span>', '<span class="g">  ✓ GPU check complete</span>', '<span class="g">  ✓ System requirements met</span>']
       },
       {
         title: 'Enter Your Wallet Address',
@@ -300,7 +301,7 @@ const platforms = {
         title: 'Run the macOS Installer',
         subtitle: 'Run the Mac-specific installer. It detects your chip (Intel vs Apple Silicon), installs Xcode CLT if needed, and finds Homebrew OpenSSL for acceleration.',
         cmd: 'chmod +x install-mac.sh && ./install-mac.sh',
-        preview: ['<span class="b">%</span> ./install-mac.sh', '', '<span class="b">  ╔══════════════════════════════════════════════╗</span>', '<span class="c">  ║   DagTech Miner v2.1.0 — macOS Installer      ║</span>', '<span class="b">  ╚══════════════════════════════════════════════╝</span>', '', '<span class="c">[DagTech]</span> Detecting macOS hardware...', '<span class="g">  Chip:    Apple M1 Pro</span>', '<span class="g">  Cores:   10 (8P + 2E)</span>', '<span class="g">  RAM:     16 GB unified</span>', '<span class="w">  Note: GPU mining requires NVIDIA CUDA (not available on macOS)</span>', '<span class="g">  ✓ CPU mining optimized for Apple Silicon</span>']
+        preview: ['<span class="b">%</span> ./install-mac.sh', '', '<span class="b">  ╔══════════════════════════════════════════════╗</span>', '<span class="c">  ║   DagTech Miner — macOS Installer              ║</span>', '<span class="b">  ╚══════════════════════════════════════════════╝</span>', '', '<span class="c">[DagTech]</span> Detecting macOS hardware...', '<span class="g">  Chip:    (your Mac chip auto-detected)</span>', '<span class="g">  Cores:   (your core count)</span>', '<span class="g">  RAM:     (your memory)</span>', '<span class="g">  ✓ CPU mining optimized for your architecture</span>']
       },
       {
         title: 'Enter Your Wallet Address',
@@ -356,7 +357,7 @@ const platforms = {
         title: 'Run the Installer',
         subtitle: 'Run the Windows batch installer. It auto-detects your CPU, RAM, and NVIDIA GPU. No admin rights required.',
         cmd: 'install.bat',
-        preview: ['<span class="b">C:\\Users\\You\\dagtech-miner></span> install.bat', '', '<span class="b">  =============================================</span>', '<span class="c">    DagTech Miner v2.1.0 - Windows Installer</span>', '<span class="b">  =============================================</span>', '', '<span class="c">[DagTech]</span> Detecting hardware...', '<span class="g">  CPU:     13th Gen Intel Core i7-13800H</span>', '<span class="g">  Cores:   20</span>', '<span class="g">  RAM:     32768 MB</span>', '<span class="g">[DagTech] NVIDIA GPU detected</span>', '<span class="g">  GPU:     NVIDIA GeForce RTX 4050 Laptop GPU</span>']
+        preview: ['<span class="b">C:\\Users\\You\\dagtech-miner></span> install.bat', '', '<span class="b">  =============================================</span>', '<span class="c">    DagTech Miner - Windows Installer</span>', '<span class="b">  =============================================</span>', '', '<span class="c">[DagTech]</span> Detecting hardware...', '<span class="g">  CPU:     (your processor auto-detected)</span>', '<span class="g">  Cores:   (your core count)</span>', '<span class="g">  RAM:     (your memory)</span>', '<span class="g">[DagTech] GPU check complete</span>']
       },
       {
         title: 'Enter Your Wallet Address',
