@@ -245,9 +245,14 @@ configure_miner() {
         if [[ "$wallet_addr" =~ ^0x[0-9a-fA-F]{40}$ ]]; then
             success "Wallet: $wallet_addr"
             break
+        elif [[ ! "$wallet_addr" =~ ^0x ]]; then
+            warn "Address must start with 0x"
+        elif (( ${#wallet_addr} < 42 )); then
+            warn "Address too short (${#wallet_addr} chars, need 42). Check you copied the full address."
+        elif (( ${#wallet_addr} > 42 )); then
+            warn "Address too long (${#wallet_addr} chars, need 42). Remove extra characters."
         else
-            warn "Invalid wallet format. Must be 0x followed by 40 hex characters."
-            echo "  Example: 0x742d35Cc6634C0532925a3b844Bc9e7595f2bD18"
+            warn "Address contains invalid characters. Use only 0-9 and a-f after 0x."
         fi
     done
 

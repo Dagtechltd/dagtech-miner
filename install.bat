@@ -192,6 +192,20 @@ REM Windows always uses pre-built binary (C source requires POSIX headers)
 echo [DagTech] Installing CPU miner binary...
 if exist "%~dp0bin\windows\dagtech-miner.exe" (
     copy /y "%~dp0bin\windows\dagtech-miner.exe" "%BIN_DIR%\dagtech-miner.exe" >nul
+    REM Verify the file actually landed (Windows Defender may silently delete it)
+    if not exist "%BIN_DIR%\dagtech-miner.exe" (
+        echo.
+        echo [DagTech] ERROR: Miner binary was deleted by antivirus ^(false positive^).
+        echo [DagTech] Windows Defender flags crypto miners as threats.
+        echo.
+        echo   To fix, run this in an ADMINISTRATOR Command Prompt:
+        echo   powershell -Command "Add-MpPreference -ExclusionPath '%INSTALL_DIR%'"
+        echo.
+        echo   Then re-run install.bat
+        echo.
+        pause
+        exit /b 1
+    )
     echo [DagTech] CPU miner binary installed from package
 ) else (
     echo [DagTech] Downloading CPU miner binary from GitHub...
@@ -255,11 +269,18 @@ if exist "%~dp0bin\windows\dagtech-start.bat" (
     powershell -Command "Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/bin/windows/dagtech-stop.bat' -OutFile '%BIN_DIR%\dagtech-stop.bat'"
 )
 
-REM ---- Add to PATH ----
+REM ---- Add to PATH (safely — avoid overflow) ----
 echo [DagTech] Adding to PATH...
 echo %PATH% | findstr /i /c:"%BIN_DIR%" >nul 2>&1
 if errorlevel 1 (
-    setx PATH "%PATH%;%BIN_DIR%" >nul 2>&1
+    REM Read the USER path from registry (not the full system+user PATH which can overflow)
+    for /f "tokens=2,*" %%a in ('reg query "HKCU\Environment" /v PATH 2^>nul') do set "USER_PATH=%%b"
+    if defined USER_PATH (
+        setx PATH "%USER_PATH%;%BIN_DIR%" >nul 2>&1
+    ) else (
+        setx PATH "%BIN_DIR%" >nul 2>&1
+    )
+    set "PATH=%PATH%;%BIN_DIR%"
     echo [DagTech] PATH updated
 ) else (
     echo [DagTech] PATH already configured
