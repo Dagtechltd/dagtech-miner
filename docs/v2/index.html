@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DagTech Architecture Atlas — Live Infrastructure</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-0: #080b14;
+    --bg-1: #0a0f1c;
+    --bg-2: #0f1626;
+    --panel: rgba(15, 22, 38, 0.7);
+    --panel-bright: rgba(20, 30, 50, 0.85);
+    --panel-border: rgba(56, 120, 220, 0.25);
+    --panel-border-bright: rgba(107, 180, 255, 0.5);
+    --blue: hsl(210, 100%, 56%);
+    --blue-soft: hsl(210, 100%, 70%);
+    --blue-dim: hsl(210, 60%, 45%);
+    --blue-deep: hsl(210, 100%, 35%);
+    --blue-glow: rgba(56, 144, 255, 0.4);
+    --blue-glow-soft: rgba(56, 144, 255, 0.15);
+    --text-0: #e6eef9;
+    --text-1: #9bb1cf;
+    --text-2: #5d7398;
+    --text-3: #3d5378;
+    --status-ok: hsl(210, 100%, 56%);
+    --status-warm: hsl(210, 70%, 60%);
+    --status-cool: hsl(210, 40%, 50%);
+    --status-stale: #5d7398;
+    --status-dead: #3d5378;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg-0);
+    color: var(--text-0);
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+    overflow-x: auto;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background:
+      radial-gradient(ellipse at 10% 0%, rgba(56, 144, 255, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 90% 100%, rgba(107, 180, 255, 0.06) 0%, transparent 50%),
+      var(--bg-0);
+    background-attachment: fixed;
+    padding: 20px 24px;
+  }
+  h1, h2, h3, h4 { font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600; }
+  code, .mono { font-family: 'JetBrains Mono', monospace; }
+
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; background: var(--panel);
+    border: 1px solid var(--panel-border); border-radius: 14px;
+    backdrop-filter: blur(12px); margin-bottom: 20px;
+    box-shadow: 0 0 40px rgba(56, 144, 255, 0.08);
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-mark {
+    width: 38px; height: 38px; display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-deep) 100%);
+    border-radius: 10px; box-shadow: 0 0 16px var(--blue-glow);
+    font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: #fff;
+    font-size: 18px; letter-spacing: -0.5px;
+  }
+  .brand h1 { font-size: 20px; color: var(--text-0); letter-spacing: -0.3px; }
+  .brand h1 span { color: var(--blue-soft); }
+  .brand p { font-size: 12px; color: var(--text-2); margin-top: 2px; letter-spacing: 0.3px; }
+  .header-meta { display: flex; align-items: center; gap: 24px; font-size: 12px; color: var(--text-1); }
+  .meta-item { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .meta-label { text-transform: uppercase; letter-spacing: 1.2px; font-size: 9px; color: var(--text-3); }
+  .meta-value { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-0); }
+  .last-update-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--blue); box-shadow: 0 0 8px var(--blue);
+    display: inline-block; margin-right: 6px; animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.5; transform: scale(0.8); }
+    50%      { opacity: 1;   transform: scale(1); }
+  }
+
+  main {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1.4fr 1fr 1fr;
+    gap: 14px; align-items: stretch; min-height: 70vh; position: relative;
+  }
+  .col-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-radius: 10px;
+    background: var(--panel); border: 1px solid var(--panel-border);
+    margin-bottom: 12px;
+  }
+  .col-header h2 {
+    font-size: 11px; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--text-1);
+  }
+  .col-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-3);
+    padding: 2px 7px; border: 1px solid var(--panel-border); border-radius: 4px;
+  }
+  .col { display: flex; flex-direction: column; }
+  .col-1 .col-header { border-left: 2px solid hsl(220, 100%, 60%); }
+  .col-2 .col-header { border-left: 2px solid hsl(210, 100%, 60%); }
+  .col-3 .col-header { border-left: 2px solid hsl(200, 100%, 58%); }
+  .col-4 .col-header { border-left: 2px solid hsl(190, 100%, 55%); }
+  .col-5 .col-header { border-left: 2px solid hsl(180, 100%, 50%); }
+  .stack { display: flex; flex-direction: column; gap: 10px; }
+
+  .card {
+    background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 10px; padding: 14px 16px; position: relative;
+    transition: all 0.2s ease; backdrop-filter: blur(6px);
+  }
+  .card:hover {
+    border-color: var(--panel-border-bright);
+    background: var(--panel-bright);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(56, 144, 255, 0.15);
+  }
+  .card.primary { border-color: rgba(56, 144, 255, 0.4); }
+  .card.dedicated { border-color: rgba(107, 180, 255, 0.6); background: linear-gradient(135deg, var(--panel) 0%, rgba(56, 144, 255, 0.06) 100%); }
+  .card-title-row { display: flex; align-items: center; justify-content: space-between; }
+  .card-title {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 14px;
+    color: var(--text-0); display: flex; align-items: center; gap: 8px;
+  }
+  .card-meta {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-2);
+    text-transform: uppercase; letter-spacing: 0.8px;
+  }
+  .status-dot {
+    display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+    background: var(--status-stale); transition: background 0.3s, box-shadow 0.3s; position: relative;
+  }
+  .status-dot.ok    { background: var(--status-ok);    box-shadow: 0 0 10px var(--status-ok); animation: pulse 2s ease-in-out infinite; }
+  .status-dot.warm  { background: var(--status-warm);  box-shadow: 0 0 8px var(--status-warm); }
+  .status-dot.cool  { background: var(--status-cool); }
+  .status-dot.stale { background: var(--status-stale); }
+  .status-dot.dead  { background: var(--status-dead); opacity: 0.5; }
+  .card-body { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .metric {
+    display: flex; align-items: baseline; justify-content: space-between;
+    font-size: 12px; color: var(--text-1);
+  }
+  .metric-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-3);
+  }
+  .metric-value { font-family: 'JetBrains Mono', monospace; color: var(--text-0); font-weight: 500; }
+  .metric-value.big { font-size: 18px; color: var(--blue-soft); }
+  .metric-value.small { font-size: 11px; color: var(--text-1); }
+  .card-tag {
+    display: inline-block; font-size: 9px; padding: 2px 7px; border-radius: 4px;
+    background: rgba(56, 144, 255, 0.15); border: 1px solid rgba(56, 144, 255, 0.3);
+    color: var(--blue-soft); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px;
+  }
+  .card-tag.dedicated {
+    background: rgba(107, 180, 255, 0.2); border-color: rgba(107, 180, 255, 0.5);
+    color: var(--blue-soft); font-weight: 600;
+  }
+  .card-tag.failover {
+    background: rgba(56, 144, 255, 0.08); border-color: rgba(56, 144, 255, 0.25); color: var(--text-2);
+  }
+  .card-sub { font-size: 10px; color: var(--text-2); margin-top: 4px; line-height: 1.5; }
+  .card-link { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--blue-soft); text-decoration: none; }
+  .card-link:hover { color: var(--blue); text-decoration: underline; }
+
+  footer {
+    margin-top: 24px; padding: 16px 24px; background: var(--panel);
+    border: 1px solid var(--panel-border); border-radius: 10px;
+    display: flex; gap: 28px; align-items: center; flex-wrap: wrap;
+    font-size: 11px; color: var(--text-1);
+  }
+  footer strong {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--text-0);
+    margin-right: 10px; text-transform: uppercase; letter-spacing: 1.5px; font-size: 10px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .progress {
+    width: 100%; height: 4px; background: rgba(56, 144, 255, 0.1);
+    border-radius: 2px; overflow: hidden; margin-top: 4px;
+  }
+  .progress-fill {
+    height: 100%; background: linear-gradient(90deg, var(--blue-deep) 0%, var(--blue) 100%);
+    transition: width 0.6s ease;
+  }
+  .stack-section-title {
+    font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--text-3); margin: 8px 4px 4px;
+  }
+
+  @media (max-width: 1280px) {
+    main { grid-template-columns: 1fr 1fr; gap: 16px; }
+  }
+  @media (max-width: 768px) {
+    main { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark">D</div>
+    <div>
+      <h1>DagTech <span>Architecture Atlas</span></h1>
+      <p>Mainnet flow · Relays · Nodes · Miners · Services</p>
+    </div>
+  </div>
+  <div class="header-meta">
+    <div class="meta-item">
+      <span class="meta-label">CHAIN TIP</span>
+      <span class="meta-value" id="chain-tip">—</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">EVM BLOCK</span>
+      <span class="meta-value" id="evm-block">—</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">WALLET 0x6387</span>
+      <span class="meta-value" id="wallet-balance">—</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">LAST UPDATE</span>
+      <span class="meta-value"><span class="last-update-dot"></span><span id="last-update">live</span></span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <div class="col col-1">
+    <div class="col-header">
+      <h2>BlockDAG Mainnet</h2>
+      <span class="col-num">01</span>
+    </div>
+    <div class="stack">
+      <div class="card primary">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot ok" id="dot-mainnet"></span>BlockDAG Network</div>
+          <span class="card-meta">L1</span>
+        </div>
+        <div class="card-body">
+          <div class="metric"><span class="metric-label">DAG order</span><span class="metric-value big" id="m-dag-order">—</span></div>
+          <div class="metric"><span class="metric-label">Block time</span><span class="metric-value" id="m-block-time">~12s</span></div>
+          <div class="metric"><span class="metric-label">Reward / block</span><span class="metric-value">7.59 BDAG</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot warm"></span>Public RPC</div>
+          <span class="card-meta">REMOTE</span>
+        </div>
+        <div class="card-body">
+          <div class="metric"><span class="metric-label">bdagscan</span><span class="metric-value" id="m-bdagscan-block">—</span></div>
+          <div class="card-sub">Geographic anycast via Cloudflare. Used for verification only.</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot cool"></span>Peer Geo</div>
+          <span class="card-meta">FYI</span>
+        </div>
+        <div class="card-body">
+          <div class="card-sub">Mainnet center of mass: <strong>US-West</strong>.<br>UAE node reaches mainnet via WG relays.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col col-2">
+    <div class="col-header">
+      <h2>WireGuard Relays</h2>
+      <span class="col-num">02</span>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot ok" id="dot-ct"></span>CT Relay</div>
+          <span class="card-meta">af-south-1</span>
+        </div>
+        <div class="card-body">
+          <div class="metric"><span class="metric-label">Endpoint</span><span class="metric-value small">13.247.214.164</span></div>
+          <div class="metric"><span class="metric-label">WG subnet</span><span class="metric-value">10.10.0.0/24</span></div>
+          <div class="metric"><span class="metric-label">RTT</span><span class="metric-value">~129ms</span></div>
+          <span class="card-tag">P2P FORWARDER</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot ok" id="dot-usw"></span>US-West Relay</div>
+          <span class="card-meta">us-west-2</span>
+        </div>
+        <div class="card-body">
+          <div class="metric"><span class="metric-label">Endpoint</span><span class="metric-value small">54.214.229.250</span></div>
+          <div class="metric"><span class="metric-label">WG subnet</span><span class="metric-value">10.20.0.0/24</span></div>
+          <div class="metric"><span class="metric-label">RTT</span><span class="metric-value">~255ms</span></div>
+          <span class="card-tag">P2P FORWARDER</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col col-3">
+    <div class="col-header">
+      <h2>UAE Node Fleet · Ras Al Khaimah</h2>
+      <span class="col-num">03</span>
+    </div>
+    <div class="stack">
+      <div class="stack-section-title">General Mining Backend (asic-pool, cpu-gpu-pool, explorer)</div>
+      <div class="card primary">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot warm" id="dot-n1"></span>node-1</div>
+          <span class="card-meta">PRIMARY</span>
+        </div>
+        <div class="card-body">
+          <div class="metric"><span class="metric-label">DAG order</span><span class="metric-value" id="m-n1-order">—</span></div>
+          <div class="metric"><span class="metric-label">Sync</span><span class="metric-value" id="m-n1-sync">catching up</span></div>
+          <div class="progress"><div class="progress-fill" id="bar-n1" style="width: 70%"></div></div>
+          <span class="card-tag">EVM RPC :18545</span>
+        </div>
+      </div>
+      <div class="card primary">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot ok" id="dot-n2"></span>node-2</div>
+          <span class="card-meta">PRIMARY</span>
+        </div>
+        <div class="card-body">
+          <div class="metric"><span class="metric-label">DAG order</span><span class="metric-value" id="m-n2-order">—</span></div>
+          <div class="metric"><span class="metric-label">Sync</span><span class="metric-value">at tip</span></div>
+          <div class="progress"><div class="progress-fill" id="bar-n2" style="width: 100%"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot warm" id="dot-n3"></span>node-3</div>
+          <span class="card-meta">FAILOVER</span>
+        </div>
+        <div class="card-body">
+          <div class="metric"><span class="metric-label">DAG order</span><span class="metric-value" id="m-n3-order">—</span></div>
+          <div class="metric"><span class="metric-label">Sync</span><span class="metric-value" id="m-n3-sync">catching up</span></div>
+          <div class="progress"><div class="progress-fill" id="bar-n3" style="width: 99%"></div></div>
+          <span class="card-tag failover">BACKUP TO 1+2</span>
+        </div>
+      </div>
+      <div class="stack-section-title" style="margin-top:14px;">X100 Dedicated Backend</div>
+      <div class="card dedicated">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot ok" id="dot-nx100"></span>node-x100</div>
+          <span class="card-meta">RESERVED</span>
+        </div>
+        <div class="card-body">
+          <div class="metric"><span class="metric-label">DAG order</span><span class="metric-value" id="m-nx100-order">—</span></div>
+          <div class="metric"><span class="metric-label">Sync</span><span class="metric-value">at tip</span></div>
+          <div class="metric"><span class="metric-label">Serves</span><span class="metric-value">hans-solo only</span></div>
+          <span class="card-tag dedicated">X100 ONLY · NO SHARE</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col col-4">
+    <div class="col-header">
+      <h2>Miners</h2>
+      <span class="col-num">04</span>
+    </div>
+    <div class="stack">
+      <div class="card dedicated">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot ok" id="dot-x100"></span>X100 ASIC</div>
+          <span class="card-meta">PRIORITY 1</span>
+        </div>
+        <div class="card-body">
+          <div class="metric"><span class="metric-label">Hashrate</span><span class="metric-value big">243 MH/s</span></div>
+          <div class="metric"><span class="metric-label">Pool</span><span class="metric-value">hans-solo :3336</span></div>
+          <div class="metric"><span class="metric-label">Power</span><span class="metric-value">845 MHz / 0.86V</span></div>
+          <div class="metric"><span class="metric-label">Wallet</span><span class="metric-value small">0x6387...083f</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot warm" id="dot-gpucpu"></span>GPU + CPU Rigs</div>
+          <span class="card-meta">PRIORITY 2</span>
+        </div>
+        <div class="card-body">
+          <div class="metric"><span class="metric-label">Pool</span><span class="metric-value">asic-pool :3334</span></div>
+          <div class="metric"><span class="metric-label">Backend</span><span class="metric-value">node-1/2/3</span></div>
+          <div class="card-sub">dagtech-miner clients via CT + USW WG tunnels.</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot cool" id="dot-x30"></span>X30 ASICs</div>
+          <span class="card-meta">PRIORITY 3</span>
+        </div>
+        <div class="card-body">
+          <div class="metric"><span class="metric-label">Wallet</span><span class="metric-value small">0x17e9...b50ac</span></div>
+          <div class="metric"><span class="metric-label">Pool</span><span class="metric-value">asic-pool :3334</span></div>
+          <div class="card-sub">Cape Town deployment via WG relay.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col col-5">
+    <div class="col-header">
+      <h2>Services</h2>
+      <span class="col-num">05</span>
+    </div>
+    <div class="stack">
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot ok" id="dot-explorer"></span>Explorer</div>
+          <span class="card-meta">BLOCKSCOUT</span>
+        </div>
+        <div class="card-body">
+          <a class="card-link" href="https://explorer.dagtech.network" target="_blank" rel="noopener">explorer.dagtech.network ↗</a>
+          <div class="card-sub">Midnight theme. Backend: node-1/2 EVM.</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot ok" id="dot-rpc"></span>RPC Gateway</div>
+          <span class="card-meta">NGINX +CACHE</span>
+        </div>
+        <div class="card-body">
+          <a class="card-link" href="https://rpc.dagtech.network" target="_blank" rel="noopener">rpc.dagtech.network ↗</a>
+          <div class="metric"><span class="metric-label">Cache</span><span class="metric-value">1s TTL · 200MB</span></div>
+          <span class="card-tag">PROXY_CACHE LIVE</span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot ok"></span>Stats + Grafana</div>
+          <span class="card-meta">DASHBOARDS</span>
+        </div>
+        <div class="card-body">
+          <a class="card-link" href="https://stats.dagtech.network" target="_blank" rel="noopener">stats.dagtech.network ↗</a>
+          <div class="card-sub">Prometheus + Grafana. 8 exporters running on host.</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot ok"></span>Netstats</div>
+          <span class="card-meta">REALTIME</span>
+        </div>
+        <div class="card-body">
+          <a class="card-link" href="https://netstats.dagtech.network" target="_blank" rel="noopener">netstats.dagtech.network ↗</a>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot cool"></span>Miner Downloads</div>
+          <span class="card-meta">GHPAGES</span>
+        </div>
+        <div class="card-body">
+          <a class="card-link" href="https://miner.dagtech.network" target="_blank" rel="noopener">miner.dagtech.network ↗</a>
+          <div class="card-sub">dagtech-miner client. Install scripts + docs.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <strong>LEGEND</strong>
+  <div class="legend-item"><span class="status-dot ok"></span><span>Healthy / live data</span></div>
+  <div class="legend-item"><span class="status-dot warm"></span><span>Catching up / partial</span></div>
+  <div class="legend-item"><span class="status-dot cool"></span><span>Standby / informational</span></div>
+  <div class="legend-item"><span class="status-dot stale"></span><span>Stale / unknown</span></div>
+  <div class="legend-item"><span class="status-dot dead"></span><span>Down</span></div>
+  <div style="margin-left:auto; font-size:10px; color:var(--text-3); letter-spacing:1.2px; text-transform:uppercase;">
+    DagTech · Ras Al Khaimah, UAE · architecture flows left → right
+  </div>
+</footer>
+
+<script>
+  const RPC = 'https://rpc.dagtech.network';
+  const BDAGSCAN = 'https://rpc.bdagscan.com';
+
+  async function jsonRpc(url, method, params=[]) {
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({jsonrpc:'2.0', id:1, method, params})
+      });
+      const j = await r.json();
+      return j.result;
+    } catch(e) { return null; }
+  }
+
+  function fmtBdag(weiHex) {
+    if (!weiHex) return '—';
+    const w = BigInt(weiHex);
+    const bdag = Number(w / (10n ** 14n)) / 10000;
+    return bdag.toLocaleString('en-US', {maximumFractionDigits: 0}) + ' BDAG';
+  }
+  function fmtBlock(hex) {
+    if (!hex) return '—';
+    return Number(BigInt(hex)).toLocaleString('en-US');
+  }
+  function setText(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+  function setDot(id, klass) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = 'status-dot ' + klass;
+  }
+  function timeAgo(seconds) {
+    if (seconds < 60) return seconds + 's ago';
+    if (seconds < 3600) return Math.floor(seconds/60) + 'm ago';
+    return Math.floor(seconds/3600) + 'h ago';
+  }
+
+  let lastUpdateTs = Date.now();
+  function refreshLastUpdate() {
+    const elapsed = Math.floor((Date.now() - lastUpdateTs) / 1000);
+    setText('last-update', elapsed === 0 ? 'live' : timeAgo(elapsed));
+  }
+  setInterval(refreshLastUpdate, 1000);
+
+  async function pullData() {
+    const block = await jsonRpc(RPC, 'eth_blockNumber');
+    if (block) {
+      setText('evm-block', fmtBlock(block));
+      setText('m-dag-order', fmtBlock(block));
+      setDot('dot-mainnet', 'ok');
+      setDot('dot-rpc', 'ok');
+    } else {
+      setDot('dot-mainnet', 'stale');
+    }
+    const bal = await jsonRpc(RPC, 'eth_getBalance', ['0x6387C32ccDD60BfBa00EC70A67715Dcd52E8083f','latest']);
+    if (bal) setText('wallet-balance', fmtBdag(bal));
+    if (block) setText('chain-tip', fmtBlock(block));
+    const ext = await jsonRpc(BDAGSCAN, 'eth_blockNumber');
+    if (ext) setText('m-bdagscan-block', fmtBlock(ext));
+    if (block) {
+      setText('m-n2-order', fmtBlock(block));
+      setText('m-nx100-order', fmtBlock(block));
+    }
+    lastUpdateTs = Date.now();
+  }
+  pullData();
+  setInterval(pullData, 10000);
+</script>
+
+</body>
+</html>
