@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DagTech Architecture Atlas — Engine Room</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-0: #050810;
+    --bg-1: #080b14;
+    --bg-2: #0a0f1c;
+    --bg-3: #0f1626;
+    --panel: rgba(15, 22, 38, 0.7);
+    --panel-bright: rgba(20, 30, 50, 0.85);
+    --panel-border: rgba(56, 120, 220, 0.25);
+    --panel-border-bright: rgba(107, 180, 255, 0.5);
+    --blue: hsl(210, 100%, 56%);
+    --blue-soft: #6bd6ff;
+    --blue-dim: hsl(210, 60%, 45%);
+    --blue-deep: hsl(210, 100%, 35%);
+    --blue-bright: #6bd6ff;
+    --blue-glow: rgba(58, 160, 255, 0.4);
+    --blue-glow-soft: rgba(107, 214, 255, 0.18);
+    --text-0: #e6eef9;
+    --text-1: #9bb1cf;
+    --text-2: #5d7398;
+    --text-3: #3d5378;
+    --flow: #3aa0ff;
+    --flow-bright: #6bd6ff;
+    --led-ok: #6bd6ff;
+    --led-warm: hsl(210, 80%, 65%);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg-0);
+    color: var(--text-0);
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+    overflow-x: auto;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background:
+      radial-gradient(ellipse at 10% 0%, rgba(56, 144, 255, 0.08) 0%, transparent 60%),
+      radial-gradient(ellipse at 90% 100%, rgba(107, 180, 255, 0.06) 0%, transparent 50%),
+      var(--bg-0);
+    background-attachment: fixed;
+    padding: 20px 24px;
+  }
+  h1, h2, h3, h4 { font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600; }
+  code, .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* HEADER */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 24px; background: var(--panel);
+    border: 1px solid var(--panel-border); border-radius: 14px;
+    backdrop-filter: blur(12px); margin-bottom: 20px;
+    box-shadow: 0 0 40px rgba(56, 144, 255, 0.08);
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-mark {
+    width: 42px; height: 42px; position: relative; border-radius: 10px;
+    background: radial-gradient(circle at 30% 30%, var(--blue-bright), var(--blue) 30%, var(--blue-deep));
+    box-shadow: 0 0 18px var(--blue-glow), inset 0 0 12px rgba(255,255,255,0.15);
+  }
+  .brand-mark::before {
+    content: ""; position: absolute; inset: 7px;
+    border: 2px solid rgba(255,255,255,0.9);
+    border-radius: 6px;
+    border-right-color: transparent; border-bottom-color: transparent;
+  }
+  .brand-mark::after {
+    content: ""; position: absolute; inset: -3px;
+    border-radius: 12px;
+    background: conic-gradient(from 0deg, transparent 0%, var(--blue-bright) 25%, transparent 50%);
+    -webkit-mask: linear-gradient(black, black) content-box, linear-gradient(black, black);
+    mask: linear-gradient(black, black) content-box, linear-gradient(black, black);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    padding: 1px;
+    opacity: 0.6;
+    animation: spin 4s linear infinite;
+  }
+  .brand-text h1 { font-size: 20px; color: var(--text-0); letter-spacing: -0.3px; }
+  .brand-text h1 span { color: var(--blue-soft); }
+  .brand-text p { font-size: 11px; color: var(--text-2); margin-top: 2px; letter-spacing: 1px; text-transform: uppercase; }
+
+  .header-meta { display: flex; align-items: center; gap: 24px; font-size: 12px; color: var(--text-1); }
+  .meta-item { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .meta-label { text-transform: uppercase; letter-spacing: 1.2px; font-size: 9px; color: var(--text-3); }
+  .meta-value { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--blue-soft); font-weight: 600; }
+  .pulse-led {
+    width: 9px; height: 9px; border-radius: 50%; display: inline-block;
+    background: var(--led-ok); box-shadow: 0 0 12px var(--led-ok);
+    animation: pulse 2s infinite; margin-right: 6px;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%      { opacity: 0.4; transform: scale(0.7); }
+  }
+  @keyframes spin       { to { transform: rotate(360deg); } }
+  @keyframes spin-rev   { to { transform: rotate(-360deg); } }
+  @keyframes pulse-soft { 0%,100% { opacity: 0.45; } 50% { opacity: 0.9; } }
+  @keyframes pulse-bright { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+  @keyframes shimmer    { 0%,100% { opacity: 0.3; } 50% { opacity: 0.8; } }
+  @keyframes dash-flow  { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -40; } }
+  @keyframes ring-expand {
+    0%   { r: 4;  opacity: 0.9; }
+    100% { r: 22; opacity: 0; }
+  }
+  @keyframes pulse-blink {
+    0%, 90%, 100% { opacity: 0.4; }
+    95%           { opacity: 1; }
+  }
+
+  /* GRID */
+  main {
+    display: grid;
+    grid-template-columns: 1fr 0.95fr 1.4fr 1fr 1fr;
+    gap: 14px; align-items: stretch; min-height: 70vh; position: relative;
+  }
+
+  .col-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px; border-radius: 10px;
+    background: var(--panel); border: 1px solid var(--panel-border);
+    margin-bottom: 12px;
+  }
+  .col-header h2 {
+    font-size: 11px; letter-spacing: 1.8px;
+    text-transform: uppercase; color: var(--text-1);
+  }
+  .col-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-3);
+    padding: 2px 7px; border: 1px solid var(--panel-border); border-radius: 4px;
+  }
+  .col { display: flex; flex-direction: column; }
+  .col-1 .col-header { border-left: 2px solid hsl(220, 100%, 60%); }
+  .col-2 .col-header { border-left: 2px solid hsl(210, 100%, 60%); }
+  .col-3 .col-header { border-left: 2px solid hsl(200, 100%, 58%); }
+  .col-4 .col-header { border-left: 2px solid hsl(190, 100%, 55%); }
+  .col-5 .col-header { border-left: 2px solid hsl(180, 100%, 50%); }
+  .stack { display: flex; flex-direction: column; gap: 10px; }
+
+  /* ILLUSTRATION FRAME — wraps each SVG hero */
+  .scene {
+    background:
+      radial-gradient(ellipse at center, rgba(56, 144, 255, 0.06) 0%, transparent 70%),
+      var(--bg-2);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .scene::before {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(58, 160, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(58, 160, 255, 0.03) 1px, transparent 1px);
+    background-size: 16px 16px;
+    pointer-events: none;
+  }
+  .scene-svg { width: 100%; height: 100%; display: block; position: relative; z-index: 1; }
+  .scene-title {
+    position: absolute; bottom: 8px; left: 12px; right: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--text-2); display: flex; justify-content: space-between; align-items: center;
+    z-index: 2;
+  }
+  .scene-title strong { color: var(--blue-soft); font-weight: 500; }
+
+  /* CARDS */
+  .card {
+    background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 10px; padding: 12px 14px; position: relative;
+    transition: all 0.2s ease; backdrop-filter: blur(6px);
+  }
+  .card:hover {
+    border-color: var(--panel-border-bright);
+    background: var(--panel-bright);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 16px rgba(56, 144, 255, 0.15);
+  }
+  .card.primary { border-color: rgba(56, 144, 255, 0.4); }
+  .card.dedicated { border-color: rgba(107, 180, 255, 0.6); background: linear-gradient(135deg, var(--panel) 0%, rgba(56, 144, 255, 0.06) 100%); }
+  .card-title-row { display: flex; align-items: center; justify-content: space-between; }
+  .card-title {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 13px;
+    color: var(--text-0); display: flex; align-items: center; gap: 8px;
+  }
+  .card-meta {
+    font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-2);
+    text-transform: uppercase; letter-spacing: 0.8px;
+  }
+  .status-dot {
+    display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--text-3); position: relative;
+  }
+  .status-dot.ok    { background: var(--led-ok);   box-shadow: 0 0 8px var(--led-ok); animation: pulse 2s infinite; }
+  .status-dot.warm  { background: var(--led-warm); box-shadow: 0 0 6px var(--led-warm); }
+  .status-dot.cool  { background: hsl(210, 40%, 50%); }
+  .status-dot.dead  { background: var(--text-3); opacity: 0.5; }
+  .card-body { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+  .metric {
+    display: flex; align-items: baseline; justify-content: space-between;
+    font-size: 11px; color: var(--text-1);
+  }
+  .metric-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-3); }
+  .metric-value { font-family: 'JetBrains Mono', monospace; color: var(--text-0); font-weight: 500; }
+  .metric-value.big { font-size: 15px; color: var(--blue-soft); }
+  .metric-value.small { font-size: 10px; color: var(--text-1); }
+  .card-tag {
+    display: inline-block; font-size: 8px; padding: 2px 6px; border-radius: 4px;
+    background: rgba(56, 144, 255, 0.15); border: 1px solid rgba(56, 144, 255, 0.3);
+    color: var(--blue-soft); text-transform: uppercase; letter-spacing: 1px; margin-top: 3px;
+  }
+  .card-tag.dedicated { background: rgba(107, 180, 255, 0.2); border-color: rgba(107, 180, 255, 0.5); font-weight: 600; }
+  .card-tag.failover { background: rgba(56, 144, 255, 0.08); border-color: rgba(56, 144, 255, 0.25); color: var(--text-2); }
+  .card-link { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--blue-soft); text-decoration: none; }
+  .card-link:hover { color: var(--blue-bright); text-decoration: underline; }
+
+  /* FLOW CONNECTORS between columns (decorative SVG overlay) */
+  .flow-bus {
+    position: absolute; left: 0; right: 0; top: 50%;
+    height: 2px; pointer-events: none; z-index: 0;
+    background: linear-gradient(90deg, transparent 0%, var(--blue-glow-soft) 20%, var(--blue-glow-soft) 80%, transparent 100%);
+  }
+
+  /* FOOTER */
+  footer {
+    margin-top: 24px; padding: 16px 24px; background: var(--panel);
+    border: 1px solid var(--panel-border); border-radius: 10px;
+    display: flex; gap: 28px; align-items: center; flex-wrap: wrap;
+    font-size: 11px; color: var(--text-1);
+  }
+  footer strong {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--text-0);
+    margin-right: 10px; text-transform: uppercase; letter-spacing: 1.5px; font-size: 10px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+
+  /* RESPONSIVE */
+  @media (max-width: 1280px) {
+    main { grid-template-columns: 1fr 1fr; gap: 16px; }
+  }
+  @media (max-width: 768px) {
+    main { grid-template-columns: 1fr; }
+  }
+
+  /* SVG SHARED CLASSES (used inside scenes) */
+  .spin-slow      { transform-origin: center; transform-box: fill-box; animation: spin 18s linear infinite; }
+  .spin-medium    { transform-origin: center; transform-box: fill-box; animation: spin 8s linear infinite; }
+  .spin-fast      { transform-origin: center; transform-box: fill-box; animation: spin 2.5s linear infinite; }
+  .spin-fast-rev  { transform-origin: center; transform-box: fill-box; animation: spin-rev 3s linear infinite; }
+  .spin-vfast     { transform-origin: center; transform-box: fill-box; animation: spin 0.8s linear infinite; }
+  .pulse-elem     { animation: pulse-soft 2.5s ease-in-out infinite; }
+  .pulse-bright   { animation: pulse-bright 1.8s ease-in-out infinite; }
+  .shimmer        { animation: shimmer 2s ease-in-out infinite; }
+  .dash           { stroke-dasharray: 6 10; animation: dash-flow 1.4s linear infinite; }
+  .dash-slow      { stroke-dasharray: 4 8; animation: dash-flow 3s linear infinite; }
+  .ring-pulse     { animation: ring-expand 2s ease-out infinite; transform-origin: center; transform-box: fill-box; }
+  .blink          { animation: pulse-blink 1.6s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark"></div>
+    <div class="brand-text">
+      <h1>DagTech <span>Engine Room</span></h1>
+      <p>Architecture atlas · flows left → right</p>
+    </div>
+  </div>
+  <div class="header-meta">
+    <div class="meta-item">
+      <span class="meta-label">CHAIN TIP</span>
+      <span class="meta-value" id="chain-tip">—</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">EVM BLOCK</span>
+      <span class="meta-value" id="evm-block">—</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">WALLET 0x6387</span>
+      <span class="meta-value" id="wallet-balance">—</span>
+    </div>
+    <div class="meta-item">
+      <span class="meta-label">LIVE</span>
+      <span class="meta-value"><span class="pulse-led"></span><span id="last-update">—</span></span>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- COL 1 — MAINNET REACTOR -->
+  <div class="col col-1">
+    <div class="col-header">
+      <h2>BlockDAG Mainnet</h2>
+      <span class="col-num">01</span>
+    </div>
+    <div class="stack">
+      <div class="scene" style="height: 220px;">
+        <svg class="scene-svg" viewBox="0 0 200 200">
+          <defs>
+            <radialGradient id="core-glow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#6bd6ff" stop-opacity="0.6"/>
+              <stop offset="40%" stop-color="#3aa0ff" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="#3aa0ff" stop-opacity="0"/>
+            </radialGradient>
+            <radialGradient id="core-bright" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+              <stop offset="40%" stop-color="#6bd6ff" stop-opacity="0.9"/>
+              <stop offset="100%" stop-color="#3aa0ff" stop-opacity="0.4"/>
+            </radialGradient>
+          </defs>
+
+          <!-- outer halo glow -->
+          <circle cx="100" cy="100" r="90" fill="url(#core-glow)" class="pulse-elem"/>
+
+          <!-- ring expand pulse (waves emanating) -->
+          <circle cx="100" cy="100" r="4" fill="none" stroke="#6bd6ff" stroke-width="1.5" class="ring-pulse"/>
+          <circle cx="100" cy="100" r="4" fill="none" stroke="#6bd6ff" stroke-width="1.5" class="ring-pulse" style="animation-delay: 1s"/>
+
+          <!-- outermost stator rings -->
+          <circle cx="100" cy="100" r="85" fill="none" stroke="#3aa0ff" stroke-width="0.5" stroke-dasharray="2 6" opacity="0.4"/>
+          <circle cx="100" cy="100" r="75" fill="none" stroke="#3aa0ff" stroke-width="0.8" opacity="0.6"/>
+
+          <!-- ROTATING TURBINE OUTER (6 blades) -->
+          <g class="spin-medium">
+            <g transform="translate(100 100)">
+              <path d="M 0 -68 L 12 -50 L 4 -38 L -4 -38 L -12 -50 Z" fill="#3aa0ff" opacity="0.55"/>
+              <path d="M 0 -68 L 12 -50 L 4 -38 L -4 -38 L -12 -50 Z" transform="rotate(60)" fill="#3aa0ff" opacity="0.55"/>
+              <path d="M 0 -68 L 12 -50 L 4 -38 L -4 -38 L -12 -50 Z" transform="rotate(120)" fill="#3aa0ff" opacity="0.55"/>
+              <path d="M 0 -68 L 12 -50 L 4 -38 L -4 -38 L -12 -50 Z" transform="rotate(180)" fill="#3aa0ff" opacity="0.55"/>
+              <path d="M 0 -68 L 12 -50 L 4 -38 L -4 -38 L -12 -50 Z" transform="rotate(240)" fill="#3aa0ff" opacity="0.55"/>
+              <path d="M 0 -68 L 12 -50 L 4 -38 L -4 -38 L -12 -50 Z" transform="rotate(300)" fill="#3aa0ff" opacity="0.55"/>
+            </g>
+          </g>
+
+          <!-- middle ring -->
+          <circle cx="100" cy="100" r="50" fill="none" stroke="#6bd6ff" stroke-width="0.6" stroke-dasharray="4 6" opacity="0.7" class="dash-slow"/>
+
+          <!-- ROTATING TURBINE INNER (counter direction, faster) -->
+          <g class="spin-fast-rev">
+            <g transform="translate(100 100)">
+              <path d="M 0 -42 Q 6 -32 4 -22 Q 0 -18 -4 -22 Q -6 -32 0 -42 Z" fill="#6bd6ff" opacity="0.75"/>
+              <path d="M 0 -42 Q 6 -32 4 -22 Q 0 -18 -4 -22 Q -6 -32 0 -42 Z" transform="rotate(72)" fill="#6bd6ff" opacity="0.75"/>
+              <path d="M 0 -42 Q 6 -32 4 -22 Q 0 -18 -4 -22 Q -6 -32 0 -42 Z" transform="rotate(144)" fill="#6bd6ff" opacity="0.75"/>
+              <path d="M 0 -42 Q 6 -32 4 -22 Q 0 -18 -4 -22 Q -6 -32 0 -42 Z" transform="rotate(216)" fill="#6bd6ff" opacity="0.75"/>
+              <path d="M 0 -42 Q 6 -32 4 -22 Q 0 -18 -4 -22 Q -6 -32 0 -42 Z" transform="rotate(288)" fill="#6bd6ff" opacity="0.75"/>
+            </g>
+          </g>
+
+          <!-- glowing core -->
+          <circle cx="100" cy="100" r="22" fill="url(#core-bright)" class="pulse-bright"/>
+          <circle cx="100" cy="100" r="14" fill="#ffffff" opacity="0.9" class="pulse-bright"/>
+          <circle cx="100" cy="100" r="6" fill="#ffffff"/>
+        </svg>
+        <div class="scene-title"><span>Reactor</span><strong id="m-dag-order">—</strong></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot warm"></span>Public RPC</div>
+          <span class="card-meta">REMOTE</span>
+        </div>
+        <div class="card-body">
+          <div class="metric"><span class="metric-label">bdagscan</span><span class="metric-value" id="m-bdagscan-block">—</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot cool"></span>Peer Geo</div>
+          <span class="card-meta">FYI</span>
+        </div>
+        <div class="card-body">
+          <div style="font-size:10px; color:var(--text-2); line-height:1.5;">Center of mass: <strong style="color:var(--blue-soft)">US-West</strong></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COL 2 — RELAY WORLDS -->
+  <div class="col col-2">
+    <div class="col-header">
+      <h2>WG Relays</h2>
+      <span class="col-num">02</span>
+    </div>
+    <div class="stack">
+
+      <div class="scene" style="height: 130px;">
+        <svg class="scene-svg" viewBox="0 0 200 130">
+          <defs>
+            <radialGradient id="globe-grad-ct" cx="35%" cy="35%" r="65%">
+              <stop offset="0%" stop-color="#1a73e8" stop-opacity="0.6"/>
+              <stop offset="60%" stop-color="#0a1428" stop-opacity="0.9"/>
+              <stop offset="100%" stop-color="#050810"/>
+            </radialGradient>
+          </defs>
+          <!-- glow base -->
+          <ellipse cx="100" cy="105" rx="55" ry="6" fill="#3aa0ff" opacity="0.18"/>
+          <!-- orbital ring (rotated 3D-like ellipse) -->
+          <g class="spin-medium">
+            <ellipse cx="100" cy="60" rx="70" ry="18" fill="none" stroke="#3aa0ff" stroke-width="0.5" stroke-dasharray="2 5" opacity="0.6"/>
+          </g>
+          <!-- globe sphere -->
+          <circle cx="100" cy="60" r="40" fill="url(#globe-grad-ct)" stroke="#3aa0ff" stroke-width="0.8"/>
+          <!-- meridians + equator -->
+          <ellipse cx="100" cy="60" rx="40" ry="14" fill="none" stroke="#3aa0ff" stroke-width="0.5" opacity="0.6"/>
+          <ellipse cx="100" cy="60" rx="14" ry="40" fill="none" stroke="#3aa0ff" stroke-width="0.4" opacity="0.4"/>
+          <ellipse cx="100" cy="60" rx="28" ry="40" fill="none" stroke="#3aa0ff" stroke-width="0.4" opacity="0.4"/>
+          <line x1="60" y1="60" x2="140" y2="60" stroke="#6bd6ff" stroke-width="0.6" opacity="0.5"/>
+          <!-- highlight dot (CT location ~31S, 18E) -->
+          <circle cx="105" cy="76" r="2" fill="#6bd6ff" class="pulse-bright">
+            <animate attributeName="r" values="2;3.5;2" dur="2s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="105" cy="76" r="2" fill="none" stroke="#6bd6ff" stroke-width="1" class="ring-pulse"/>
+          <!-- orbiting satellite dot -->
+          <g class="spin-medium">
+            <g transform="translate(100 60)">
+              <circle cx="70" cy="0" r="2.5" fill="#6bd6ff"/>
+              <circle cx="70" cy="0" r="2.5" fill="none" stroke="#6bd6ff" opacity="0.6">
+                <animate attributeName="r" values="2.5;6;2.5" dur="1.8s" repeatCount="indefinite"/>
+              </circle>
+            </g>
+          </g>
+        </svg>
+        <div class="scene-title"><span>CT Relay</span><strong>af-south-1</strong></div>
+      </div>
+
+      <div class="scene" style="height: 130px;">
+        <svg class="scene-svg" viewBox="0 0 200 130">
+          <ellipse cx="100" cy="105" rx="55" ry="6" fill="#3aa0ff" opacity="0.18"/>
+          <g class="spin-medium" style="animation-direction:reverse">
+            <ellipse cx="100" cy="60" rx="70" ry="18" fill="none" stroke="#3aa0ff" stroke-width="0.5" stroke-dasharray="2 5" opacity="0.6"/>
+          </g>
+          <circle cx="100" cy="60" r="40" fill="url(#globe-grad-ct)" stroke="#3aa0ff" stroke-width="0.8"/>
+          <ellipse cx="100" cy="60" rx="40" ry="14" fill="none" stroke="#3aa0ff" stroke-width="0.5" opacity="0.6"/>
+          <ellipse cx="100" cy="60" rx="14" ry="40" fill="none" stroke="#3aa0ff" stroke-width="0.4" opacity="0.4"/>
+          <ellipse cx="100" cy="60" rx="28" ry="40" fill="none" stroke="#3aa0ff" stroke-width="0.4" opacity="0.4"/>
+          <line x1="60" y1="60" x2="140" y2="60" stroke="#6bd6ff" stroke-width="0.6" opacity="0.5"/>
+          <!-- USW location ~47N, 122W (left side of globe) -->
+          <circle cx="78" cy="50" r="2" fill="#6bd6ff" class="pulse-bright">
+            <animate attributeName="r" values="2;3.5;2" dur="2s" repeatCount="indefinite"/>
+          </circle>
+          <circle cx="78" cy="50" r="2" fill="none" stroke="#6bd6ff" stroke-width="1" class="ring-pulse" style="animation-delay: 0.5s"/>
+          <g class="spin-medium" style="animation-direction:reverse">
+            <g transform="translate(100 60)">
+              <circle cx="-70" cy="0" r="2.5" fill="#6bd6ff"/>
+              <circle cx="-70" cy="0" r="2.5" fill="none" stroke="#6bd6ff" opacity="0.6">
+                <animate attributeName="r" values="2.5;6;2.5" dur="1.8s" repeatCount="indefinite"/>
+              </circle>
+            </g>
+          </g>
+        </svg>
+        <div class="scene-title"><span>US-West Relay</span><strong>us-west-2</strong></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- COL 3 — NODE ENGINE ROOM -->
+  <div class="col col-3">
+    <div class="col-header">
+      <h2>UAE Node Fleet · Engine Room</h2>
+      <span class="col-num">03</span>
+    </div>
+    <div class="stack">
+
+      <!-- node-1 + node-2 paired engine row -->
+      <div class="scene" style="height: 200px;">
+        <svg class="scene-svg" viewBox="0 0 400 200">
+          <defs>
+            <linearGradient id="rack-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#0f1626"/>
+              <stop offset="100%" stop-color="#080b14"/>
+            </linearGradient>
+          </defs>
+
+          <!-- ── Rack 1 (node-1) ── -->
+          <g transform="translate(10, 20)">
+            <rect x="0" y="0" width="180" height="160" rx="6" fill="url(#rack-grad)" stroke="#3aa0ff" stroke-width="1"/>
+            <!-- top status bar -->
+            <rect x="6" y="6" width="168" height="10" rx="2" fill="#050810" stroke="#3aa0ff" stroke-width="0.4"/>
+            <text x="12" y="14" fill="#6bd6ff" font-size="6" font-family="JetBrains Mono">NODE-01 · PRIMARY</text>
+            <circle cx="166" cy="11" r="2" fill="#6bd6ff" class="blink"/>
+
+            <!-- large cooling fan -->
+            <circle cx="55" cy="80" r="36" fill="#050810" stroke="#3aa0ff" stroke-width="0.7"/>
+            <circle cx="55" cy="80" r="40" fill="none" stroke="#3aa0ff" stroke-width="0.3" stroke-dasharray="2 4" opacity="0.5"/>
+            <g class="spin-fast">
+              <g transform="translate(55 80)">
+                <path d="M 0 -32 Q 8 -22 5 -10 Q 0 -6 -5 -10 Q -8 -22 0 -32 Z" fill="#3aa0ff" opacity="0.55"/>
+                <path d="M 0 -32 Q 8 -22 5 -10 Q 0 -6 -5 -10 Q -8 -22 0 -32 Z" transform="rotate(72)" fill="#3aa0ff" opacity="0.55"/>
+                <path d="M 0 -32 Q 8 -22 5 -10 Q 0 -6 -5 -10 Q -8 -22 0 -32 Z" transform="rotate(144)" fill="#3aa0ff" opacity="0.55"/>
+                <path d="M 0 -32 Q 8 -22 5 -10 Q 0 -6 -5 -10 Q -8 -22 0 -32 Z" transform="rotate(216)" fill="#3aa0ff" opacity="0.55"/>
+                <path d="M 0 -32 Q 8 -22 5 -10 Q 0 -6 -5 -10 Q -8 -22 0 -32 Z" transform="rotate(288)" fill="#3aa0ff" opacity="0.55"/>
+              </g>
+            </g>
+            <circle cx="55" cy="80" r="6" fill="#0a1428" stroke="#3aa0ff" stroke-width="0.8"/>
+            <circle cx="55" cy="80" r="2" fill="#6bd6ff"/>
+
+            <!-- equalizer LED bars -->
+            <g transform="translate(110, 40)">
+              <rect x="0"  y="-20" width="4" height="36" fill="#0a1428"/>
+              <rect x="0"  y="0"   width="4" height="16" fill="#3aa0ff" class="pulse-elem"/>
+              <rect x="8"  y="-20" width="4" height="36" fill="#0a1428"/>
+              <rect x="8"  y="-8"  width="4" height="24" fill="#6bd6ff" class="pulse-elem" style="animation-delay:0.3s"/>
+              <rect x="16" y="-20" width="4" height="36" fill="#0a1428"/>
+              <rect x="16" y="-3"  width="4" height="19" fill="#3aa0ff" class="pulse-elem" style="animation-delay:0.6s"/>
+              <rect x="24" y="-20" width="4" height="36" fill="#0a1428"/>
+              <rect x="24" y="-12" width="4" height="28" fill="#6bd6ff" class="pulse-elem" style="animation-delay:0.9s"/>
+              <rect x="32" y="-20" width="4" height="36" fill="#0a1428"/>
+              <rect x="32" y="-6"  width="4" height="22" fill="#3aa0ff" class="pulse-elem" style="animation-delay:1.2s"/>
+              <rect x="40" y="-20" width="4" height="36" fill="#0a1428"/>
+              <rect x="40" y="-10" width="4" height="26" fill="#6bd6ff" class="pulse-elem" style="animation-delay:1.5s"/>
+            </g>
+
+            <!-- gauge dial -->
+            <g transform="translate(140, 110)">
+              <circle cx="0" cy="0" r="22" fill="#050810" stroke="#3aa0ff" stroke-width="0.7"/>
+              <path d="M -18 0 A 18 18 0 0 1 18 0" fill="none" stroke="#3aa0ff" stroke-width="0.5" opacity="0.4"/>
+              <path d="M -18 0 A 18 18 0 0 1 18 0" fill="none" stroke="#6bd6ff" stroke-width="1.2" stroke-dasharray="42 100" opacity="0.8"/>
+              <line x1="0" y1="0" x2="0" y2="-14" stroke="#6bd6ff" stroke-width="1.2" class="gauge-n1" transform-origin="center" style="transform:rotate(35deg)"/>
+              <circle cx="0" cy="0" r="2" fill="#6bd6ff"/>
+              <text x="0" y="15" text-anchor="middle" fill="#5d7398" font-size="5" font-family="JetBrains Mono">SYNC</text>
+            </g>
+
+            <!-- bottom status leds -->
+            <g transform="translate(10, 145)">
+              <circle cx="0"  cy="0" r="2" fill="#6bd6ff" class="blink"/>
+              <circle cx="10" cy="0" r="2" fill="#3aa0ff" class="blink" style="animation-delay:0.2s"/>
+              <circle cx="20" cy="0" r="2" fill="#6bd6ff" class="blink" style="animation-delay:0.4s"/>
+              <text x="35" y="3" fill="#5d7398" font-size="5" font-family="JetBrains Mono">EVM · QNG · WS</text>
+            </g>
+          </g>
+
+          <!-- ── Rack 2 (node-2) ── -->
+          <g transform="translate(210, 20)">
+            <rect x="0" y="0" width="180" height="160" rx="6" fill="url(#rack-grad)" stroke="#3aa0ff" stroke-width="1"/>
+            <rect x="6" y="6" width="168" height="10" rx="2" fill="#050810" stroke="#3aa0ff" stroke-width="0.4"/>
+            <text x="12" y="14" fill="#6bd6ff" font-size="6" font-family="JetBrains Mono">NODE-02 · PRIMARY</text>
+            <circle cx="166" cy="11" r="2" fill="#6bd6ff" class="blink"/>
+            <circle cx="55" cy="80" r="36" fill="#050810" stroke="#3aa0ff" stroke-width="0.7"/>
+            <circle cx="55" cy="80" r="40" fill="none" stroke="#3aa0ff" stroke-width="0.3" stroke-dasharray="2 4" opacity="0.5"/>
+            <g class="spin-fast" style="animation-direction:reverse">
+              <g transform="translate(55 80)">
+                <path d="M 0 -32 Q 8 -22 5 -10 Q 0 -6 -5 -10 Q -8 -22 0 -32 Z" fill="#3aa0ff" opacity="0.55"/>
+                <path d="M 0 -32 Q 8 -22 5 -10 Q 0 -6 -5 -10 Q -8 -22 0 -32 Z" transform="rotate(72)" fill="#3aa0ff" opacity="0.55"/>
+                <path d="M 0 -32 Q 8 -22 5 -10 Q 0 -6 -5 -10 Q -8 -22 0 -32 Z" transform="rotate(144)" fill="#3aa0ff" opacity="0.55"/>
+                <path d="M 0 -32 Q 8 -22 5 -10 Q 0 -6 -5 -10 Q -8 -22 0 -32 Z" transform="rotate(216)" fill="#3aa0ff" opacity="0.55"/>
+                <path d="M 0 -32 Q 8 -22 5 -10 Q 0 -6 -5 -10 Q -8 -22 0 -32 Z" transform="rotate(288)" fill="#3aa0ff" opacity="0.55"/>
+              </g>
+            </g>
+            <circle cx="55" cy="80" r="6" fill="#0a1428" stroke="#3aa0ff" stroke-width="0.8"/>
+            <circle cx="55" cy="80" r="2" fill="#6bd6ff"/>
+            <g transform="translate(110, 40)">
+              <rect x="0"  y="-20" width="4" height="36" fill="#0a1428"/>
+              <rect x="0"  y="-15" width="4" height="31" fill="#6bd6ff" class="pulse-elem"/>
+              <rect x="8"  y="-20" width="4" height="36" fill="#0a1428"/>
+              <rect x="8"  y="-18" width="4" height="34" fill="#6bd6ff" class="pulse-elem" style="animation-delay:0.3s"/>
+              <rect x="16" y="-20" width="4" height="36" fill="#0a1428"/>
+              <rect x="16" y="-12" width="4" height="28" fill="#6bd6ff" class="pulse-elem" style="animation-delay:0.6s"/>
+              <rect x="24" y="-20" width="4" height="36" fill="#0a1428"/>
+              <rect x="24" y="-16" width="4" height="32" fill="#6bd6ff" class="pulse-elem" style="animation-delay:0.9s"/>
+              <rect x="32" y="-20" width="4" height="36" fill="#0a1428"/>
+              <rect x="32" y="-14" width="4" height="30" fill="#6bd6ff" class="pulse-elem" style="animation-delay:1.2s"/>
+              <rect x="40" y="-20" width="4" height="36" fill="#0a1428"/>
+              <rect x="40" y="-17" width="4" height="33" fill="#6bd6ff" class="pulse-elem" style="animation-delay:1.5s"/>
+            </g>
+            <g transform="translate(140, 110)">
+              <circle cx="0" cy="0" r="22" fill="#050810" stroke="#3aa0ff" stroke-width="0.7"/>
+              <path d="M -18 0 A 18 18 0 0 1 18 0" fill="none" stroke="#3aa0ff" stroke-width="0.5" opacity="0.4"/>
+              <path d="M -18 0 A 18 18 0 0 1 18 0" fill="none" stroke="#6bd6ff" stroke-width="1.2" stroke-dasharray="55 100" opacity="0.9"/>
+              <line x1="0" y1="0" x2="0" y2="-14" stroke="#6bd6ff" stroke-width="1.2" transform-origin="center" style="transform:rotate(80deg)"/>
+              <circle cx="0" cy="0" r="2" fill="#6bd6ff"/>
+              <text x="0" y="15" text-anchor="middle" fill="#5d7398" font-size="5" font-family="JetBrains Mono">SYNC</text>
+            </g>
+            <g transform="translate(10, 145)">
+              <circle cx="0"  cy="0" r="2" fill="#6bd6ff" class="blink"/>
+              <circle cx="10" cy="0" r="2" fill="#6bd6ff" class="blink" style="animation-delay:0.2s"/>
+              <circle cx="20" cy="0" r="2" fill="#6bd6ff" class="blink" style="animation-delay:0.4s"/>
+              <text x="35" y="3" fill="#5d7398" font-size="5" font-family="JetBrains Mono">EVM · QNG · WS</text>
+            </g>
+          </g>
+        </svg>
+        <div class="scene-title"><span>node-1 / node-2</span><strong id="m-n1-order">general mining backend</strong></div>
+      </div>
+
+      <!-- node-3 failover (smaller) -->
+      <div class="scene" style="height: 120px;">
+        <svg class="scene-svg" viewBox="0 0 400 110">
+          <g transform="translate(10, 10)">
+            <rect x="0" y="0" width="380" height="90" rx="6" fill="url(#rack-grad)" stroke="#3aa0ff" stroke-width="0.8" stroke-dasharray="4 4" opacity="0.85"/>
+            <text x="12" y="16" fill="#5d7398" font-size="7" font-family="JetBrains Mono">NODE-03 · FAILOVER · BACKUP TO 1+2</text>
+            <!-- smaller fan -->
+            <circle cx="40" cy="55" r="22" fill="#050810" stroke="#3aa0ff" stroke-width="0.6"/>
+            <g class="spin-medium">
+              <g transform="translate(40 55)">
+                <path d="M 0 -18 Q 5 -12 3 -6 Q 0 -4 -3 -6 Q -5 -12 0 -18 Z" fill="#3aa0ff" opacity="0.4"/>
+                <path d="M 0 -18 Q 5 -12 3 -6 Q 0 -4 -3 -6 Q -5 -12 0 -18 Z" transform="rotate(120)" fill="#3aa0ff" opacity="0.4"/>
+                <path d="M 0 -18 Q 5 -12 3 -6 Q 0 -4 -3 -6 Q -5 -12 0 -18 Z" transform="rotate(240)" fill="#3aa0ff" opacity="0.4"/>
+              </g>
+            </g>
+            <circle cx="40" cy="55" r="3" fill="#3aa0ff"/>
+            <!-- minimal LED row -->
+            <g transform="translate(90, 50)">
+              <rect x="0"  y="-10" width="3" height="20" fill="#3aa0ff" opacity="0.4" class="pulse-elem"/>
+              <rect x="6"  y="-10" width="3" height="20" fill="#3aa0ff" opacity="0.4" class="pulse-elem" style="animation-delay:0.3s"/>
+              <rect x="12" y="-10" width="3" height="20" fill="#3aa0ff" opacity="0.4" class="pulse-elem" style="animation-delay:0.6s"/>
+              <rect x="18" y="-10" width="3" height="20" fill="#3aa0ff" opacity="0.4" class="pulse-elem" style="animation-delay:0.9s"/>
+            </g>
+            <text x="240" y="48" fill="#5d7398" font-size="6" font-family="JetBrains Mono">EVM RPC: 18545</text>
+            <text x="240" y="60" fill="#5d7398" font-size="6" font-family="JetBrains Mono">QNG RPC: 38131</text>
+            <text x="240" y="72" fill="#6bd6ff" font-size="6" font-family="JetBrains Mono" class="blink">CATCHING UP →</text>
+          </g>
+        </svg>
+        <div class="scene-title"><span>node-3</span><strong>failover</strong></div>
+      </div>
+
+      <!-- node-x100 dedicated (special highlight) -->
+      <div class="scene" style="height: 150px; border-color: rgba(107, 180, 255, 0.55); box-shadow: inset 0 0 30px rgba(56, 144, 255, 0.08);">
+        <svg class="scene-svg" viewBox="0 0 400 140">
+          <!-- vault-like chamber background -->
+          <rect x="10" y="10" width="380" height="120" rx="8" fill="url(#rack-grad)" stroke="#6bd6ff" stroke-width="1.2"/>
+          <!-- decorative scan line -->
+          <line x1="10" y1="35" x2="390" y2="35" stroke="#6bd6ff" stroke-width="0.4" opacity="0.4"/>
+          <line x1="10" y1="105" x2="390" y2="105" stroke="#6bd6ff" stroke-width="0.4" opacity="0.4"/>
+          <text x="20" y="28" fill="#6bd6ff" font-size="8" font-family="JetBrains Mono" letter-spacing="2">NODE-X100 · DEDICATED · X100 ASIC ONLY · NO SHARE</text>
+
+          <!-- triple-fan engine (big) -->
+          <g transform="translate(60, 75)">
+            <circle cx="0" cy="0" r="26" fill="#050810" stroke="#6bd6ff" stroke-width="0.8"/>
+            <g class="spin-fast">
+              <g>
+                <path d="M 0 -22 Q 7 -14 4 -7 Q 0 -4 -4 -7 Q -7 -14 0 -22 Z" fill="#6bd6ff" opacity="0.75"/>
+                <path d="M 0 -22 Q 7 -14 4 -7 Q 0 -4 -4 -7 Q -7 -14 0 -22 Z" transform="rotate(72)" fill="#6bd6ff" opacity="0.75"/>
+                <path d="M 0 -22 Q 7 -14 4 -7 Q 0 -4 -4 -7 Q -7 -14 0 -22 Z" transform="rotate(144)" fill="#6bd6ff" opacity="0.75"/>
+                <path d="M 0 -22 Q 7 -14 4 -7 Q 0 -4 -4 -7 Q -7 -14 0 -22 Z" transform="rotate(216)" fill="#6bd6ff" opacity="0.75"/>
+                <path d="M 0 -22 Q 7 -14 4 -7 Q 0 -4 -4 -7 Q -7 -14 0 -22 Z" transform="rotate(288)" fill="#6bd6ff" opacity="0.75"/>
+              </g>
+            </g>
+            <circle cx="0" cy="0" r="4" fill="#0a1428" stroke="#6bd6ff"/>
+          </g>
+          <g transform="translate(140, 75)">
+            <circle cx="0" cy="0" r="26" fill="#050810" stroke="#6bd6ff" stroke-width="0.8"/>
+            <g class="spin-fast" style="animation-direction:reverse">
+              <g>
+                <path d="M 0 -22 Q 7 -14 4 -7 Q 0 -4 -4 -7 Q -7 -14 0 -22 Z" fill="#6bd6ff" opacity="0.75"/>
+                <path d="M 0 -22 Q 7 -14 4 -7 Q 0 -4 -4 -7 Q -7 -14 0 -22 Z" transform="rotate(72)" fill="#6bd6ff" opacity="0.75"/>
+                <path d="M 0 -22 Q 7 -14 4 -7 Q 0 -4 -4 -7 Q -7 -14 0 -22 Z" transform="rotate(144)" fill="#6bd6ff" opacity="0.75"/>
+                <path d="M 0 -22 Q 7 -14 4 -7 Q 0 -4 -4 -7 Q -7 -14 0 -22 Z" transform="rotate(216)" fill="#6bd6ff" opacity="0.75"/>
+                <path d="M 0 -22 Q 7 -14 4 -7 Q 0 -4 -4 -7 Q -7 -14 0 -22 Z" transform="rotate(288)" fill="#6bd6ff" opacity="0.75"/>
+              </g>
+            </g>
+            <circle cx="0" cy="0" r="4" fill="#0a1428" stroke="#6bd6ff"/>
+          </g>
+          <g transform="translate(220, 75)">
+            <circle cx="0" cy="0" r="26" fill="#050810" stroke="#6bd6ff" stroke-width="0.8"/>
+            <g class="spin-fast">
+              <g>
+                <path d="M 0 -22 Q 7 -14 4 -7 Q 0 -4 -4 -7 Q -7 -14 0 -22 Z" fill="#6bd6ff" opacity="0.75"/>
+                <path d="M 0 -22 Q 7 -14 4 -7 Q 0 -4 -4 -7 Q -7 -14 0 -22 Z" transform="rotate(72)" fill="#6bd6ff" opacity="0.75"/>
+                <path d="M 0 -22 Q 7 -14 4 -7 Q 0 -4 -4 -7 Q -7 -14 0 -22 Z" transform="rotate(144)" fill="#6bd6ff" opacity="0.75"/>
+                <path d="M 0 -22 Q 7 -14 4 -7 Q 0 -4 -4 -7 Q -7 -14 0 -22 Z" transform="rotate(216)" fill="#6bd6ff" opacity="0.75"/>
+                <path d="M 0 -22 Q 7 -14 4 -7 Q 0 -4 -4 -7 Q -7 -14 0 -22 Z" transform="rotate(288)" fill="#6bd6ff" opacity="0.75"/>
+              </g>
+            </g>
+            <circle cx="0" cy="0" r="4" fill="#0a1428" stroke="#6bd6ff"/>
+          </g>
+
+          <!-- big sync gauge -->
+          <g transform="translate(330, 70)">
+            <circle cx="0" cy="0" r="30" fill="#050810" stroke="#6bd6ff" stroke-width="1"/>
+            <path d="M -25 0 A 25 25 0 0 1 25 0" fill="none" stroke="#3aa0ff" stroke-width="0.7" opacity="0.4"/>
+            <path d="M -25 0 A 25 25 0 0 1 25 0" fill="none" stroke="#6bd6ff" stroke-width="2" stroke-dasharray="78 200" opacity="0.95"/>
+            <line x1="0" y1="0" x2="0" y2="-20" stroke="#6bd6ff" stroke-width="1.5" transform-origin="center" style="transform:rotate(85deg)"/>
+            <circle cx="0" cy="0" r="3" fill="#6bd6ff"/>
+            <text x="0" y="20" text-anchor="middle" fill="#6bd6ff" font-size="6" font-family="JetBrains Mono">AT TIP</text>
+          </g>
+
+          <!-- bottom data line -->
+          <text x="20" y="125" fill="#5d7398" font-size="6" font-family="JetBrains Mono">→ hans-solo :3336 · X100 ASIC dedicated path</text>
+        </svg>
+        <div class="scene-title"><span>node-x100</span><strong id="m-nx100-order">reserved</strong></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- COL 4 — MINERS -->
+  <div class="col col-4">
+    <div class="col-header">
+      <h2>Miners</h2>
+      <span class="col-num">04</span>
+    </div>
+    <div class="stack">
+
+      <!-- X100 ASIC scene (twin fans) -->
+      <div class="scene" style="height: 175px; border-color: rgba(107, 180, 255, 0.55);">
+        <svg class="scene-svg" viewBox="0 0 220 160">
+          <!-- heat shimmer halo top -->
+          <ellipse cx="110" cy="0" rx="100" ry="14" fill="#6bd6ff" opacity="0.08" class="shimmer"/>
+          <ellipse cx="110" cy="160" rx="100" ry="14" fill="#6bd6ff" opacity="0.08" class="shimmer" style="animation-delay:1s"/>
+
+          <!-- chassis -->
+          <rect x="15" y="20" width="190" height="120" rx="8" fill="url(#rack-grad)" stroke="#6bd6ff" stroke-width="1.2"/>
+          <text x="110" y="36" text-anchor="middle" fill="#6bd6ff" font-size="9" font-family="JetBrains Mono" letter-spacing="2">GOLDSHELL X100</text>
+
+          <!-- two big fans -->
+          <g transform="translate(65, 90)">
+            <circle cx="0" cy="0" r="32" fill="#050810" stroke="#6bd6ff" stroke-width="0.8"/>
+            <circle cx="0" cy="0" r="36" fill="none" stroke="#6bd6ff" stroke-width="0.3" stroke-dasharray="2 4" opacity="0.4"/>
+            <g class="spin-vfast">
+              <g>
+                <path d="M 0 -28 Q 9 -18 6 -8 Q 0 -4 -6 -8 Q -9 -18 0 -28 Z" fill="#6bd6ff" opacity="0.6"/>
+                <path d="M 0 -28 Q 9 -18 6 -8 Q 0 -4 -6 -8 Q -9 -18 0 -28 Z" transform="rotate(60)" fill="#6bd6ff" opacity="0.6"/>
+                <path d="M 0 -28 Q 9 -18 6 -8 Q 0 -4 -6 -8 Q -9 -18 0 -28 Z" transform="rotate(120)" fill="#6bd6ff" opacity="0.6"/>
+                <path d="M 0 -28 Q 9 -18 6 -8 Q 0 -4 -6 -8 Q -9 -18 0 -28 Z" transform="rotate(180)" fill="#6bd6ff" opacity="0.6"/>
+                <path d="M 0 -28 Q 9 -18 6 -8 Q 0 -4 -6 -8 Q -9 -18 0 -28 Z" transform="rotate(240)" fill="#6bd6ff" opacity="0.6"/>
+                <path d="M 0 -28 Q 9 -18 6 -8 Q 0 -4 -6 -8 Q -9 -18 0 -28 Z" transform="rotate(300)" fill="#6bd6ff" opacity="0.6"/>
+              </g>
+            </g>
+            <circle cx="0" cy="0" r="5" fill="#0a1428" stroke="#6bd6ff"/>
+            <circle cx="0" cy="0" r="2" fill="#6bd6ff"/>
+          </g>
+          <g transform="translate(155, 90)">
+            <circle cx="0" cy="0" r="32" fill="#050810" stroke="#6bd6ff" stroke-width="0.8"/>
+            <circle cx="0" cy="0" r="36" fill="none" stroke="#6bd6ff" stroke-width="0.3" stroke-dasharray="2 4" opacity="0.4"/>
+            <g class="spin-vfast" style="animation-direction:reverse">
+              <g>
+                <path d="M 0 -28 Q 9 -18 6 -8 Q 0 -4 -6 -8 Q -9 -18 0 -28 Z" fill="#6bd6ff" opacity="0.6"/>
+                <path d="M 0 -28 Q 9 -18 6 -8 Q 0 -4 -6 -8 Q -9 -18 0 -28 Z" transform="rotate(60)" fill="#6bd6ff" opacity="0.6"/>
+                <path d="M 0 -28 Q 9 -18 6 -8 Q 0 -4 -6 -8 Q -9 -18 0 -28 Z" transform="rotate(120)" fill="#6bd6ff" opacity="0.6"/>
+                <path d="M 0 -28 Q 9 -18 6 -8 Q 0 -4 -6 -8 Q -9 -18 0 -28 Z" transform="rotate(180)" fill="#6bd6ff" opacity="0.6"/>
+                <path d="M 0 -28 Q 9 -18 6 -8 Q 0 -4 -6 -8 Q -9 -18 0 -28 Z" transform="rotate(240)" fill="#6bd6ff" opacity="0.6"/>
+                <path d="M 0 -28 Q 9 -18 6 -8 Q 0 -4 -6 -8 Q -9 -18 0 -28 Z" transform="rotate(300)" fill="#6bd6ff" opacity="0.6"/>
+              </g>
+            </g>
+            <circle cx="0" cy="0" r="5" fill="#0a1428" stroke="#6bd6ff"/>
+            <circle cx="0" cy="0" r="2" fill="#6bd6ff"/>
+          </g>
+
+          <!-- hashrate readout -->
+          <text x="110" y="130" text-anchor="middle" fill="#6bd6ff" font-size="14" font-weight="700" font-family="JetBrains Mono" id="x100-rate">243 MH/s</text>
+        </svg>
+        <div class="scene-title"><span>X100 · priority 1</span><strong>hans-solo :3336</strong></div>
+      </div>
+
+      <!-- GPU/CPU rigs -->
+      <div class="scene" style="height: 130px;">
+        <svg class="scene-svg" viewBox="0 0 220 110">
+          <!-- 3 tower rigs side by side -->
+          <g transform="translate(20 14)">
+            <rect x="0" y="0" width="40" height="80" rx="3" fill="url(#rack-grad)" stroke="#3aa0ff" stroke-width="0.8"/>
+            <!-- case fan top -->
+            <circle cx="20" cy="20" r="12" fill="#050810" stroke="#3aa0ff" stroke-width="0.5"/>
+            <g class="spin-medium"><g transform="translate(20 20)">
+              <path d="M 0 -10 Q 3 -6 2 -2 Q 0 -1 -2 -2 Q -3 -6 0 -10 Z" fill="#3aa0ff" opacity="0.5"/>
+              <path d="M 0 -10 Q 3 -6 2 -2 Q 0 -1 -2 -2 Q -3 -6 0 -10 Z" transform="rotate(72)" fill="#3aa0ff" opacity="0.5"/>
+              <path d="M 0 -10 Q 3 -6 2 -2 Q 0 -1 -2 -2 Q -3 -6 0 -10 Z" transform="rotate(144)" fill="#3aa0ff" opacity="0.5"/>
+              <path d="M 0 -10 Q 3 -6 2 -2 Q 0 -1 -2 -2 Q -3 -6 0 -10 Z" transform="rotate(216)" fill="#3aa0ff" opacity="0.5"/>
+              <path d="M 0 -10 Q 3 -6 2 -2 Q 0 -1 -2 -2 Q -3 -6 0 -10 Z" transform="rotate(288)" fill="#3aa0ff" opacity="0.5"/>
+            </g></g>
+            <!-- GPU bars -->
+            <rect x="6" y="42" width="28" height="6" fill="#3aa0ff" opacity="0.4"/>
+            <rect x="6" y="52" width="28" height="6" fill="#3aa0ff" opacity="0.4"/>
+            <rect x="6" y="62" width="28" height="6" fill="#3aa0ff" opacity="0.4"/>
+            <!-- LEDs -->
+            <circle cx="6" cy="76" r="1.4" fill="#6bd6ff" class="blink"/>
+            <circle cx="10" cy="76" r="1.4" fill="#3aa0ff" class="blink" style="animation-delay:0.3s"/>
+          </g>
+          <g transform="translate(90 14)">
+            <rect x="0" y="0" width="40" height="80" rx="3" fill="url(#rack-grad)" stroke="#3aa0ff" stroke-width="0.8"/>
+            <circle cx="20" cy="20" r="12" fill="#050810" stroke="#3aa0ff" stroke-width="0.5"/>
+            <g class="spin-medium" style="animation-delay:0.5s"><g transform="translate(20 20)">
+              <path d="M 0 -10 Q 3 -6 2 -2 Q 0 -1 -2 -2 Q -3 -6 0 -10 Z" fill="#3aa0ff" opacity="0.5"/>
+              <path d="M 0 -10 Q 3 -6 2 -2 Q 0 -1 -2 -2 Q -3 -6 0 -10 Z" transform="rotate(72)" fill="#3aa0ff" opacity="0.5"/>
+              <path d="M 0 -10 Q 3 -6 2 -2 Q 0 -1 -2 -2 Q -3 -6 0 -10 Z" transform="rotate(144)" fill="#3aa0ff" opacity="0.5"/>
+              <path d="M 0 -10 Q 3 -6 2 -2 Q 0 -1 -2 -2 Q -3 -6 0 -10 Z" transform="rotate(216)" fill="#3aa0ff" opacity="0.5"/>
+              <path d="M 0 -10 Q 3 -6 2 -2 Q 0 -1 -2 -2 Q -3 -6 0 -10 Z" transform="rotate(288)" fill="#3aa0ff" opacity="0.5"/>
+            </g></g>
+            <rect x="6" y="42" width="28" height="6" fill="#3aa0ff" opacity="0.4"/>
+            <rect x="6" y="52" width="28" height="6" fill="#3aa0ff" opacity="0.4"/>
+            <rect x="6" y="62" width="28" height="6" fill="#3aa0ff" opacity="0.4"/>
+            <circle cx="6" cy="76" r="1.4" fill="#6bd6ff" class="blink" style="animation-delay:0.2s"/>
+            <circle cx="10" cy="76" r="1.4" fill="#3aa0ff" class="blink" style="animation-delay:0.5s"/>
+          </g>
+          <g transform="translate(160 14)">
+            <rect x="0" y="0" width="40" height="80" rx="3" fill="url(#rack-grad)" stroke="#3aa0ff" stroke-width="0.8"/>
+            <circle cx="20" cy="20" r="12" fill="#050810" stroke="#3aa0ff" stroke-width="0.5"/>
+            <g class="spin-medium" style="animation-delay:1s"><g transform="translate(20 20)">
+              <path d="M 0 -10 Q 3 -6 2 -2 Q 0 -1 -2 -2 Q -3 -6 0 -10 Z" fill="#3aa0ff" opacity="0.5"/>
+              <path d="M 0 -10 Q 3 -6 2 -2 Q 0 -1 -2 -2 Q -3 -6 0 -10 Z" transform="rotate(72)" fill="#3aa0ff" opacity="0.5"/>
+              <path d="M 0 -10 Q 3 -6 2 -2 Q 0 -1 -2 -2 Q -3 -6 0 -10 Z" transform="rotate(144)" fill="#3aa0ff" opacity="0.5"/>
+              <path d="M 0 -10 Q 3 -6 2 -2 Q 0 -1 -2 -2 Q -3 -6 0 -10 Z" transform="rotate(216)" fill="#3aa0ff" opacity="0.5"/>
+              <path d="M 0 -10 Q 3 -6 2 -2 Q 0 -1 -2 -2 Q -3 -6 0 -10 Z" transform="rotate(288)" fill="#3aa0ff" opacity="0.5"/>
+            </g></g>
+            <rect x="6" y="42" width="28" height="6" fill="#3aa0ff" opacity="0.4"/>
+            <rect x="6" y="52" width="28" height="6" fill="#3aa0ff" opacity="0.4"/>
+            <rect x="6" y="62" width="28" height="6" fill="#3aa0ff" opacity="0.4"/>
+            <circle cx="6" cy="76" r="1.4" fill="#6bd6ff" class="blink" style="animation-delay:0.4s"/>
+            <circle cx="10" cy="76" r="1.4" fill="#3aa0ff" class="blink" style="animation-delay:0.7s"/>
+          </g>
+        </svg>
+        <div class="scene-title"><span>GPU + CPU rigs · priority 2</span><strong>asic-pool :3334</strong></div>
+      </div>
+
+      <!-- X30 minimal -->
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot cool"></span>X30 ASICs</div>
+          <span class="card-meta">PRIORITY 3</span>
+        </div>
+        <div class="card-body">
+          <div class="metric"><span class="metric-label">Wallet</span><span class="metric-value small">0x17e9...b50ac</span></div>
+          <div class="metric"><span class="metric-label">Pool</span><span class="metric-value">asic-pool :3334</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- COL 5 — SERVICES -->
+  <div class="col col-5">
+    <div class="col-header">
+      <h2>Services</h2>
+      <span class="col-num">05</span>
+    </div>
+    <div class="stack">
+
+      <!-- Control panel SVG (multi-screen) -->
+      <div class="scene" style="height: 175px;">
+        <svg class="scene-svg" viewBox="0 0 220 160">
+          <!-- main panel -->
+          <rect x="10" y="14" width="200" height="130" rx="8" fill="url(#rack-grad)" stroke="#3aa0ff" stroke-width="1"/>
+          <text x="20" y="30" fill="#6bd6ff" font-size="7" font-family="JetBrains Mono" letter-spacing="1.5">MONITORING PANEL</text>
+          <!-- 4 screens -->
+          <g transform="translate(20, 38)">
+            <!-- screen 1: chart (running line) -->
+            <rect x="0" y="0" width="85" height="46" rx="3" fill="#050810" stroke="#3aa0ff" stroke-width="0.5"/>
+            <polyline points="6,38 18,30 28,33 38,20 48,25 58,16 70,18 80,10"
+                     fill="none" stroke="#6bd6ff" stroke-width="1.2"/>
+            <polyline points="6,38 18,30 28,33 38,20 48,25 58,16 70,18 80,10"
+                     fill="none" stroke="#3aa0ff" stroke-width="0.5" opacity="0.4"/>
+            <text x="6" y="45" fill="#5d7398" font-size="4" font-family="JetBrains Mono">EARN/HR</text>
+
+            <!-- screen 2: gauges -->
+            <rect x="90" y="0" width="85" height="46" rx="3" fill="#050810" stroke="#3aa0ff" stroke-width="0.5"/>
+            <g transform="translate(112, 26)">
+              <path d="M -16 0 A 16 16 0 0 1 16 0" fill="none" stroke="#3aa0ff" stroke-width="0.5" opacity="0.3"/>
+              <path d="M -16 0 A 16 16 0 0 1 16 0" fill="none" stroke="#6bd6ff" stroke-width="1.5" stroke-dasharray="42 100"/>
+              <line x1="0" y1="0" x2="0" y2="-12" stroke="#6bd6ff" stroke-width="1" transform="rotate(70)"/>
+            </g>
+            <g transform="translate(150, 26)">
+              <path d="M -16 0 A 16 16 0 0 1 16 0" fill="none" stroke="#3aa0ff" stroke-width="0.5" opacity="0.3"/>
+              <path d="M -16 0 A 16 16 0 0 1 16 0" fill="none" stroke="#6bd6ff" stroke-width="1.5" stroke-dasharray="38 100"/>
+              <line x1="0" y1="0" x2="0" y2="-12" stroke="#6bd6ff" stroke-width="1" transform="rotate(50)"/>
+            </g>
+            <text x="96" y="45" fill="#5d7398" font-size="4" font-family="JetBrains Mono">CACHE / RPC</text>
+
+            <!-- screen 3: bar EQ -->
+            <rect x="0" y="52" width="85" height="46" rx="3" fill="#050810" stroke="#3aa0ff" stroke-width="0.5"/>
+            <g transform="translate(8 90)">
+              <rect x="0"  y="-18" width="4" height="18" fill="#6bd6ff" class="pulse-elem"/>
+              <rect x="8"  y="-26" width="4" height="26" fill="#3aa0ff" class="pulse-elem" style="animation-delay:0.2s"/>
+              <rect x="16" y="-12" width="4" height="12" fill="#6bd6ff" class="pulse-elem" style="animation-delay:0.4s"/>
+              <rect x="24" y="-22" width="4" height="22" fill="#3aa0ff" class="pulse-elem" style="animation-delay:0.6s"/>
+              <rect x="32" y="-16" width="4" height="16" fill="#6bd6ff" class="pulse-elem" style="animation-delay:0.8s"/>
+              <rect x="40" y="-30" width="4" height="30" fill="#3aa0ff" class="pulse-elem" style="animation-delay:1s"/>
+              <rect x="48" y="-20" width="4" height="20" fill="#6bd6ff" class="pulse-elem" style="animation-delay:1.2s"/>
+              <rect x="56" y="-14" width="4" height="14" fill="#3aa0ff" class="pulse-elem" style="animation-delay:1.4s"/>
+              <rect x="64" y="-24" width="4" height="24" fill="#6bd6ff" class="pulse-elem" style="animation-delay:1.6s"/>
+              <rect x="72" y="-18" width="4" height="18" fill="#3aa0ff" class="pulse-elem" style="animation-delay:1.8s"/>
+            </g>
+            <text x="6" y="97" fill="#5d7398" font-size="4" font-family="JetBrains Mono">RPC RATE</text>
+
+            <!-- screen 4: status dots grid -->
+            <rect x="90" y="52" width="85" height="46" rx="3" fill="#050810" stroke="#3aa0ff" stroke-width="0.5"/>
+            <g transform="translate(98, 64)">
+              <circle cx="0"  cy="0"  r="2" fill="#6bd6ff" class="blink"/>
+              <circle cx="10" cy="0"  r="2" fill="#3aa0ff" class="blink" style="animation-delay:0.1s"/>
+              <circle cx="20" cy="0"  r="2" fill="#6bd6ff" class="blink" style="animation-delay:0.2s"/>
+              <circle cx="30" cy="0"  r="2" fill="#3aa0ff" class="blink" style="animation-delay:0.3s"/>
+              <circle cx="40" cy="0"  r="2" fill="#6bd6ff" class="blink" style="animation-delay:0.4s"/>
+              <circle cx="50" cy="0"  r="2" fill="#3aa0ff" class="blink" style="animation-delay:0.5s"/>
+              <circle cx="60" cy="0"  r="2" fill="#6bd6ff" class="blink" style="animation-delay:0.6s"/>
+              <circle cx="0"  cy="10" r="2" fill="#3aa0ff" class="blink" style="animation-delay:0.7s"/>
+              <circle cx="10" cy="10" r="2" fill="#6bd6ff" class="blink" style="animation-delay:0.8s"/>
+              <circle cx="20" cy="10" r="2" fill="#3aa0ff" class="blink" style="animation-delay:0.9s"/>
+              <circle cx="30" cy="10" r="2" fill="#6bd6ff" class="blink" style="animation-delay:1s"/>
+              <circle cx="40" cy="10" r="2" fill="#3aa0ff" class="blink" style="animation-delay:1.1s"/>
+              <circle cx="50" cy="10" r="2" fill="#6bd6ff" class="blink" style="animation-delay:1.2s"/>
+              <circle cx="60" cy="10" r="2" fill="#3aa0ff" class="blink" style="animation-delay:1.3s"/>
+              <circle cx="0"  cy="20" r="2" fill="#6bd6ff" class="blink" style="animation-delay:1.4s"/>
+              <circle cx="10" cy="20" r="2" fill="#3aa0ff" class="blink" style="animation-delay:1.5s"/>
+              <circle cx="20" cy="20" r="2" fill="#6bd6ff" class="blink" style="animation-delay:1.6s"/>
+              <circle cx="30" cy="20" r="2" fill="#3aa0ff" class="blink" style="animation-delay:1.7s"/>
+              <circle cx="40" cy="20" r="2" fill="#6bd6ff" class="blink" style="animation-delay:1.8s"/>
+              <circle cx="50" cy="20" r="2" fill="#3aa0ff" class="blink" style="animation-delay:1.9s"/>
+              <circle cx="60" cy="20" r="2" fill="#6bd6ff" class="blink" style="animation-delay:2s"/>
+            </g>
+            <text x="96" y="97" fill="#5d7398" font-size="4" font-family="JetBrains Mono">EXPORTERS</text>
+          </g>
+          <!-- bottom status row -->
+          <g transform="translate(20, 130)">
+            <circle cx="0"  cy="0" r="2" fill="#6bd6ff" class="blink"/>
+            <circle cx="10" cy="0" r="2" fill="#6bd6ff" class="blink" style="animation-delay:0.3s"/>
+            <circle cx="20" cy="0" r="2" fill="#6bd6ff" class="blink" style="animation-delay:0.6s"/>
+            <text x="35" y="3" fill="#5d7398" font-size="6" font-family="JetBrains Mono">GRAFANA · PROMETHEUS · NETDATA</text>
+          </g>
+        </svg>
+        <div class="scene-title"><span>Control panel</span><strong>live</strong></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot ok" id="dot-explorer"></span>Explorer</div>
+          <span class="card-meta">BLOCKSCOUT</span>
+        </div>
+        <div class="card-body">
+          <a class="card-link" href="https://explorer.dagtech.network" target="_blank" rel="noopener">explorer.dagtech.network ↗</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot ok" id="dot-rpc"></span>RPC Gateway</div>
+          <span class="card-meta">NGINX +CACHE</span>
+        </div>
+        <div class="card-body">
+          <a class="card-link" href="https://rpc.dagtech.network" target="_blank" rel="noopener">rpc.dagtech.network ↗</a>
+          <span class="card-tag">PROXY_CACHE LIVE</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title-row">
+          <div class="card-title"><span class="status-dot ok"></span>Stats + Netstats</div>
+          <span class="card-meta">DASHBOARDS</span>
+        </div>
+        <div class="card-body">
+          <a class="card-link" href="https://stats.dagtech.network" target="_blank" rel="noopener">stats.dagtech.network ↗</a>
+          <a class="card-link" href="https://netstats.dagtech.network" target="_blank" rel="noopener" style="margin-top:3px; display:block;">netstats.dagtech.network ↗</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  <strong>FLOW</strong>
+  <div class="legend-item"><span class="status-dot ok"></span><span>Healthy / live</span></div>
+  <div class="legend-item"><span class="status-dot warm"></span><span>Catching up</span></div>
+  <div class="legend-item"><span class="status-dot cool"></span><span>Standby / info</span></div>
+  <div class="legend-item"><span class="status-dot dead"></span><span>Down</span></div>
+  <div style="margin-left:auto; font-size:10px; color:var(--text-3); letter-spacing:1.2px; text-transform:uppercase;">
+    DagTech · Engine Room · architecture flows left → right
+  </div>
+</footer>
+
+<script>
+  const RPC = 'https://rpc.dagtech.network';
+  const BDAGSCAN = 'https://rpc.bdagscan.com';
+
+  async function jsonRpc(url, method, params=[]) {
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({jsonrpc:'2.0', id:1, method, params})
+      });
+      const j = await r.json();
+      return j.result;
+    } catch(e) { return null; }
+  }
+  function fmtBdag(weiHex) {
+    if (!weiHex) return '—';
+    const w = BigInt(weiHex);
+    const bdag = Number(w / (10n ** 14n)) / 10000;
+    return bdag.toLocaleString('en-US', {maximumFractionDigits: 0}) + ' BDAG';
+  }
+  function fmtBlock(hex) {
+    if (!hex) return '—';
+    return Number(BigInt(hex)).toLocaleString('en-US');
+  }
+  function setText(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+  function timeAgo(seconds) {
+    if (seconds < 60) return seconds + 's ago';
+    if (seconds < 3600) return Math.floor(seconds/60) + 'm ago';
+    return Math.floor(seconds/3600) + 'h ago';
+  }
+
+  let lastUpdateTs = Date.now();
+  function refreshLastUpdate() {
+    const elapsed = Math.floor((Date.now() - lastUpdateTs) / 1000);
+    setText('last-update', elapsed === 0 ? 'live' : timeAgo(elapsed));
+  }
+  setInterval(refreshLastUpdate, 1000);
+
+  async function pullData() {
+    const block = await jsonRpc(RPC, 'eth_blockNumber');
+    if (block) {
+      setText('evm-block', fmtBlock(block));
+      setText('chain-tip', fmtBlock(block));
+      setText('m-dag-order', fmtBlock(block));
+      setText('m-nx100-order', fmtBlock(block));
+      setText('m-n1-order', fmtBlock(block));
+    }
+    const bal = await jsonRpc(RPC, 'eth_getBalance', ['0x6387C32ccDD60BfBa00EC70A67715Dcd52E8083f','latest']);
+    if (bal) setText('wallet-balance', fmtBdag(bal));
+    const ext = await jsonRpc(BDAGSCAN, 'eth_blockNumber');
+    if (ext) setText('m-bdagscan-block', fmtBlock(ext));
+    lastUpdateTs = Date.now();
+  }
+  pullData();
+  setInterval(pullData, 10000);
+</script>
+
+</body>
+</html>
