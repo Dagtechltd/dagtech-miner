@@ -589,45 +589,49 @@
   <!-- COL 4 — POOLS (stratum + RPC proxy) -->
   <!-- =========================================================== -->
 
-  <!-- asic-pool -->
+  <!-- asic-pool — with total hashrate readout -->
   <g transform="translate(990 250)">
     <rect width="180" height="75" rx="8" fill="url(#boxGrad)" stroke="#3aa0ff" stroke-width="1"/>
     <rect x="6" y="6" width="168" height="12" rx="2" fill="#050810" stroke="#3aa0ff" stroke-width="0.4"/>
     <text x="14" y="15" fill="#6bd6ff" font-size="7" font-family="JetBrains Mono" font-weight="600">ASIC-POOL · :3334</text>
     <circle cx="166" cy="12" r="2" fill="#6bd6ff" style="animation: pulseBright 1.5s infinite;"/>
     <text x="14" y="32" fill="#9bb1cf" font-size="9" font-family="Inter">stratum V1 · PROP</text>
-    <text x="14" y="46" fill="#5d7398" font-size="7" font-family="JetBrains Mono">routes: node-1/2 primary</text>
-    <text x="14" y="58" fill="#5d7398" font-size="7" font-family="JetBrains Mono">       node-3 failover</text>
-    <!-- mini activity bars -->
-    <g transform="translate(132, 56)">
-      <rect x="0"  y="-12" width="3" height="12" fill="#3aa0ff" style="animation: pulseSoft 1.6s infinite;"/>
-      <rect x="6"  y="-8"  width="3" height="8"  fill="#6bd6ff" style="animation: pulseSoft 1.6s infinite; animation-delay:0.2s;"/>
-      <rect x="12" y="-14" width="3" height="14" fill="#3aa0ff" style="animation: pulseSoft 1.6s infinite; animation-delay:0.4s;"/>
-      <rect x="18" y="-10" width="3" height="10" fill="#6bd6ff" style="animation: pulseSoft 1.6s infinite; animation-delay:0.6s;"/>
-      <rect x="24" y="-16" width="3" height="16" fill="#3aa0ff" style="animation: pulseSoft 1.6s infinite; animation-delay:0.8s;"/>
-      <rect x="30" y="-8"  width="3" height="8"  fill="#6bd6ff" style="animation: pulseSoft 1.6s infinite; animation-delay:1s;"/>
+    <text x="14" y="46" fill="#5d7398" font-size="7" font-family="JetBrains Mono">node-1/2 primary · 3 failover</text>
+    <!-- HASHRATE readout (right side) -->
+    <text x="170" y="40" text-anchor="end" fill="#6bd6ff" font-size="16" font-family="JetBrains Mono" font-weight="700" id="rate-asic-pool">—</text>
+    <text x="170" y="52" text-anchor="end" fill="#9bb1cf" font-size="7" font-family="JetBrains Mono" id="rate-asic-pool-unit">total H/s</text>
+    <!-- mini activity bars (smaller, beneath rate) -->
+    <g transform="translate(115, 66)">
+      <rect x="0"  y="-7" width="2" height="7"  fill="#3aa0ff" style="animation: pulseSoft 1.6s infinite;"/>
+      <rect x="4"  y="-5" width="2" height="5"  fill="#6bd6ff" style="animation: pulseSoft 1.6s infinite; animation-delay:0.2s;"/>
+      <rect x="8"  y="-9" width="2" height="9"  fill="#3aa0ff" style="animation: pulseSoft 1.6s infinite; animation-delay:0.4s;"/>
+      <rect x="12" y="-6" width="2" height="6"  fill="#6bd6ff" style="animation: pulseSoft 1.6s infinite; animation-delay:0.6s;"/>
+      <rect x="16" y="-10" width="2" height="10" fill="#3aa0ff" style="animation: pulseSoft 1.6s infinite; animation-delay:0.8s;"/>
+      <rect x="20" y="-5" width="2" height="5"  fill="#6bd6ff" style="animation: pulseSoft 1.6s infinite; animation-delay:1s;"/>
     </g>
-    <text x="160" y="70" text-anchor="end" fill="#5d7398" font-size="6" font-family="JetBrains Mono">PROP · 1% fee</text>
+    <text x="14" y="70" fill="#5d7398" font-size="6" font-family="JetBrains Mono">PROP · 1% · workers <tspan fill="#6bd6ff" id="workers-asic-pool">—</tspan></text>
   </g>
 
-  <!-- cpu-gpu-pool -->
+  <!-- cpu-gpu-pool — with total hashrate readout -->
   <g transform="translate(990 345)">
     <rect width="180" height="75" rx="8" fill="url(#boxGrad)" stroke="#3aa0ff" stroke-width="1"/>
     <rect x="6" y="6" width="168" height="12" rx="2" fill="#050810" stroke="#3aa0ff" stroke-width="0.4"/>
     <text x="14" y="15" fill="#6bd6ff" font-size="7" font-family="JetBrains Mono" font-weight="600">CPU-GPU-POOL · :3335</text>
     <circle cx="166" cy="12" r="2" fill="#6bd6ff" style="animation: pulseBright 1.7s infinite;"/>
     <text x="14" y="32" fill="#9bb1cf" font-size="9" font-family="Inter">stratum V1 · PPLNS</text>
-    <text x="14" y="46" fill="#5d7398" font-size="7" font-family="JetBrains Mono">routes: node-1/2 primary</text>
-    <text x="14" y="58" fill="#5d7398" font-size="7" font-family="JetBrains Mono">       node-3 failover</text>
-    <g transform="translate(132, 56)">
-      <rect x="0"  y="-10" width="3" height="10" fill="#3aa0ff" style="animation: pulseSoft 1.4s infinite;"/>
-      <rect x="6"  y="-14" width="3" height="14" fill="#6bd6ff" style="animation: pulseSoft 1.4s infinite; animation-delay:0.2s;"/>
-      <rect x="12" y="-7"  width="3" height="7"  fill="#3aa0ff" style="animation: pulseSoft 1.4s infinite; animation-delay:0.4s;"/>
-      <rect x="18" y="-12" width="3" height="12" fill="#6bd6ff" style="animation: pulseSoft 1.4s infinite; animation-delay:0.6s;"/>
-      <rect x="24" y="-9"  width="3" height="9"  fill="#3aa0ff" style="animation: pulseSoft 1.4s infinite; animation-delay:0.8s;"/>
-      <rect x="30" y="-15" width="3" height="15" fill="#6bd6ff" style="animation: pulseSoft 1.4s infinite; animation-delay:1s;"/>
+    <text x="14" y="46" fill="#5d7398" font-size="7" font-family="JetBrains Mono">node-1/2 primary · 3 failover</text>
+    <!-- HASHRATE readout -->
+    <text x="170" y="40" text-anchor="end" fill="#6bd6ff" font-size="16" font-family="JetBrains Mono" font-weight="700" id="rate-cpu-gpu-pool">—</text>
+    <text x="170" y="52" text-anchor="end" fill="#9bb1cf" font-size="7" font-family="JetBrains Mono" id="rate-cpu-gpu-pool-unit">total H/s</text>
+    <g transform="translate(115, 66)">
+      <rect x="0"  y="-5"  width="2" height="5"  fill="#3aa0ff" style="animation: pulseSoft 1.4s infinite;"/>
+      <rect x="4"  y="-8"  width="2" height="8"  fill="#6bd6ff" style="animation: pulseSoft 1.4s infinite; animation-delay:0.2s;"/>
+      <rect x="8"  y="-3"  width="2" height="3"  fill="#3aa0ff" style="animation: pulseSoft 1.4s infinite; animation-delay:0.4s;"/>
+      <rect x="12" y="-7"  width="2" height="7"  fill="#6bd6ff" style="animation: pulseSoft 1.4s infinite; animation-delay:0.6s;"/>
+      <rect x="16" y="-5"  width="2" height="5"  fill="#3aa0ff" style="animation: pulseSoft 1.4s infinite; animation-delay:0.8s;"/>
+      <rect x="20" y="-9"  width="2" height="9"  fill="#6bd6ff" style="animation: pulseSoft 1.4s infinite; animation-delay:1s;"/>
     </g>
-    <text x="160" y="70" text-anchor="end" fill="#5d7398" font-size="6" font-family="JetBrains Mono">PPLNS · 1% fee</text>
+    <text x="14" y="70" fill="#5d7398" font-size="6" font-family="JetBrains Mono">PPLNS · 1% · workers <tspan fill="#6bd6ff" id="workers-cpu-gpu-pool">—</tspan></text>
   </g>
 
   <!-- hans-solo (DEDICATED, bright) -->
@@ -882,6 +886,44 @@
     else               el.style.color = '#6bd6ff';
   }
 
+  // Format hashrate with sensible units
+  function fmtRate(hps) {
+    if (hps == null || isNaN(hps) || hps <= 0) return ['—', 'total H/s'];
+    if (hps >= 1e12) return [(hps/1e12).toFixed(2), 'TH/s'];
+    if (hps >= 1e9)  return [(hps/1e9 ).toFixed(2), 'GH/s'];
+    if (hps >= 1e6)  return [(hps/1e6 ).toFixed(1), 'MH/s'];
+    if (hps >= 1e3)  return [(hps/1e3 ).toFixed(1), 'kH/s'];
+    return [Math.round(hps).toString(), 'H/s'];
+  }
+  function setRate(idBase, hps, workers) {
+    const [num, unit] = fmtRate(hps);
+    setText('rate-' + idBase, num);
+    setText('rate-' + idBase + '-unit', unit);
+    setText('workers-' + idBase, workers != null ? String(workers) : '—');
+  }
+
+  // Try to fetch pool stats from a CORS-friendly endpoint (TBD — to be added at rpc.dagtech.network/pools/stats)
+  // Expected JSON shape:
+  //   { "asic-pool":    { "hashrate_hps": 12345678, "workers": 3 },
+  //     "cpu-gpu-pool": { "hashrate_hps":   234567, "workers": 4 } }
+  async function pullPoolStats() {
+    const endpoints = [
+      'https://rpc.dagtech.network/pools/stats',
+      'https://stats.dagtech.network/api/pools',  // fallback if Grafana exposes a public proxy
+    ];
+    for (const url of endpoints) {
+      try {
+        const r = await fetch(url, { headers: {'Accept':'application/json'}, signal: AbortSignal.timeout(4000) });
+        if (!r.ok) continue;
+        const j = await r.json();
+        if (j['asic-pool'])    setRate('asic-pool',    j['asic-pool'].hashrate_hps,    j['asic-pool'].workers);
+        if (j['cpu-gpu-pool']) setRate('cpu-gpu-pool', j['cpu-gpu-pool'].hashrate_hps, j['cpu-gpu-pool'].workers);
+        return true;
+      } catch (e) { /* try next */ }
+    }
+    return false;
+  }
+
   async function pullData() {
     const block = await jsonRpc(RPC, 'eth_blockNumber');
     if (block) {
@@ -897,6 +939,8 @@
       setText('t-bdagscan-block', fmtBlock(ext));
       colorChainTip(block, ext);
     }
+    // pool hashrates — best-effort, fails silently if endpoint not yet exposed
+    await pullPoolStats();
     lastUpdateTs = Date.now();
   }
   pullData();
