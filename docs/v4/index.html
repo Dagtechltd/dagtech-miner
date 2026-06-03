@@ -656,9 +656,9 @@
     <rect x="6" y="6" width="168" height="12" rx="2" fill="#050810" stroke="#4fa6e6" stroke-width="0.4"/>
     <text x="14" y="15" fill="#4fa6e6" font-size="7" font-family="JetBrains Mono" font-weight="600">RPC-FAILOVER · HAProxy</text>
     <circle cx="166" cy="12" r="2" fill="#4fa6e6" style="animation: pulseBright 1.8s infinite;"/>
-    <text x="14" y="32" fill="#9bb1cf" font-size="9" font-family="Inter">HTTP proxy · health-chk</text>
-    <text x="14" y="46" fill="#5d7398" font-size="7" font-family="JetBrains Mono">primary: node-1</text>
-    <text x="14" y="58" fill="#5d7398" font-size="7" font-family="JetBrains Mono">backup: node-2 + node-3</text>
+    <text x="14" y="32" fill="#9bb1cf" font-size="9" font-family="Inter">HTTP proxy · sync-aware</text>
+    <text x="14" y="46" fill="#5d7398" font-size="7" font-family="JetBrains Mono">primary: node-1 · backup: 2+3</text>
+    <text x="14" y="58" fill="#6bd6ff" font-size="7" font-family="JetBrains Mono">2-stage check · auto-failover</text>
     <g transform="translate(132, 56)">
       <rect x="0"  y="-8"  width="3" height="8"  fill="#4fa6e6" style="animation: pulseSoft 1.8s infinite;"/>
       <rect x="6"  y="-12" width="3" height="12" fill="#4fa6e6" style="animation: pulseSoft 1.8s infinite; animation-delay:0.2s;"/>
@@ -670,12 +670,12 @@
     <text x="160" y="70" text-anchor="end" fill="#5d7398" font-size="6" font-family="JetBrains Mono">explorer + monitor</text>
   </g>
 
-  <!-- ARCHITECTURE NOTE — explains the dim wires -->
+  <!-- ARCHITECTURE NOTE — HAProxy sync-aware check now LIVE -->
   <g transform="translate(880 660)">
-    <rect width="290" height="42" rx="6" fill="rgba(255, 165, 61, 0.06)" stroke="rgba(255, 165, 61, 0.25)" stroke-width="0.5"/>
-    <text x="10" y="15" fill="#ffa53d" font-size="7" font-family="JetBrains Mono" font-weight="600">⚠ HAPROXY GAP</text>
-    <text x="10" y="27" fill="#9bb1cf" font-size="6" font-family="JetBrains Mono">Health check only validates RPC alive,</text>
-    <text x="10" y="36" fill="#9bb1cf" font-size="6" font-family="JetBrains Mono">not sync depth. node-3 standby won't auto-engage on sync lag.</text>
+    <rect width="290" height="42" rx="6" fill="rgba(107, 214, 255, 0.08)" stroke="rgba(107, 214, 255, 0.4)" stroke-width="0.5"/>
+    <text x="10" y="15" fill="#6bd6ff" font-size="7" font-family="JetBrains Mono" font-weight="700">✓ SYNC-AWARE FAILOVER LIVE</text>
+    <text x="10" y="27" fill="#9bb1cf" font-size="6" font-family="JetBrains Mono">HAProxy 2-stage check: RPC alive + getBlockTemplate</text>
+    <text x="10" y="36" fill="#9bb1cf" font-size="6" font-family="JetBrains Mono">(rejects "initial download"). Auto-failover on sync lag now active.</text>
   </g>
 
   <!-- =========================================================== -->
