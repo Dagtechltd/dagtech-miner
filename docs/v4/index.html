@@ -273,26 +273,26 @@
   <!-- node-x100 → hans-solo (DEDICATED, bright) -->
   <path d="M 850 530 Q 920 510 970 480" fill="none" stroke="var(--wire-dedicated)" stroke-width="2.5" opacity="0.95" stroke-dasharray="8 6" style="animation: flow 1.2s linear infinite;" marker-end="url(#arrowBright)"/>
 
-  <!-- node-1 → asic-pool (PRIMARY) — degraded (orange) because node-1 is catching up -->
-  <path d="M 850 170 Q 920 220 970 290" fill="none" stroke="#ffa53d" stroke-width="2" opacity="0.75" stroke-dasharray="6 6" style="animation: flow 1.5s linear infinite;"/>
-  <!-- node-1 → cpu-gpu-pool (orange) -->
-  <path d="M 850 170 Q 920 260 970 380" fill="none" stroke="#ffa53d" stroke-width="2" opacity="0.75" stroke-dasharray="6 6" style="animation: flow 1.5s linear infinite;"/>
-  <!-- node-1 → rpc-failover (orange-tinted) -->
-  <path d="M 850 170 Q 920 360 970 580" fill="none" stroke="#ffa53d" stroke-width="1.5" opacity="0.55" stroke-dasharray="5 7" style="animation: flow 1.8s linear infinite;"/>
+  <!-- node-1 → asic-pool (ACTIVE PRIMARY — node-1 caught up, sharing load with node-2) -->
+  <path d="M 850 170 Q 920 220 970 290" fill="none" stroke="var(--wire-primary)" stroke-width="2" opacity="0.85" stroke-dasharray="6 6" style="animation: flow 1.5s linear infinite;" marker-end="url(#arrowB)"/>
+  <!-- node-1 → cpu-gpu-pool (ACTIVE PRIMARY) -->
+  <path d="M 850 170 Q 920 260 970 380" fill="none" stroke="var(--wire-primary)" stroke-width="2" opacity="0.85" stroke-dasharray="6 6" style="animation: flow 1.5s linear infinite;" marker-end="url(#arrowB)"/>
+  <!-- node-1 → rpc-failover (ACTIVE PRIMARY for HAProxy) -->
+  <path d="M 850 170 Q 920 360 970 580" fill="none" stroke="var(--wire-service)" stroke-width="2" opacity="0.85" stroke-dasharray="5 7" style="animation: flow 1.8s linear infinite;" marker-end="url(#arrowB)"/>
 
   <!-- node-2 → asic-pool (PRIMARY) -->
   <path d="M 850 280 Q 920 285 970 290" fill="none" stroke="var(--wire-primary)" stroke-width="2" opacity="0.85" stroke-dasharray="6 6" style="animation: flow 1.4s linear infinite;" marker-end="url(#arrowB)"/>
   <!-- node-2 → cpu-gpu-pool -->
   <path d="M 850 280 Q 920 330 970 380" fill="none" stroke="var(--wire-primary)" stroke-width="2" opacity="0.85" stroke-dasharray="6 6" style="animation: flow 1.4s linear infinite;" marker-end="url(#arrowB)"/>
-  <!-- node-2 → rpc-failover -->
-  <path d="M 850 280 Q 920 420 970 580" fill="none" stroke="var(--wire-service)" stroke-width="1.5" opacity="0.65" stroke-dasharray="5 7" style="animation: flow 1.7s linear infinite;"/>
+  <!-- node-2 → rpc-failover (BACKUP per HAProxy · STANDBY · only kicks in if node-1 fails) -->
+  <path d="M 850 280 Q 920 420 970 580" fill="none" stroke="var(--wire-failover)" stroke-width="1" opacity="0.3" stroke-dasharray="2 10"/>
 
-  <!-- node-3 → asic-pool (FAILOVER, dashed dim) -->
-  <path d="M 850 410 Q 920 350 970 295" fill="none" stroke="var(--wire-failover)" stroke-width="1.3" opacity="0.55" stroke-dasharray="3 6" style="animation: flow 3s linear infinite;"/>
-  <!-- node-3 → cpu-gpu-pool -->
-  <path d="M 850 410 Q 920 390 970 385" fill="none" stroke="var(--wire-failover)" stroke-width="1.3" opacity="0.55" stroke-dasharray="3 6" style="animation: flow 3s linear infinite;"/>
-  <!-- node-3 → rpc-failover (this is its primary job) -->
-  <path d="M 850 410 Q 920 490 970 575" fill="none" stroke="var(--wire-service)" stroke-width="2" opacity="0.8" stroke-dasharray="5 7" style="animation: flow 1.6s linear infinite;" marker-end="url(#arrowB)"/>
+  <!-- node-3 → asic-pool (FAILOVER · STANDBY · NO ACTIVE FLOW — wider gaps, no animation) -->
+  <path d="M 850 410 Q 920 350 970 295" fill="none" stroke="var(--wire-failover)" stroke-width="1" opacity="0.3" stroke-dasharray="2 10"/>
+  <!-- node-3 → cpu-gpu-pool (FAILOVER · STANDBY · NO ACTIVE FLOW) -->
+  <path d="M 850 410 Q 920 390 970 385" fill="none" stroke="var(--wire-failover)" stroke-width="1" opacity="0.3" stroke-dasharray="2 10"/>
+  <!-- node-3 → rpc-failover (BACKUP per HAProxy config · STANDBY · NO ACTIVE FLOW until 1+2 fail) -->
+  <path d="M 850 410 Q 920 490 970 575" fill="none" stroke="var(--wire-failover)" stroke-width="1" opacity="0.3" stroke-dasharray="2 10"/>
 
   <!-- ========== Pool → Miner wires (col 4 → col 5) ========== -->
 
@@ -447,40 +447,38 @@
 
   <!-- NODE template gets: chassis, name, fan, two gauges (sync + load), status LED, sparkline -->
 
-  <!-- node-1 (catching up — ORANGE warning state) -->
+  <!-- node-1 (at tip — healthy) -->
   <g transform="translate(680 130)">
-    <!-- outer warning glow halo -->
-    <rect x="-2" y="-2" width="174" height="84" rx="9" fill="none" stroke="#ffa53d" stroke-width="0.6" opacity="0.4" style="animation: pulseSoft 1.6s infinite;"/>
-    <rect width="170" height="80" rx="8" fill="url(#boxGrad)" stroke="#ffa53d" stroke-width="1.4"/>
-    <rect x="6" y="6" width="158" height="12" rx="2" fill="#1a0e00" stroke="#ffa53d" stroke-width="0.4"/>
-    <text x="14" y="15" fill="#ffa53d" font-size="7" font-family="JetBrains Mono" font-weight="700">NODE-1 · GENERAL · CATCHING UP</text>
-    <circle cx="156" cy="12" r="2.5" fill="#ffa53d" filter="url(#softGlow)" style="animation: pulseBright 1s infinite;"/>
-    <circle cx="20" cy="40" r="11" fill="#050810" stroke="#ffa53d" stroke-width="0.7"/>
+    <rect width="170" height="80" rx="8" fill="url(#boxGrad)" stroke="#3aa0ff" stroke-width="1"/>
+    <rect x="6" y="6" width="158" height="12" rx="2" fill="#050810" stroke="#3aa0ff" stroke-width="0.4"/>
+    <text x="14" y="15" fill="#6bd6ff" font-size="7" font-family="JetBrains Mono" font-weight="600">NODE-1 · GENERAL · ACTIVE</text>
+    <circle cx="156" cy="12" r="2" fill="#6bd6ff" style="animation: blink 1.5s infinite;"/>
+    <circle cx="20" cy="40" r="11" fill="#050810" stroke="#3aa0ff" stroke-width="0.6"/>
     <g style="animation: spin 3s linear infinite; transform-origin: 20px 40px;">
-      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" fill="#ffa53d" opacity="0.65"/>
-      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" transform="rotate(120 20 40)" fill="#ffa53d" opacity="0.65"/>
-      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" transform="rotate(240 20 40)" fill="#ffa53d" opacity="0.65"/>
+      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" fill="#3aa0ff" opacity="0.6"/>
+      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" transform="rotate(120 20 40)" fill="#3aa0ff" opacity="0.6"/>
+      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" transform="rotate(240 20 40)" fill="#3aa0ff" opacity="0.6"/>
     </g>
-    <circle cx="20" cy="40" r="2" fill="#ffa53d"/>
+    <circle cx="20" cy="40" r="2" fill="#3aa0ff"/>
     <g transform="translate(60 48)">
       <use href="#gaugeArc"/>
-      <path d="M -16 0 A 16 16 0 0 1 16 0" fill="none" stroke="#ffa53d" stroke-width="3" stroke-dasharray="35 100" opacity="0.95"/>
-      <line x1="0" y1="0" x2="0" y2="-14" stroke="#ffa53d" stroke-width="1.4" transform-origin="0 0" style="transform:rotate(35deg)"/>
-      <circle cx="0" cy="0" r="2" fill="#ffa53d"/>
-      <text x="0" y="14" text-anchor="middle" fill="#ffa53d" font-size="6" font-family="JetBrains Mono" font-weight="600">SYNC 70%</text>
+      <path d="M -16 0 A 16 16 0 0 1 16 0" fill="none" stroke="#6bd6ff" stroke-width="3" stroke-dasharray="50 100"/>
+      <line x1="0" y1="0" x2="0" y2="-14" stroke="#6bd6ff" stroke-width="1.2" transform-origin="0 0" style="transform:rotate(90deg)"/>
+      <circle cx="0" cy="0" r="2" fill="#6bd6ff"/>
+      <text x="0" y="14" text-anchor="middle" fill="#6bd6ff" font-size="6" font-family="JetBrains Mono" font-weight="600">SYNC 100%</text>
     </g>
     <g transform="translate(108 48)">
       <use href="#gaugeArc"/>
-      <path d="M -16 0 A 16 16 0 0 1 16 0" fill="none" stroke="#ffa53d" stroke-width="3" stroke-dasharray="62 100" opacity="0.85"/>
-      <line x1="0" y1="0" x2="0" y2="-14" stroke="#ffa53d" stroke-width="1.4" transform-origin="0 0" style="transform:rotate(112deg)"/>
-      <circle cx="0" cy="0" r="2" fill="#ffa53d"/>
-      <text x="0" y="14" text-anchor="middle" fill="#ffa53d" font-size="6" font-family="JetBrains Mono" font-weight="600">LOAD 62%</text>
+      <path d="M -16 0 A 16 16 0 0 1 16 0" fill="none" stroke="#3aa0ff" stroke-width="3" stroke-dasharray="55 100" opacity="0.85"/>
+      <line x1="0" y1="0" x2="0" y2="-14" stroke="#3aa0ff" stroke-width="1.2" transform-origin="0 0" style="transform:rotate(99deg)"/>
+      <circle cx="0" cy="0" r="2" fill="#3aa0ff"/>
+      <text x="0" y="14" text-anchor="middle" fill="#5d7398" font-size="6" font-family="JetBrains Mono">LOAD 55%</text>
     </g>
-    <polyline points="146,38 150,32 154,36 158,30 162,34" fill="none" stroke="#ffa53d" stroke-width="1.2" opacity="0.85"/>
-    <circle cx="14" cy="72" r="1.6" fill="#ffa53d" style="animation: blink 1.2s infinite;"/>
-    <circle cx="22" cy="72" r="1.6" fill="#ffa53d" style="animation: blink 1.4s infinite;"/>
-    <circle cx="30" cy="72" r="1.6" fill="#ffa53d" style="animation: blink 1.6s infinite;"/>
-    <text x="42" y="74" fill="#ffa53d" font-size="6" font-family="JetBrains Mono">QNG · EVM · WS</text>
+    <polyline points="146,36 150,33 154,32 158,32 162,31" fill="none" stroke="#6bd6ff" stroke-width="1" opacity="0.75"/>
+    <circle cx="14" cy="72" r="1.5" fill="#6bd6ff" style="animation: blink 1.6s infinite;"/>
+    <circle cx="22" cy="72" r="1.5" fill="#6bd6ff" style="animation: blink 1.8s infinite;"/>
+    <circle cx="30" cy="72" r="1.5" fill="#6bd6ff" style="animation: blink 2s infinite;"/>
+    <text x="42" y="74" fill="#5d7398" font-size="6" font-family="JetBrains Mono">QNG · EVM · WS</text>
   </g>
 
   <!-- node-2 (at tip) -->
@@ -521,8 +519,8 @@
   <g transform="translate(680 370)">
     <rect width="170" height="80" rx="8" fill="url(#boxGrad)" stroke="#5d7398" stroke-width="1" stroke-dasharray="4 4" opacity="0.92"/>
     <rect x="6" y="6" width="158" height="12" rx="2" fill="#050810" stroke="#5d7398" stroke-width="0.4"/>
-    <text x="14" y="15" fill="#9bb1cf" font-size="7" font-family="JetBrains Mono" font-weight="600">NODE-3 · STANDBY · CATCHING UP</text>
-    <circle cx="156" cy="12" r="2.2" fill="#ffa53d" filter="url(#softGlow)" style="animation: blink 1.5s infinite;"/>
+    <text x="14" y="15" fill="#9bb1cf" font-size="7" font-family="JetBrains Mono" font-weight="600">NODE-3 · WARM STANDBY · AT TIP</text>
+    <circle cx="156" cy="12" r="2" fill="#6bd6ff" style="animation: blink 1.5s infinite;"/>
     <circle cx="20" cy="40" r="11" fill="#050810" stroke="#5d7398" stroke-width="0.6"/>
     <g style="animation: spin 4s linear infinite; transform-origin: 20px 40px;">
       <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" fill="#5d7398" opacity="0.7"/>
@@ -672,6 +670,14 @@
     <text x="160" y="70" text-anchor="end" fill="#5d7398" font-size="6" font-family="JetBrains Mono">explorer + monitor</text>
   </g>
 
+  <!-- ARCHITECTURE NOTE — explains the dim wires -->
+  <g transform="translate(880 660)">
+    <rect width="290" height="42" rx="6" fill="rgba(255, 165, 61, 0.06)" stroke="rgba(255, 165, 61, 0.25)" stroke-width="0.5"/>
+    <text x="10" y="15" fill="#ffa53d" font-size="7" font-family="JetBrains Mono" font-weight="600">⚠ HAPROXY GAP</text>
+    <text x="10" y="27" fill="#9bb1cf" font-size="6" font-family="JetBrains Mono">Health check only validates RPC alive,</text>
+    <text x="10" y="36" fill="#9bb1cf" font-size="6" font-family="JetBrains Mono">not sync depth. node-3 standby won't auto-engage on sync lag.</text>
+  </g>
+
   <!-- =========================================================== -->
   <!-- COL 5 — MINERS + SERVICES -->
   <!-- =========================================================== -->
@@ -814,10 +820,10 @@
 
 <footer>
   <strong>WIRES</strong>
-  <div class="legend-item"><span class="legend-line dedicated"></span><span>X100 dedicated path</span></div>
-  <div class="legend-item"><span class="legend-line"></span><span>Mining primary</span></div>
-  <div class="legend-item"><span class="legend-line failover"></span><span>Failover (when primary down)</span></div>
-  <div class="legend-item"><span class="legend-line service"></span><span>Service / explorer</span></div>
+  <div class="legend-item"><span class="legend-line dedicated"></span><span>X100 dedicated · active</span></div>
+  <div class="legend-item"><span class="legend-line"></span><span>Active primary (carrying flow)</span></div>
+  <div class="legend-item"><span class="legend-line service"></span><span>Active service path</span></div>
+  <div class="legend-item"><span class="legend-line failover"></span><span style="color:#7f8da6;">Warm standby (ready, no flow)</span></div>
   <strong style="margin-left:30px;">STATUS</strong>
   <div class="legend-item"><span class="legend-dot ok"></span><span>Live / healthy</span></div>
   <div class="legend-item"><span class="legend-dot warn"></span><span style="color:#ffa53d;font-weight:600;">Warning / catching up / overloaded</span></div>
