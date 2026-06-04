@@ -25,7 +25,7 @@ Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
 WizardSizePercent=120
-PrivilegesRequired=lowest
+PrivilegesRequired=admin
 PrivilegesRequiredOverridesAllowed=dialog
 UninstallDisplayName={#AppName}
 VersionInfoVersion={#AppVersion}
@@ -65,7 +65,7 @@ Name: "{app}\logs"
 Name: "{app}\python"
 
 [Icons]
-Name: "{userdesktop}\{#AppName}"; Filename: "{app}\bin\dagtech-start.bat"; WorkingDir: "{app}\bin"; IconFilename: "{app}\dagtech.ico"; Comment: "Start DagTech Miner"; Tasks: desktopicon
+; Desktop shortcut created via Code section to handle OneDrive Desktop gracefully
 Name: "{group}\{#AppName}"; Filename: "{app}\bin\dagtech-start.bat"; WorkingDir: "{app}\bin"; IconFilename: "{app}\dagtech.ico"; Comment: "Start DagTech Miner"; Tasks: startmenuicon
 Name: "{group}\Stop {#AppName}"; Filename: "{app}\bin\dagtech-stop.bat"; WorkingDir: "{app}\bin"; Comment: "Stop DagTech Miner"; Tasks: startmenuicon
 Name: "{group}\Dashboard"; Filename: "http://localhost:8881"; Comment: "Open Mining Dashboard"; Tasks: startmenuicon
@@ -76,10 +76,12 @@ Name: "{userstartup}\{#AppName}"; Filename: "{app}\bin\dagtech-start.bat"; Worki
 Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}\bin"; Check: NeedsAddPath(ExpandConstant('{app}\bin'))
 
 [Run]
-; Defender exclusion (before anything else)
+; Defender exclusion
 Filename: "powershell.exe"; Parameters: "-Command ""Add-MpPreference -ExclusionPath '{app}'"""; StatusMsg: "Adding Windows Defender exclusion..."; Flags: runhidden; Tasks: defenderexclusion
-; Only open dashboard on finish - user clicks the reactor button to start mining
-Filename: "http://localhost:8881"; Flags: nowait postinstall shellexec unchecked; Description: "Open mining dashboard"
+; Start dashboard server (runs independently of miner)
+Filename: "python"; Parameters: """{app}\dashboard\dashboard_server.py"" 8881 8880"; WorkingDir: "{app}\dashboard"; StatusMsg: "Starting dashboard server..."; Flags: nowait runhidden
+; Open dashboard on finish
+Filename: "http://localhost:8881"; Flags: nowait postinstall shellexec; Description: "Open mining dashboard"
 
 [UninstallRun]
 Filename: "taskkill"; Parameters: "/f /im dagtech-miner.exe"; Flags: runhidden
@@ -248,6 +250,30 @@ var
 begin
   if CurStep = ssPostInstall then
   begin
+    // Create desktop shortcut with error handling (OneDrive may block)
+    if IsTaskSelected('desktopicon') then
+    begin
+      try
+        // Try standard desktop first
+        CreateShellLink(
+          ExpandConstant('{userdesktop}\{#AppName}.lnk'),
+          '', ExpandConstant('{app}\bin\dagtech-start.bat'),
+          '', ExpandConstant('{app}\bin'), '',
+          0, SW_SHOWNORMAL);
+      except
+        // If OneDrive blocks, try the local desktop
+        try
+          CreateShellLink(
+            ExpandConstant('{%USERPROFILE}\Desktop\{#AppName}.lnk'),
+            '', ExpandConstant('{app}\bin\dagtech-start.bat'),
+            '', ExpandConstant('{app}\bin'), '',
+            0, SW_SHOWNORMAL);
+        except
+          // Just skip - Start Menu shortcut will work
+        end;
+      end;
+    end;
+
     ConfigFile := ExpandConstant('{app}') + '\config.env';
     Lines := TStringList.Create;
     try
