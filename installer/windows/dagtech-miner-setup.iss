@@ -53,7 +53,7 @@ WelcomeLabel2=This will install {#AppName} v{#AppVersion} on your computer.%n%nT
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: checked
 Name: "startmenuicon"; Description: "Create a &Start Menu entry"; GroupDescription: "Shortcuts:"; Flags: checked
 Name: "autostart"; Description: "Start mining automatically on Windows login"; GroupDescription: "Options:"; Flags: unchecked
-Name: "defenderexclusion"; Description: "Add Windows Defender exclusion (recommended — prevents false positive deletion)"; GroupDescription: "Security:"; Flags: checked
+Name: "defenderexclusion"; Description: "Add Windows Defender exclusion (recommended - prevents false positive deletion)"; GroupDescription: "Security:"; Flags: checked
 
 [Files]
 ; Core miner binaries
