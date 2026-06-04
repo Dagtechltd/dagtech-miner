@@ -1,0 +1,1277 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="DagTech — German-engineered, UAE-operated BlockDAG mining infrastructure. Mining pool, custom miner software, dApp registry, explorer, network mesh — every layer of the BlockDAG stack, built in-house.">
+<meta name="theme-color" content="#040711">
+<meta property="og:title" content="DagTech — BlockDAG Infrastructure">
+<meta property="og:description" content="German Precision. UAE Operations. Every layer of BlockDAG, engineered in-house.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://dagtechltd.com/NewLGO/upscalemedia-transformed.png">
+<title>DagTech — BlockDAG Infrastructure</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@200;300;400;500;600&family=JetBrains+Mono:wght@300;400;500&family=Cormorant+Garamond:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#040711;
+    --bg-mid:#070d1c;
+    --bg-glass:rgba(8, 22, 44, 0.55);
+    --bg-glass-hi:rgba(15, 35, 65, 0.65);
+    --fg:#e8eef8;
+    --fg-dim:#a8b3c8;
+    --muted:#6b7a96;
+    --muted2:#3a4762;
+    --line:rgba(0, 212, 255, 0.18);
+    --line-strong:rgba(0, 212, 255, 0.4);
+    --blue:#00d4ff;
+    --blue-d:#0090b5;
+    --blue-l:#7fe5ff;
+    --blue-glow:rgba(0, 212, 255, 0.45);
+    --gold:#fbbf24;
+    --gold-l:#fcd34d;
+    --gold-glow:rgba(251, 191, 36, 0.4);
+    --german-red:#b8313a;
+    --german-gold:#fdc60b;
+  }
+  *,*::before,*::after { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-weight: 300;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  html { scroll-behavior: smooth; }
+  ::selection { background: rgba(0,212,255,0.3); color: white; }
+  a { color: inherit; text-decoration: none; }
+  img { display: block; max-width: 100%; }
+
+  /* ===== HEADER ===== */
+  header {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    padding: 16px 36px;
+    backdrop-filter: blur(20px) saturate(170%);
+    -webkit-backdrop-filter: blur(20px) saturate(170%);
+    background: rgba(4, 7, 17, 0.55);
+    border-bottom: 1px solid rgba(0,212,255,0.08);
+    display: flex; justify-content: space-between; align-items: center;
+    transition: padding 0.3s ease, background 0.3s ease;
+  }
+  header.scrolled { padding: 10px 36px; background: rgba(4,7,17,0.85); border-bottom-color: var(--line); }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .mark {
+    width: 36px; height: 36px;
+    background:
+      radial-gradient(circle at 50% 50%, var(--blue) 0%, var(--blue-d) 40%, transparent 70%),
+      radial-gradient(circle at 50% 50%, transparent 28%, rgba(0,212,255,0.55) 33%, transparent 42%);
+    border-radius: 50%;
+    box-shadow: 0 0 22px rgba(0,212,255,0.5), inset 0 0 8px rgba(255,255,255,0.4);
+    position: relative;
+  }
+  .brand .mark::after {
+    content: ""; position: absolute; inset: 14px;
+    background: #fff; border-radius: 50%;
+    box-shadow: 0 0 10px #fff;
+  }
+  .brand .name {
+    font-family: 'Space Grotesk'; font-weight: 700;
+    font-size: 17px; letter-spacing: 0.18em;
+    background: linear-gradient(180deg, #fff 0%, var(--blue-l) 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  nav.primary { display: flex; gap: 28px; align-items: center; }
+  nav.primary a {
+    color: var(--fg-dim); font-size: 13px; font-weight: 400;
+    letter-spacing: 0.04em; transition: color 0.2s;
+  }
+  nav.primary a:hover { color: var(--blue-l); }
+  nav.primary .cta {
+    padding: 8px 18px;
+    background: linear-gradient(180deg, var(--blue-d), var(--blue));
+    color: #02101a;
+    border-radius: 4px;
+    font-weight: 600; font-size: 13px;
+    box-shadow: 0 0 18px rgba(0,212,255,0.35);
+    transition: all 0.2s;
+  }
+  nav.primary .cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 0 28px rgba(0,212,255,0.55);
+  }
+  @media (max-width: 900px) {
+    header { padding: 12px 18px; }
+    nav.primary { gap: 14px; font-size: 12px; }
+    nav.primary > a:not(.cta) { display: none; }
+  }
+
+  /* ===== HERO ===== */
+  section.hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex; flex-direction: column; justify-content: center; align-items: center;
+    padding: 100px 28px 60px;
+    text-align: center;
+    overflow: hidden;
+  }
+  /* WebGL canvas behind hero */
+  #stars {
+    position: absolute; inset: 0; z-index: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 50% 30%, rgba(0,80,140,0.35), transparent 70%),
+      radial-gradient(ellipse 80% 40% at 50% 100%, rgba(60,30,0,0.25), transparent 70%),
+      linear-gradient(180deg, var(--bg) 0%, var(--bg-mid) 60%, var(--bg) 100%);
+  }
+  .hero-grid {
+    position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    opacity: 0.35;
+    background-image:
+      linear-gradient(0deg, rgba(0,212,255,0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.07) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 20%, transparent 90%);
+    -webkit-mask-image: radial-gradient(ellipse 80% 70% at 50% 50%, black 20%, transparent 90%);
+  }
+  .hero-content { position: relative; z-index: 5; max-width: 1100px; }
+  .eyebrow {
+    display: inline-block;
+    padding: 6px 16px;
+    background: rgba(0,212,255,0.08);
+    border: 1px solid var(--line);
+    border-radius: 24px;
+    font-family: 'JetBrains Mono';
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--blue-l);
+    margin-bottom: 26px;
+    animation: fadeUp 0.8s 0.05s both;
+  }
+  .eyebrow .dot {
+    display: inline-block; width: 6px; height: 6px; background: var(--blue);
+    border-radius: 50%; margin-right: 8px;
+    box-shadow: 0 0 8px var(--blue);
+    animation: blink 2s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .hero h1 {
+    margin: 0;
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: clamp(48px, 10vw, 140px);
+    line-height: 0.92;
+    letter-spacing: -0.045em;
+    background: linear-gradient(180deg, #ffffff 0%, #c4daf0 45%, var(--blue-l) 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: fadeUp 1s 0.1s both;
+    text-shadow: 0 0 80px rgba(0, 150, 200, 0.3);
+  }
+  .hero h1 .alt {
+    -webkit-text-fill-color: var(--gold);
+    background: none;
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 300;
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .hero .lede {
+    margin: 32px auto 0;
+    max-width: 720px;
+    font-size: clamp(15px, 1.4vw, 19px);
+    color: var(--fg-dim);
+    font-weight: 300;
+    line-height: 1.6;
+    animation: fadeUp 1s 0.2s both;
+  }
+  .hero .flags {
+    display: inline-flex; align-items: center; gap: 16px;
+    margin-top: 28px;
+    font-family: 'JetBrains Mono'; font-size: 12px;
+    color: var(--muted); letter-spacing: 0.06em;
+    animation: fadeUp 1s 0.3s both;
+  }
+  .hero .flags span { display: inline-flex; align-items: center; gap: 6px; }
+  .hero .flags .flag {
+    width: 22px; height: 14px; border-radius: 2px; overflow: hidden;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  }
+  .flag.de { background: linear-gradient(180deg, #000 33%, #b8313a 33%, #b8313a 66%, #fdc60b 66%); }
+  .flag.ae {
+    background:
+      linear-gradient(180deg, #00723f 33%, #fff 33%, #fff 66%, #000 66%);
+    position: relative; overflow: hidden;
+  }
+  .flag.ae::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 35%;
+    background: #d32027;
+  }
+  .ctas {
+    display: flex; gap: 14px; justify-content: center; margin-top: 44px; flex-wrap: wrap;
+    animation: fadeUp 1s 0.4s both;
+  }
+  .btn {
+    padding: 13px 26px; border-radius: 4px; font-weight: 500;
+    font-size: 14px; letter-spacing: 0.03em;
+    border: 1px solid transparent; cursor: pointer; transition: all 0.25s;
+    display: inline-flex; align-items: center; gap: 10px;
+  }
+  .btn.primary {
+    background: linear-gradient(180deg, var(--blue-d), var(--blue));
+    color: #02101a; font-weight: 600;
+    box-shadow: 0 0 22px rgba(0,212,255,0.35);
+  }
+  .btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 35px rgba(0,212,255,0.55);
+  }
+  .btn.secondary {
+    background: rgba(0,212,255,0.08);
+    color: var(--fg); border: 1px solid var(--line-strong);
+  }
+  .btn.secondary:hover {
+    background: rgba(0,212,255,0.16); border-color: var(--blue);
+  }
+  .btn.ghost {
+    background: transparent; color: var(--fg-dim); border: 1px solid rgba(0,212,255,0.18);
+  }
+  .btn.ghost:hover { color: var(--blue-l); border-color: var(--blue); }
+  .btn .arrow { transition: transform 0.2s; }
+  .btn:hover .arrow { transform: translateX(3px); }
+
+  /* Scroll indicator */
+  .scroll-down {
+    position: absolute; bottom: 40px; left: 50%;
+    transform: translateX(-50%); z-index: 5;
+    font-family: 'JetBrains Mono'; font-size: 10px; letter-spacing: 0.18em;
+    color: var(--muted); text-transform: uppercase;
+    animation: fadeUp 1s 0.6s both;
+  }
+  .scroll-down::after {
+    content: ""; display: block; width: 1px; height: 30px; margin: 12px auto 0;
+    background: linear-gradient(180deg, var(--blue) 0%, transparent 100%);
+    animation: dropDown 1.6s ease-in-out infinite;
+  }
+  @keyframes dropDown {
+    0% { transform: translateY(-10px); opacity: 0; }
+    50% { transform: translateY(0); opacity: 1; }
+    100% { transform: translateY(10px); opacity: 0; }
+  }
+
+  /* ===== LIVE STATS RIBBON ===== */
+  section.ticker {
+    position: relative; z-index: 10;
+    background: linear-gradient(180deg, rgba(8,16,28,0.95), rgba(4,7,17,0.95));
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 24px 36px;
+    margin-top: -1px;
+    backdrop-filter: blur(12px);
+  }
+  .ticker-grid {
+    max-width: 1500px; margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 20px;
+  }
+  .stat-block {
+    display: flex; flex-direction: column;
+    border-left: 2px solid transparent;
+    padding-left: 16px;
+    border-image: linear-gradient(180deg, var(--blue) 0%, transparent 100%) 1;
+  }
+  .stat-block .label {
+    font-family: 'JetBrains Mono'; font-size: 10px;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 6px;
+  }
+  .stat-block .value {
+    font-family: 'JetBrains Mono'; font-weight: 500;
+    font-size: 24px; color: var(--blue-l);
+    text-shadow: 0 0 14px var(--blue-glow);
+    line-height: 1.2;
+  }
+  .stat-block .sub {
+    font-family: 'JetBrains Mono'; font-size: 10px;
+    color: var(--muted); margin-top: 4px;
+  }
+  .stat-block .value.gold { color: var(--gold); text-shadow: 0 0 14px var(--gold-glow); }
+
+  /* ===== SECTIONS ===== */
+  main { position: relative; z-index: 5; }
+  section.wrap {
+    padding: 100px 36px;
+    max-width: 1500px; margin: 0 auto;
+    position: relative;
+  }
+  @media (max-width: 700px) {
+    section.wrap { padding: 70px 22px; }
+  }
+  .section-title { display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 60px; }
+  .section-title .num {
+    font-family: 'JetBrains Mono';
+    font-size: 11px; letter-spacing: 0.2em; color: var(--blue);
+    text-transform: uppercase; margin-bottom: 16px;
+  }
+  .section-title h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+    font-size: clamp(32px, 4.5vw, 56px);
+    line-height: 1.05;
+    letter-spacing: -0.025em;
+    margin: 0 0 20px;
+    max-width: 1000px;
+  }
+  .section-title h2 em {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 300;
+    color: var(--blue-l);
+  }
+  .section-title .desc {
+    max-width: 720px;
+    color: var(--fg-dim);
+    font-size: 16px; line-height: 1.65;
+  }
+
+  /* ===== WHO WE ARE ===== */
+  .twocol {
+    display: grid; grid-template-columns: 1.2fr 1fr; gap: 60px;
+    align-items: start;
+  }
+  @media (max-width: 900px) { .twocol { grid-template-columns: 1fr; gap: 40px; } }
+  .quote {
+    border-left: 2px solid var(--blue);
+    padding: 20px 24px;
+    background: rgba(0,212,255,0.04);
+    border-radius: 0 4px 4px 0;
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px;
+    line-height: 1.4;
+    color: var(--fg);
+    font-style: italic;
+    margin: 30px 0;
+  }
+  .quote .who {
+    display: block; margin-top: 16px;
+    font-family: 'JetBrains Mono', monospace;
+    font-style: normal;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .pillars {
+    display: grid; gap: 18px;
+  }
+  .pillar {
+    padding: 22px 24px;
+    background: var(--bg-glass);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    backdrop-filter: blur(10px);
+    transition: all 0.25s;
+  }
+  .pillar:hover {
+    border-color: var(--blue);
+    background: var(--bg-glass-hi);
+    transform: translateX(4px);
+  }
+  .pillar .label {
+    font-family: 'JetBrains Mono'; font-size: 10px;
+    letter-spacing: 0.18em; color: var(--blue); text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .pillar h4 {
+    font-family: 'Space Grotesk'; font-size: 22px; font-weight: 600;
+    margin: 0 0 8px; letter-spacing: -0.02em;
+  }
+  .pillar p { margin: 0; color: var(--fg-dim); font-size: 14px; line-height: 1.55; }
+
+  /* ===== ECOSYSTEM GRID ===== */
+  .ecosystem-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  .service-card {
+    position: relative;
+    background: var(--bg-glass);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 28px 26px 30px;
+    backdrop-filter: blur(14px);
+    transition: all 0.3s cubic-bezier(0.2, 0.8, 0.4, 1);
+    overflow: hidden;
+    text-decoration: none; color: inherit;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .service-card::before {
+    content: ""; position: absolute; inset: -1px;
+    background: linear-gradient(135deg, transparent 30%, var(--blue) 100%);
+    z-index: -1;
+    border-radius: 8px;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .service-card::after {
+    content: ""; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+    background: radial-gradient(circle at center, rgba(0,212,255,0.15) 0%, transparent 40%);
+    transform: translate(-30%, -30%);
+    opacity: 0;
+    transition: opacity 0.4s, transform 0.5s;
+    pointer-events: none;
+  }
+  .service-card:hover {
+    transform: translateY(-3px);
+    border-color: var(--blue);
+    box-shadow: 0 20px 40px rgba(0, 100, 150, 0.18);
+  }
+  .service-card:hover::after { opacity: 1; transform: translate(0,0); }
+  .service-card .header-row {
+    display: flex; justify-content: space-between; align-items: flex-start;
+  }
+  .service-card .icon {
+    width: 44px; height: 44px;
+    border-radius: 6px;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, rgba(0,212,255,0.18), rgba(0,80,120,0.05));
+    border: 1px solid var(--line);
+    font-size: 22px;
+  }
+  .service-card .badge {
+    font-family: 'JetBrains Mono'; font-size: 9px; padding: 4px 10px;
+    border-radius: 12px; letter-spacing: 0.12em; text-transform: uppercase;
+    background: rgba(0,212,255,0.10); color: var(--blue-l);
+    border: 1px solid var(--line);
+  }
+  .service-card .badge.live::before {
+    content: ""; display: inline-block; width: 6px; height: 6px;
+    background: #10e0a5; border-radius: 50%; margin-right: 6px;
+    box-shadow: 0 0 6px #10e0a5;
+    animation: blink 2s ease-in-out infinite;
+  }
+  .service-card h3 {
+    font-family: 'Space Grotesk'; font-size: 22px; font-weight: 600;
+    margin: 0; letter-spacing: -0.018em;
+  }
+  .service-card p {
+    margin: 0; color: var(--fg-dim); font-size: 13px; line-height: 1.55; flex: 1;
+  }
+  .service-card .url {
+    font-family: 'JetBrains Mono'; font-size: 11px;
+    color: var(--blue-l); letter-spacing: 0.04em;
+    display: flex; align-items: center; gap: 8px;
+    margin-top: 6px;
+  }
+  .service-card .url svg { transition: transform 0.2s; }
+  .service-card:hover .url svg { transform: translateX(4px); }
+  .service-card.gold {
+    border-color: rgba(251,191,36,0.3);
+    background: linear-gradient(180deg, rgba(40, 25, 0, 0.45), var(--bg-glass));
+  }
+  .service-card.gold .icon { background: linear-gradient(135deg, rgba(251,191,36,0.18), rgba(120,80,0,0.05)); border-color: rgba(251,191,36,0.35); }
+  .service-card.gold:hover { border-color: var(--gold); box-shadow: 0 20px 40px rgba(150,100,0,0.18); }
+  .service-card.gold .url { color: var(--gold-l); }
+
+  /* ===== INFRA STRIP ===== */
+  .infra {
+    position: relative;
+    padding: 70px 36px;
+    background:
+      radial-gradient(ellipse 70% 40% at 20% 30%, rgba(0,80,140,0.20), transparent 60%),
+      radial-gradient(ellipse 50% 30% at 80% 70%, rgba(0,80,120,0.20), transparent 60%),
+      linear-gradient(180deg, var(--bg-mid) 0%, var(--bg) 100%);
+    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+  }
+  .infra-inner { max-width: 1500px; margin: 0 auto; }
+  .infra-headline {
+    text-align: center; max-width: 800px; margin: 0 auto 56px;
+  }
+  .infra-headline h3 {
+    font-family: 'Space Grotesk'; font-weight: 500;
+    font-size: clamp(28px, 3.6vw, 40px);
+    margin: 0 0 16px;
+    letter-spacing: -0.02em;
+  }
+  .infra-headline p { color: var(--fg-dim); font-size: 16px; }
+  .infra-points {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 18px; max-width: 1100px; margin: 0 auto;
+  }
+  .infra-point {
+    text-align: center;
+    padding: 28px 22px;
+    background: var(--bg-glass);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    backdrop-filter: blur(10px);
+  }
+  .infra-point .where {
+    font-family: 'JetBrains Mono'; font-size: 10px;
+    color: var(--blue); letter-spacing: 0.16em; text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .infra-point h5 {
+    font-family: 'Space Grotesk'; font-size: 22px; font-weight: 600;
+    margin: 0 0 8px;
+  }
+  .infra-point .meta {
+    font-family: 'JetBrains Mono'; font-size: 11px;
+    color: var(--muted); line-height: 1.6;
+  }
+  .infra-point .latency {
+    margin-top: 12px; font-family: 'JetBrains Mono'; font-size: 12px;
+    color: var(--blue-l);
+  }
+
+  /* ===== DAPPS SHOWCASE ===== */
+  .dapps-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+  .dapp-card {
+    padding: 20px 22px;
+    background: var(--bg-glass);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    backdrop-filter: blur(10px);
+    transition: all 0.25s;
+    display: flex; flex-direction: column; gap: 8px;
+    text-decoration: none; color: inherit;
+  }
+  .dapp-card:hover {
+    border-color: var(--blue);
+    background: var(--bg-glass-hi);
+    transform: translateY(-2px);
+  }
+  .dapp-card .row { display: flex; justify-content: space-between; align-items: flex-start; }
+  .dapp-card h4 {
+    font-family: 'Space Grotesk'; font-size: 18px; font-weight: 600; margin: 0;
+    letter-spacing: -0.015em;
+  }
+  .dapp-card .cat {
+    font-family: 'JetBrains Mono'; font-size: 9px; padding: 3px 8px;
+    border-radius: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    background: rgba(0,212,255,0.10); color: var(--blue-l);
+  }
+  .dapp-card .clone {
+    font-family: 'JetBrains Mono'; font-size: 11px; color: var(--muted);
+    margin-bottom: 4px; letter-spacing: 0.04em;
+  }
+  .dapp-card p { margin: 0; color: var(--fg-dim); font-size: 12.5px; line-height: 1.55; }
+
+  /* ===== PATHS / CTA ===== */
+  .paths-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+  }
+  .path-card {
+    padding: 36px 32px;
+    background: var(--bg-glass);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    backdrop-filter: blur(14px);
+    position: relative;
+    overflow: hidden;
+  }
+  .path-card::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--blue);
+    box-shadow: 0 0 18px var(--blue-glow);
+  }
+  .path-card.gold::before { background: var(--gold); box-shadow: 0 0 18px var(--gold-glow); }
+  .path-card.mauve::before { background: #c084fc; box-shadow: 0 0 18px rgba(192,132,252,0.4); }
+  .path-card .who-for {
+    font-family: 'JetBrains Mono'; font-size: 10px;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 8px;
+  }
+  .path-card h3 {
+    font-family: 'Space Grotesk'; font-size: 28px; font-weight: 600;
+    margin: 0 0 14px; letter-spacing: -0.02em;
+  }
+  .path-card p { color: var(--fg-dim); font-size: 14px; margin: 0 0 22px; }
+  .path-card .step { display: flex; gap: 14px; margin-bottom: 10px; font-size: 13px; color: var(--fg-dim); }
+  .path-card .step .n {
+    flex: none; width: 22px; height: 22px; border-radius: 50%;
+    background: rgba(0,212,255,0.1); color: var(--blue-l);
+    font-family: 'JetBrains Mono'; font-size: 11px; font-weight: 500;
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line);
+  }
+  .path-card .cta-row {
+    margin-top: 22px; display: flex; gap: 10px;
+  }
+
+  /* ===== FOOTER ===== */
+  footer {
+    padding: 80px 36px 50px;
+    background: linear-gradient(180deg, var(--bg) 0%, #02050c 100%);
+    border-top: 1px solid var(--line);
+  }
+  .footer-inner { max-width: 1500px; margin: 0 auto; }
+  .footer-top {
+    display: grid; grid-template-columns: 1.4fr repeat(4, 1fr);
+    gap: 40px;
+    margin-bottom: 50px;
+  }
+  @media (max-width: 900px) { .footer-top { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 540px) { .footer-top { grid-template-columns: 1fr; } }
+  .footer-col h6 {
+    font-family: 'JetBrains Mono'; font-size: 10px; font-weight: 500;
+    letter-spacing: 0.16em; text-transform: uppercase; color: var(--blue);
+    margin: 0 0 16px;
+  }
+  .footer-col ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+  .footer-col a {
+    color: var(--fg-dim); font-size: 13px; transition: color 0.2s;
+  }
+  .footer-col a:hover { color: var(--blue-l); }
+  .footer-about p { color: var(--muted); font-size: 13px; line-height: 1.65; margin: 14px 0 0; }
+  .footer-bottom {
+    border-top: 1px solid rgba(0,212,255,0.08);
+    padding-top: 30px;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 20px;
+    font-family: 'JetBrains Mono'; font-size: 11px; color: var(--muted);
+  }
+  .wallet-line { font-size: 10px; word-break: break-all; }
+
+  /* Reveal animations */
+  .reveal { opacity: 0; transform: translateY(40px); transition: opacity 0.9s ease, transform 0.9s ease; }
+  .reveal.is-visible { opacity: 1; transform: translateY(0); }
+  .reveal.delay-1 { transition-delay: 0.08s; }
+  .reveal.delay-2 { transition-delay: 0.16s; }
+  .reveal.delay-3 { transition-delay: 0.24s; }
+
+  /* Live ticker pulsing */
+  .pulse-dot {
+    display: inline-block; width: 8px; height: 8px;
+    background: #10e0a5; border-radius: 50%;
+    box-shadow: 0 0 8px #10e0a5;
+    animation: blink 2s ease-in-out infinite;
+    margin-right: 6px; vertical-align: middle;
+  }
+</style>
+</head>
+<body>
+
+<header id="hdr">
+  <a href="/" class="brand">
+    <span class="mark"></span>
+    <span class="name">DAGTECH</span>
+  </a>
+  <nav class="primary">
+    <a href="#ecosystem">Ecosystem</a>
+    <a href="#infra">Infrastructure</a>
+    <a href="#dapps">dApps</a>
+    <a href="#start">Get Started</a>
+    <a href="https://miner.dagtech.network/install.html" class="cta">Start Mining ↗</a>
+  </nav>
+</header>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <canvas id="stars"></canvas>
+  <div class="hero-grid"></div>
+  <div class="hero-content">
+    <div class="eyebrow"><span class="dot"></span>BlockDAG mainnet · Chain 1404 · Live infrastructure</div>
+    <h1>The full stack of <span class="alt">BlockDAG,</span><br>engineered in&#8209;house.</h1>
+    <p class="lede">
+      DagTech runs every layer of the BlockDAG network ourselves — the mining pool,
+      the custom miner software, the dApp registry, the explorer, the global mesh.
+      German engineering. UAE operations. Built for the community, open from day one.
+    </p>
+    <div class="flags">
+      <span><span class="flag de"></span> GERMAN ENGINEERING</span>
+      <span style="opacity:0.4">·</span>
+      <span><span class="flag ae"></span> UAE OPERATIONS</span>
+      <span style="opacity:0.4">·</span>
+      <span>3 CONTINENTS</span>
+    </div>
+    <div class="ctas">
+      <a href="https://miner.dagtech.network/install.html" class="btn primary">
+        Start Mining <span class="arrow">→</span>
+      </a>
+      <a href="https://dapps.dagtech.network" class="btn secondary">Browse dApps</a>
+      <a href="https://miner.dagtech.network/mesh/" class="btn ghost">View Network Mesh</a>
+    </div>
+  </div>
+  <div class="scroll-down">SCROLL TO EXPLORE</div>
+</section>
+
+<!-- ===== LIVE STATS RIBBON ===== -->
+<section class="ticker">
+  <div class="ticker-grid">
+    <div class="stat-block">
+      <div class="label"><span class="pulse-dot"></span>BlockDAG Tip</div>
+      <div class="value" id="s_chain">—</div>
+      <div class="sub" id="s_chain_sub">syncing…</div>
+    </div>
+    <div class="stat-block">
+      <div class="label">Connected Miners</div>
+      <div class="value gold" id="s_miners">—</div>
+      <div class="sub" id="s_countries">— countries</div>
+    </div>
+    <div class="stat-block">
+      <div class="label">Network Continents</div>
+      <div class="value">3</div>
+      <div class="sub">UAE · S. Africa · US-West</div>
+    </div>
+    <div class="stat-block">
+      <div class="label">DagTech Wallet</div>
+      <div class="value" id="s_wallet">—</div>
+      <div class="sub">BDAG · refreshed live</div>
+    </div>
+    <div class="stat-block">
+      <div class="label">Featured dApps</div>
+      <div class="value">17+</div>
+      <div class="sub">growing every week</div>
+    </div>
+  </div>
+</section>
+
+<main>
+
+<!-- ===== SECTION: WHO WE ARE ===== -->
+<section class="wrap" id="who">
+  <div class="section-title reveal">
+    <div class="num">01 · Who we are</div>
+    <h2>Mining infrastructure built by <em>engineers</em>, not hobbyists.</h2>
+    <p class="desc">
+      DagTech Ltd is a German-engineered, UAE-operated mining and infrastructure
+      company purpose-built for the BlockDAG Network. We don't fork someone else's
+      tooling — we reverse-engineer the chain, write the implementation, deploy the
+      infrastructure, and open-source every line.
+    </p>
+  </div>
+
+  <div class="twocol">
+    <div class="reveal">
+      <p style="color:var(--fg);font-size:17px;line-height:1.7;margin-top:0">
+        When BlockDAG mainnet launched, there was no production miner, no pool
+        software, no documentation. Just a chain with potential and a community
+        waiting for someone to build the tools.
+      </p>
+      <p style="color:var(--fg-dim);font-size:16px;line-height:1.7;">
+        So we did. We reverse-engineered the Scrypt-derivative hash function from
+        first principles, wrote a stratum implementation in pure C, stood up pool
+        infrastructure across three continents, deployed dApps across every major
+        DeFi vertical, and shipped a global network mesh you can watch in real time.
+      </p>
+      <div class="quote">
+        Efficiency is not an option; it is the foundation of profitable crypto mining.
+        <span class="who">— DagTech Lead Engineer</span>
+      </div>
+      <p style="color:var(--fg-dim);font-size:15px;line-height:1.7;">
+        Every piece of our stack runs in production on our own infrastructure
+        before it ships to the community — same X100 ASICs, same node software,
+        same pool code. If it doesn't perform for us, it doesn't ship.
+      </p>
+    </div>
+
+    <div class="pillars">
+      <div class="pillar reveal delay-1">
+        <div class="label">German Engineering</div>
+        <h4>Precision · Quality · Reliability</h4>
+        <p>Operations overseen by German-trained engineers. Every component spec'd, measured, and stress-tested before deployment.</p>
+      </div>
+      <div class="pillar reveal delay-2">
+        <div class="label">UAE Operations</div>
+        <h4>99.9% uptime, by design</h4>
+        <p>Ras Al Khaimah base of operations. Stable grid, advanced cooling, enterprise-grade redundancy. Backed by AWS relays in Cape Town and Oregon.</p>
+      </div>
+      <div class="pillar reveal delay-3">
+        <div class="label">Open Source</div>
+        <h4>MIT-licensed, day one</h4>
+        <p>The miner, the pool stack, the dApp contracts, the dashboards — all open source. Fork it, audit it, improve it. Your hardware, your coins, your network.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SECTION: ECOSYSTEM ===== -->
+<section class="wrap" id="ecosystem">
+  <div class="section-title reveal">
+    <div class="num">02 · The DagTech ecosystem</div>
+    <h2>Nine production services. <em>One coherent stack.</em></h2>
+    <p class="desc">
+      From the C-level hash engine to the public network monitor — every layer
+      a community miner, developer, or watcher needs, all engineered in-house.
+    </p>
+  </div>
+
+  <div class="ecosystem-grid">
+    <a href="https://miner.dagtech.network/install.html" class="service-card gold reveal">
+      <div class="header-row">
+        <div class="icon">⛏</div>
+        <span class="badge live">PROD v2.1.0</span>
+      </div>
+      <h3>DagTech Miner</h3>
+      <p>Custom Scrypt engine (N=1024, r=1, p=1) with BlockDAG post-ROMix transformation, written in pure C. CPU + CUDA GPU. Linux / macOS / Windows. One-command install.</p>
+      <div class="url">miner.dagtech.network <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7h7m-3-3l3 3-3 3" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></div>
+    </a>
+
+    <a href="https://miner.dagtech.network/install.html" class="service-card reveal delay-1">
+      <div class="header-row">
+        <div class="icon">🏊</div>
+        <span class="badge live">3 POOLS</span>
+      </div>
+      <h3>Mining Pool</h3>
+      <p>Three production stratum pools — asic-pool (PROP) on :3334, cpu-gpu-pool (PPLNS) on :3335, hans-solo (SOLO) on :3336. PPLNS payouts, vardiff, 1% fee.</p>
+      <div class="url">excalibur.dagtech.network <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7h7m-3-3l3 3-3 3" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></div>
+    </a>
+
+    <a href="https://dapps.dagtech.network" class="service-card reveal delay-2">
+      <div class="header-row">
+        <div class="icon">🧩</div>
+        <span class="badge live">17 FEATURED</span>
+      </div>
+      <h3>dApp Registry</h3>
+      <p>The canonical dApp registry for BlockDAG mainnet. Permissionless on-chain listings — 200 BDAG per dApp. DagSwap, DagLend, DagStake, DagMarket, DagMint, and more.</p>
+      <div class="url">dapps.dagtech.network <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7h7m-3-3l3 3-3 3" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></div>
+    </a>
+
+    <a href="https://explorer.dagtech.network" class="service-card reveal delay-3">
+      <div class="header-row">
+        <div class="icon">🔍</div>
+        <span class="badge live">BLOCKSCOUT</span>
+      </div>
+      <h3>Block Explorer</h3>
+      <p>Full-featured BlockDAG block explorer. Blocks, transactions, tokens, smart contracts, internal txns. Backed by our own indexer running against the L1.</p>
+      <div class="url">explorer.dagtech.network <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7h7m-3-3l3 3-3 3" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></div>
+    </a>
+
+    <a href="https://miner.dagtech.network/mesh/" class="service-card reveal">
+      <div class="header-row">
+        <div class="icon">🌐</div>
+        <span class="badge live">LIVE GEO</span>
+      </div>
+      <h3>Network Mesh</h3>
+      <p>Real-time geographic map of every community miner connected to the pool, plotted at IP geolocation, with live great-circle routing to whichever relay carries their stratum traffic.</p>
+      <div class="url">miner.dagtech.network/mesh <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7h7m-3-3l3 3-3 3" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></div>
+    </a>
+
+    <a href="https://monitor.dagtech.network" class="service-card reveal delay-1">
+      <div class="header-row">
+        <div class="icon">📊</div>
+        <span class="badge">OPS</span>
+      </div>
+      <h3>Live Monitor</h3>
+      <p>Grafana-backed operations dashboards — pool hashrate, node sync, EVM block height, wallet balance, X100 telemetry, share acceptance. Community access.</p>
+      <div class="url">monitor.dagtech.network <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7h7m-3-3l3 3-3 3" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></div>
+    </a>
+
+    <a href="https://rpc.dagtech.network" class="service-card reveal delay-2">
+      <div class="header-row">
+        <div class="icon">⚡</div>
+        <span class="badge live">PUBLIC RPC</span>
+      </div>
+      <h3>Public RPC Endpoint</h3>
+      <p>Production-grade JSON-RPC for the BlockDAG EVM layer. HAProxy sync-aware health checks, nginx caching, 4-node failover. Free for the community.</p>
+      <div class="url">rpc.dagtech.network <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7h7m-3-3l3 3-3 3" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></div>
+    </a>
+
+    <a href="https://digest.dagtech.network" class="service-card reveal delay-3">
+      <div class="header-row">
+        <div class="icon">📰</div>
+        <span class="badge">SOON</span>
+      </div>
+      <h3>DagDigest</h3>
+      <p>BlockDAG news, analysis, and community digest. Weekly briefs, miner spotlights, on-chain narrative tracking, ecosystem updates. Built for the community.</p>
+      <div class="url">digest.dagtech.network <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7h7m-3-3l3 3-3 3" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></div>
+    </a>
+
+    <a href="https://miner.dagtech.network/node.html" class="service-card reveal">
+      <div class="header-row">
+        <div class="icon">🛰</div>
+        <span class="badge">FULL NODE</span>
+      </div>
+      <h3>Run a Node</h3>
+      <p>One-command full BlockDAG node install. QNG v1.3.21 with sane defaults, PathDB state scheme, systemd-managed, configured for both mining and dApp RPC serving.</p>
+      <div class="url">miner.dagtech.network/node <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 7h7m-3-3l3 3-3 3" stroke="currentColor" stroke-width="1.4" fill="none" stroke-linecap="round"/></svg></div>
+    </a>
+  </div>
+</section>
+
+<!-- ===== INFRA SECTION ===== -->
+<section class="infra" id="infra">
+  <div class="infra-inner">
+    <div class="infra-headline reveal">
+      <div class="num" style="font-family:'JetBrains Mono';font-size:11px;letter-spacing:0.2em;color:var(--blue);text-transform:uppercase;margin-bottom:14px">03 · Global infrastructure</div>
+      <h3>One mining pool. <em style="font-family:'Cormorant Garamond';font-style:italic;font-weight:300;color:var(--blue-l)">Three continents.</em></h3>
+      <p>The DagTech production network: a dedicated mining facility in the UAE, two AWS relays across the southern hemisphere and the US west coast, all bridged by WireGuard tunnels. Sub-300ms median submission latency, regardless of where the miner is.</p>
+    </div>
+
+    <div class="infra-points">
+      <div class="infra-point reveal">
+        <div class="where">PRIMARY · UAE</div>
+        <h5>Ras Al Khaimah</h5>
+        <div class="meta">Pool stack · 4 QNG nodes<br>X100 hero ASIC · grid-stable</div>
+        <div class="latency">25.78°N · 55.94°E</div>
+      </div>
+      <div class="infra-point reveal delay-1">
+        <div class="where">RELAY · AWS af-south-1</div>
+        <h5>Cape Town</h5>
+        <div class="meta">WireGuard tunnel<br>EU, Africa, Middle East mesh</div>
+        <div class="latency">~132ms RTT to UAE</div>
+      </div>
+      <div class="infra-point reveal delay-2">
+        <div class="where">RELAY · AWS us-west-2</div>
+        <h5>Oregon</h5>
+        <div class="meta">WireGuard tunnel<br>NA, LATAM, APAC mesh</div>
+        <div class="latency">~255ms RTT to UAE</div>
+      </div>
+      <div class="infra-point reveal delay-3">
+        <div class="where">EXPLORER / RPC</div>
+        <h5>Public Services</h5>
+        <div class="meta">Cloudflare-fronted<br>nginx · HAProxy · sync-aware HC</div>
+        <div class="latency">99.9% target uptime</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== SECTION: DAPPS ===== -->
+<section class="wrap" id="dapps">
+  <div class="section-title reveal">
+    <div class="num">04 · dApps on BlockDAG</div>
+    <h2>Every DeFi primitive. <em>One chain.</em></h2>
+    <p class="desc">
+      DagTech operates 17 production dApps covering every category — DEX, lending,
+      stablecoin, staking, NFTs, perps, prediction markets, and more. All live on
+      BlockDAG Chain 1404. Full registry at <a href="https://dapps.dagtech.network" style="color:var(--blue-l);text-decoration:underline">dapps.dagtech.network</a>.
+    </p>
+  </div>
+
+  <div class="dapps-grid">
+    <a href="https://dapps.dagtech.network/dapp/dagswap/" class="dapp-card reveal">
+      <div class="row"><h4>DagSwap</h4><span class="cat">DeFi</span></div>
+      <div class="clone">Uniswap V2 clone</div>
+      <p>Constant-product DEX. Swap any token. Earn LP fees.</p>
+    </a>
+    <a href="https://dapps.dagtech.network/dapp/daglend/" class="dapp-card reveal delay-1">
+      <div class="row"><h4>DagLend</h4><span class="cat">DeFi</span></div>
+      <div class="clone">Aave / Compound</div>
+      <p>Supply assets, borrow against them, earn interest.</p>
+    </a>
+    <a href="https://dapps.dagtech.network/dapp/dagstake/" class="dapp-card reveal delay-2">
+      <div class="row"><h4>DagStake</h4><span class="cat">DeFi</span></div>
+      <div class="clone">Lido</div>
+      <p>Stake BDAG, get stBDAG, keep your liquidity.</p>
+    </a>
+    <a href="https://dapps.dagtech.network/dapp/dagmarket/" class="dapp-card reveal delay-3">
+      <div class="row"><h4>DagMarket</h4><span class="cat">NFT</span></div>
+      <div class="clone">OpenSea / Blur</div>
+      <p>Permissionless NFT marketplace with on-chain royalties.</p>
+    </a>
+    <a href="https://dapps.dagtech.network/dapp/dagmint/" class="dapp-card reveal">
+      <div class="row"><h4>DagMint</h4><span class="cat">DeFi</span></div>
+      <div class="clone">MakerDAO</div>
+      <p>Mint DUSD — BlockDAG's first overcollateralized stablecoin.</p>
+    </a>
+    <a href="https://dapps.dagtech.network/dapp/dagnames/" class="dapp-card reveal delay-1">
+      <div class="row"><h4>DagNames</h4><span class="cat">Tools</span></div>
+      <div class="clone">ENS</div>
+      <p>Register yourname.dag. Own your identity on BlockDAG.</p>
+    </a>
+    <a href="https://dapps.dagtech.network/dapp/dagperp/" class="dapp-card reveal delay-2">
+      <div class="row"><h4>DagPerp</h4><span class="cat">DeFi</span></div>
+      <div class="clone">GMX / Hyperliquid</div>
+      <p>Perp futures with 50× leverage. LPs are the house.</p>
+    </a>
+    <a href="https://dapps.dagtech.network/dapp/dagpredict/" class="dapp-card reveal delay-3">
+      <div class="row"><h4>DagPredict</h4><span class="cat">Social</span></div>
+      <div class="clone">Polymarket</div>
+      <p>Bet on real-world events. YES/NO markets with CPMM.</p>
+    </a>
+  </div>
+
+  <div style="margin-top:34px;text-align:center" class="reveal">
+    <a href="https://dapps.dagtech.network/browse/" class="btn secondary">View all 17 dApps <span class="arrow">→</span></a>
+  </div>
+</section>
+
+<!-- ===== SECTION: GET STARTED ===== -->
+<section class="wrap" id="start">
+  <div class="section-title reveal">
+    <div class="num">05 · Pick your path</div>
+    <h2>However you want to participate, <em>we've built the tooling.</em></h2>
+  </div>
+
+  <div class="paths-grid">
+    <div class="path-card reveal">
+      <div class="who-for">FOR MINERS</div>
+      <h3>I want to mine BDAG</h3>
+      <p>Download the open-source miner, point it at our pool, start earning. Under 60 seconds from a fresh box to your first share.</p>
+      <div class="step"><span class="n">1</span>Install DagTech Miner on Linux, macOS, or Windows</div>
+      <div class="step"><span class="n">2</span>Run with our pool URL and your BDAG wallet address</div>
+      <div class="step"><span class="n">3</span>Watch your hashrate on localhost:8881 — and on our public mesh</div>
+      <div class="cta-row">
+        <a href="https://miner.dagtech.network/install.html" class="btn primary">Install Guide <span class="arrow">→</span></a>
+        <a href="https://miner.dagtech.network/mesh/" class="btn ghost">View Mesh</a>
+      </div>
+    </div>
+
+    <div class="path-card gold reveal delay-1">
+      <div class="who-for">FOR BUILDERS</div>
+      <h3>I want to build on BlockDAG</h3>
+      <p>Solidity, EVM-compatible, Chain ID 1404. Use our public RPC and explorer, deploy your contract, list it on the registry.</p>
+      <div class="step"><span class="n">1</span>Connect MetaMask to BlockDAG mainnet (Chain 1404)</div>
+      <div class="step"><span class="n">2</span>Deploy with Hardhat / Foundry against rpc.dagtech.network</div>
+      <div class="step"><span class="n">3</span>List your dApp on dapps.dagtech.network — 200 BDAG, one tx</div>
+      <div class="cta-row">
+        <a href="https://dapps.dagtech.network/submit/" class="btn primary" style="background:linear-gradient(180deg,#d97706,#fbbf24);color:#1a1208;box-shadow:0 0 22px rgba(251,191,36,0.35)">List Your dApp <span class="arrow">→</span></a>
+        <a href="https://rpc.dagtech.network/" class="btn ghost">RPC Docs</a>
+      </div>
+    </div>
+
+    <div class="path-card mauve reveal delay-2">
+      <div class="who-for">FOR WATCHERS</div>
+      <h3>I just want to follow along</h3>
+      <p>Watch the network in real time — block explorer, live monitor, mesh map, ecosystem digest. Everything observable, all public.</p>
+      <div class="step"><span class="n">1</span>Explore the chain at explorer.dagtech.network</div>
+      <div class="step"><span class="n">2</span>Watch ops live at monitor.dagtech.network</div>
+      <div class="step"><span class="n">3</span>Subscribe to weekly digest at digest.dagtech.network</div>
+      <div class="cta-row">
+        <a href="https://explorer.dagtech.network" class="btn secondary">Explorer <span class="arrow">→</span></a>
+        <a href="https://miner.dagtech.network/mesh/" class="btn ghost">Mesh Map</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-col footer-about">
+        <a href="/" class="brand">
+          <span class="mark"></span>
+          <span class="name">DAGTECH</span>
+        </a>
+        <p>German-engineered, UAE-operated BlockDAG mining and infrastructure. Mining pool, custom miner, dApp registry, explorer, mesh. Every layer of the stack, built in-house and open-sourced.</p>
+        <p style="font-family:'JetBrains Mono';font-size:11px;margin-top:18px">
+          <span class="pulse-dot"></span>BlockDAG mainnet · Chain 1404
+        </p>
+      </div>
+
+      <div class="footer-col">
+        <h6>Mining</h6>
+        <ul>
+          <li><a href="https://miner.dagtech.network/install.html">Install miner</a></li>
+          <li><a href="https://miner.dagtech.network/node.html">Run a node</a></li>
+          <li><a href="https://miner.dagtech.network/mesh/">Network mesh</a></li>
+          <li><a href="https://monitor.dagtech.network">Live monitor</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h6>Build</h6>
+        <ul>
+          <li><a href="https://dapps.dagtech.network">dApp registry</a></li>
+          <li><a href="https://dapps.dagtech.network/submit/">List your dApp</a></li>
+          <li><a href="https://rpc.dagtech.network">Public RPC</a></li>
+          <li><a href="https://explorer.dagtech.network">Block explorer</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h6>Community</h6>
+        <ul>
+          <li><a href="https://digest.dagtech.network">DagDigest</a></li>
+          <li><a href="https://github.com/Dagtechltd">GitHub</a></li>
+          <li><a href="https://miner.dagtech.network">DagTech Miner</a></li>
+          <li><a href="https://dagtechltd.com">Dag Tech Ltd</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-col">
+        <h6>Infrastructure</h6>
+        <ul>
+          <li><a href="https://miners.dagtech.network/v6/">Ops schematic</a></li>
+          <li><a href="https://netstats.dagtech.network">Net stats</a></li>
+          <li><a href="https://visualizer.dagtech.network">Visualizer</a></li>
+          <li><a href="https://stats.dagtech.network">Stats (legacy)</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <span>© 2024–2026 DagTech Ltd · Built on BlockDAG · MIT-licensed</span>
+      <span class="wallet-line">DagTech mining wallet · 0x6387C32ccDD60BfBa00EC70A67715Dcd52E8083f</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+// ===== Header scroll state =====
+const hdr = document.getElementById('hdr');
+window.addEventListener('scroll', () => {
+  hdr.classList.toggle('scrolled', window.scrollY > 30);
+});
+
+// ===== Reveal on scroll =====
+const io = new IntersectionObserver((entries) => {
+  for (const e of entries) {
+    if (e.isIntersecting) {
+      e.target.classList.add('is-visible');
+      io.unobserve(e.target);
+    }
+  }
+}, { rootMargin: '0px 0px -10% 0px' });
+document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+// ===== Star field (hero canvas) =====
+const canvas = document.getElementById('stars');
+const ctx = canvas.getContext('2d', { alpha: true });
+let stars = [];
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = canvas.parentElement.offsetHeight;
+  const count = Math.min(220, Math.floor(canvas.width * canvas.height / 12000));
+  stars = Array.from({ length: count }, () => ({
+    x: Math.random() * canvas.width,
+    y: Math.random() * canvas.height,
+    r: Math.random() * 1.2 + 0.2,
+    vx: (Math.random() - 0.5) * 0.06,
+    vy: (Math.random() - 0.5) * 0.06,
+    phase: Math.random() * Math.PI * 2,
+    speed: Math.random() * 0.02 + 0.005,
+  }));
+}
+resize();
+window.addEventListener('resize', resize);
+
+let mx = -9999, my = -9999;
+canvas.addEventListener('mousemove', (e) => {
+  const rect = canvas.getBoundingClientRect();
+  mx = e.clientX - rect.left; my = e.clientY - rect.top;
+});
+canvas.addEventListener('mouseleave', () => { mx = my = -9999; });
+
+function tick() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  for (const s of stars) {
+    s.x += s.vx; s.y += s.vy;
+    if (s.x < 0) s.x += canvas.width; if (s.x > canvas.width) s.x -= canvas.width;
+    if (s.y < 0) s.y += canvas.height; if (s.y > canvas.height) s.y -= canvas.height;
+    s.phase += s.speed;
+    const alpha = (Math.sin(s.phase) * 0.5 + 0.5) * 0.7 + 0.1;
+
+    const dx = s.x - mx, dy = s.y - my;
+    const dist2 = dx*dx + dy*dy;
+    let r = s.r;
+    let glow = alpha;
+    if (dist2 < 12000) {
+      const f = 1 - dist2 / 12000;
+      r += f * 1.2;
+      glow = Math.min(1, alpha + f * 0.5);
+    }
+
+    ctx.fillStyle = `rgba(127, 229, 255, ${glow})`;
+    ctx.beginPath(); ctx.arc(s.x, s.y, r, 0, Math.PI * 2); ctx.fill();
+  }
+  // Faint connections between near stars
+  ctx.strokeStyle = 'rgba(0,212,255,0.08)';
+  ctx.lineWidth = 0.4;
+  for (let i = 0; i < stars.length; i++) {
+    for (let j = i + 1; j < stars.length; j++) {
+      const a = stars[i], b = stars[j];
+      const dx = a.x - b.x, dy = a.y - b.y;
+      const d2 = dx * dx + dy * dy;
+      if (d2 < 8000) {
+        ctx.globalAlpha = (1 - d2 / 8000) * 0.4;
+        ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+      }
+    }
+  }
+  ctx.globalAlpha = 1;
+  requestAnimationFrame(tick);
+}
+tick();
+
+// ===== Live stats =====
+const fmtCompact = (n) => {
+  if (n === null || n === undefined || isNaN(n)) return '—';
+  const v = Math.abs(n);
+  if (v >= 1e9) return (n/1e9).toFixed(2)+'B';
+  if (v >= 1e6) return (n/1e6).toFixed(2)+'M';
+  if (v >= 1e3) return (n/1e3).toFixed(1)+'k';
+  return n.toString();
+};
+
+// Animated counter
+function animateValue(el, target, decimals=0, suffix='') {
+  if (target == null) return;
+  const initial = parseFloat(el.dataset.last) || 0;
+  const start = performance.now();
+  const dur = 1200;
+  function step(t) {
+    const p = Math.min(1, (t - start) / dur);
+    const eased = 1 - Math.pow(1 - p, 3);
+    const v = initial + (target - initial) * eased;
+    el.textContent = fmtCompact(v);
+    if (p < 1) requestAnimationFrame(step);
+    else el.dataset.last = target;
+  }
+  requestAnimationFrame(step);
+}
+
+async function refresh() {
+  // Mesh-public.json
+  try {
+    const r = await fetch('https://miners.dagtech.network/mesh-public.json?t=' + Date.now());
+    const d = await r.json();
+    const minersEl = document.getElementById('s_miners');
+    animateValue(minersEl, d.totals.miners);
+    document.getElementById('s_countries').textContent = d.totals.countries + ' countries';
+  } catch (e) { /* ignore */ }
+
+  // BlockDAG chain tip via public RPC
+  try {
+    const r = await fetch('https://rpc.bdagscan.com', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc:'2.0', id:1, method:'eth_blockNumber', params:[] })
+    });
+    const j = await r.json();
+    const n = parseInt(j.result, 16);
+    if (!isNaN(n)) {
+      animateValue(document.getElementById('s_chain'), n);
+      document.getElementById('s_chain_sub').textContent = 'block · live · 12s cadence';
+    }
+  } catch (e) {}
+
+  // X100 wallet balance via public RPC
+  try {
+    const r = await fetch('https://rpc.bdagscan.com', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jsonrpc:'2.0', id:1, method:'eth_getBalance',
+        params:['0x6387C32ccDD60BfBa00EC70A67715Dcd52E8083f','latest'] })
+    });
+    const j = await r.json();
+    if (j.result) {
+      const wei = BigInt(j.result);
+      const bdag = Number(wei / 10n ** 16n) / 100;
+      animateValue(document.getElementById('s_wallet'), bdag);
+    }
+  } catch (e) {}
+}
+refresh();
+setInterval(refresh, 30000);
+</script>
+
+</body>
+</html>
