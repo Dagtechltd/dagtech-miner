@@ -6,6 +6,8 @@
 <title>DagTech · Live Network Mesh</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3/dist/topojson-client.min.js"></script>
 <style>
   :root {
     --bg:#080b14;
@@ -19,6 +21,9 @@
     --muted:#7a8aa3;
     --muted2:#4a5568;
     --line:rgba(0, 212, 255, 0.18);
+    --land:#0d2540;
+    --land-stroke:rgba(0,212,255,0.35);
+    --water:#040814;
   }
   * { box-sizing:border-box }
   html, body {
@@ -40,7 +45,7 @@
     mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 30%, transparent 100%);
     -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 50%, black 30%, transparent 100%);
   }
-  /* ===== HEADER ===== */
+  /* HEADER */
   header {
     position: sticky; top:0; z-index:10;
     backdrop-filter: blur(20px) saturate(160%);
@@ -57,7 +62,7 @@
     -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
   }
   header .sub { color: var(--muted); font-size:12px; letter-spacing:0.06em; }
-  header .stats { display:flex; gap:8px; align-items:stretch; flex-wrap:wrap; }
+  header .stats { display:flex; gap:8px; flex-wrap:wrap; }
   header .stat {
     padding: 6px 14px;
     background: linear-gradient(180deg, rgba(0,212,255,0.06), rgba(0,80,120,0.04));
@@ -82,7 +87,7 @@
   main {
     position:relative; z-index: 5;
     padding: 24px 24px 60px;
-    max-width: 1500px; margin: 0 auto;
+    max-width: 1700px; margin: 0 auto;
   }
   .panel {
     background: var(--surface);
@@ -100,7 +105,66 @@
   }
   .panel .desc { color: var(--muted); font-size:13px; line-height:1.5; margin-bottom:10px }
 
-  /* ===== Legend ===== */
+  /* SVG map */
+  #map {
+    width: 100%; height: auto; display: block;
+    background: linear-gradient(180deg, var(--water) 0%, #060b18 100%);
+    border-radius: 4px;
+  }
+  #map .country {
+    fill: var(--land);
+    stroke: var(--land-stroke);
+    stroke-width: 0.4px;
+    vector-effect: non-scaling-stroke;
+  }
+  #map .graticule {
+    fill: none;
+    stroke: rgba(0,212,255,0.08);
+    stroke-width: 0.5px;
+    vector-effect: non-scaling-stroke;
+  }
+  #map .sphere {
+    fill: none;
+    stroke: rgba(0,212,255,0.30);
+    stroke-width: 0.8px;
+    vector-effect: non-scaling-stroke;
+  }
+  #map .arc {
+    fill: none;
+    stroke-linecap: round;
+    pointer-events: none;
+  }
+  #map .arc-miner-ct  { stroke: rgba(0,212,255,0.55);   stroke-width: 0.6px; vector-effect: non-scaling-stroke; }
+  #map .arc-miner-usw { stroke: rgba(127,229,255,0.55); stroke-width: 0.6px; vector-effect: non-scaling-stroke; }
+  #map .arc-miner-dir { stroke: rgba(251,191,36,0.65);  stroke-width: 0.6px; vector-effect: non-scaling-stroke; }
+  #map .arc-backbone  { stroke: rgba(0,212,255,0.85);   stroke-width: 1.4px; vector-effect: non-scaling-stroke;
+                        filter: drop-shadow(0 0 2px #00d4ff); }
+  .miner-dot      { fill: var(--blue); }
+  .miner-dot-asic { fill: #7fe5ff; }
+  .miner-dot-solo { fill: var(--gold); }
+  .miner-halo      { fill: var(--blue); opacity: 0.22; }
+  .miner-halo-asic { fill: #7fe5ff; opacity: 0.22; }
+  .miner-halo-solo { fill: var(--gold); opacity: 0.22; }
+  .anchor-halo {
+    animation: pulse 2.5s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { transform: scale(1); opacity: 0.20; }
+    50%     { transform: scale(1.5); opacity: 0.05; }
+  }
+  .anchor-label {
+    font-family: 'Space Grotesk'; font-weight: 600; font-size: 11px;
+    fill: var(--blue-l); paint-order: stroke; stroke: rgba(2,8,20,0.85); stroke-width: 2.4px;
+    pointer-events: none;
+  }
+  .anchor-label.gold { fill: var(--gold); }
+  .anchor-sublabel {
+    font-family: 'JetBrains Mono'; font-size: 9px;
+    fill: rgba(255,255,255,0.65); paint-order: stroke; stroke: rgba(2,8,20,0.85); stroke-width: 2px;
+    pointer-events: none;
+  }
+
+  /* Legend */
   .legend { display:flex; gap:18px; padding: 8px 12px; font-family:'JetBrains Mono'; font-size:11px; color: var(--muted); flex-wrap:wrap }
   .legend .it { display:flex; gap:6px; align-items:center }
   .legend .it::before { content:""; display:inline-block; width:10px; height:10px; border-radius:50%; }
@@ -110,7 +174,7 @@
   .legend .it.cpu::before    { background: var(--blue); box-shadow: 0 0 6px var(--blue-glow); }
   .legend .it.solo::before   { background: var(--gold); box-shadow: 0 0 6px rgba(251,191,36,0.7); }
 
-  /* ===== Country grid below map ===== */
+  /* Country grid */
   .country-grid {
     display:grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -129,6 +193,11 @@
     font-family:'JetBrains Mono'; color: var(--blue-l);
     text-shadow: 0 0 8px var(--blue-glow);
     font-size: 18px; font-weight:500;
+  }
+
+  .loading-text {
+    text-align:center; padding: 60px; color: var(--muted);
+    font-family:'JetBrains Mono'; letter-spacing: 0.2em;
   }
 
   footer {
@@ -153,7 +222,7 @@
     <h1>DagTech · Live Network Mesh</h1>
     <div class="sub">Community miners contributing to the BlockDAG network · updates every 60s</div>
   </div>
-  <div class="stats" id="stats">
+  <div class="stats">
     <div class="stat"><div class="l">MINERS</div><div class="v" id="s_miners">—</div></div>
     <div class="stat"><div class="l">COUNTRIES</div><div class="v" id="s_countries">—</div></div>
     <div class="stat"><div class="l">UPDATED</div><div class="v" id="s_ts" style="font-size:13px">—</div></div>
@@ -166,14 +235,14 @@
 
 <main>
   <div class="panel map-panel">
-    <svg id="map" viewBox="0 0 360 180" preserveAspectRatio="xMidYMid meet" style="width:100%; height:auto; display:block; min-height:380px;">
-      <rect x="0" y="0" width="360" height="180" fill="rgba(2,8,20,0.5)"/>
+    <svg id="map" viewBox="0 0 1000 540" preserveAspectRatio="xMidYMid meet">
+      <text x="500" y="270" text-anchor="middle" fill="rgba(255,255,255,0.4)" font-family="JetBrains Mono" font-size="14">[ loading world data… ]</text>
     </svg>
   </div>
 
   <div class="legend">
     <div class="it uae">UAE Pool — Ras Al Khaimah</div>
-    <div class="it relay">Relays — CT &amp; US-West</div>
+    <div class="it relay">Relays — Cape Town &amp; US-West</div>
     <div class="it cpu">CPU/GPU miners (port 3335)</div>
     <div class="it asic">ASIC miners (port 3334)</div>
     <div class="it solo">SOLO (X100)</div>
@@ -181,7 +250,7 @@
 
   <div class="panel">
     <h2>About this map</h2>
-    <p class="desc">Each cyan dot is a real miner currently connected to the DagTech pool, plotted at their connecting IP's approximate geolocation. The thicker arcs are our WireGuard backbone — Cape Town relay (af-south-1) and US-West relay (us-west-2) both reach the pool in Ras Al Khaimah. Identifying details (IP, ISP) are not exposed publicly — only the city/country and which relay each miner uses.</p>
+    <p class="desc">Each cyan dot is a real miner currently connected to the DagTech pool, plotted at their connecting IP's approximate geolocation. The thick arcs are our WireGuard backbone — Cape Town relay (af-south-1) and US-West relay (us-west-2) both reach the pool in Ras Al Khaimah. Identifying details (IP, ISP) are not exposed publicly — only the city/country and which relay each miner uses. Map projection: Natural Earth I, with great-circle (geodesic) routing.</p>
     <div class="country-grid" id="countryGrid"></div>
   </div>
 </main>
@@ -191,35 +260,12 @@
 </footer>
 
 <script>
-const ENDPOINT = 'https://miners.dagtech.network/mesh-public.json';
+const ENDPOINT  = 'https://miners.dagtech.network/mesh-public.json';
+const WORLD_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 
-const proj = (lat, lon) => ({ x: lon + 180, y: 90 - lat });
-const arcPath = (x1,y1,x2,y2,bow=0.18) => {
-  const mx = (x1+x2)/2, my = (y1+y2)/2;
-  const dx = x2-x1, dy = y2-y1;
-  const len = Math.sqrt(dx*dx+dy*dy);
-  const nx = -dy/len, ny = dx/len;
-  const cx = mx + nx*len*bow;
-  const cy = my + ny*len*bow;
-  return `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`;
-};
-
-// Simplified continent silhouettes (rough silhouettes — not cartographic-accurate)
-const CONTINENT_PATHS = [
-  'M 17 30 L 35 20 L 75 15 L 105 25 L 110 45 L 100 60 L 85 75 L 70 88 L 50 90 L 35 85 L 28 70 L 30 55 L 25 40 Z',
-  'M 130 18 L 150 15 L 155 30 L 145 38 L 135 35 Z',
-  'M 100 95 L 120 90 L 130 105 L 135 130 L 130 155 L 120 170 L 110 165 L 105 140 L 100 115 Z',
-  'M 165 35 L 195 28 L 215 35 L 215 55 L 195 62 L 180 60 L 168 50 Z',
-  'M 175 70 L 210 65 L 230 75 L 240 100 L 235 130 L 225 145 L 205 150 L 190 130 L 178 100 Z',
-  'M 215 25 L 285 22 L 330 35 L 335 65 L 310 75 L 285 80 L 260 70 L 240 75 L 220 60 Z',
-  'M 290 120 L 325 115 L 340 125 L 335 145 L 305 145 L 290 135 Z',
-  'M 290 90 L 320 88 L 320 105 L 305 110 L 295 100 Z',
-  'M 10 170 L 350 170 L 350 178 L 10 178 Z',
-  'M 320 50 L 335 50 L 335 60 L 320 60 Z',
-  'M 168 35 L 178 33 L 178 45 L 170 47 Z',
-  'M 165 50 L 178 50 L 178 60 L 165 58 Z',
-  'M 238 130 L 245 128 L 245 145 L 238 143 Z',
-];
+const W = 1000, H = 540;
+const projection = d3.geoNaturalEarth1().fitSize([W, H], { type: 'Sphere' });
+const pathGen = d3.geoPath(projection);
 
 const fmtTime = ts => {
   if (!ts) return '—';
@@ -227,15 +273,59 @@ const fmtTime = ts => {
   return d.toUTCString().slice(17, 25) + ' UTC';
 };
 
-async function load() {
+let worldGeo = null;
+let lastData = null;
+
+async function init() {
   try {
-    const r = await fetch(ENDPOINT + '?t=' + Date.now());
-    const data = await r.json();
-    render(data);
+    // Fetch world topology + mesh data in parallel
+    const [world, mesh] = await Promise.all([
+      fetch(WORLD_URL).then(r => r.json()),
+      fetch(ENDPOINT + '?t=' + Date.now()).then(r => r.json()),
+    ]);
+    worldGeo = topojson.feature(world, world.objects.countries);
+    drawBase();
+    render(mesh);
+    // Refresh data only (world stays cached) every 60s
+    setInterval(refreshData, 60000);
   } catch (e) {
     document.getElementById('map').innerHTML =
-      `<text x="180" y="90" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-size="4" font-family="JetBrains Mono">[ couldn't load mesh data — ${e.message} ]</text>`;
+      `<text x="500" y="270" text-anchor="middle" fill="rgba(255,77,77,0.7)" font-family="JetBrains Mono" font-size="14">[ couldn't load: ${e.message} ]</text>`;
   }
+}
+
+async function refreshData() {
+  try {
+    const mesh = await fetch(ENDPOINT + '?t=' + Date.now()).then(r => r.json());
+    render(mesh);
+  } catch (e) { /* keep last */ }
+}
+
+function drawBase() {
+  const svg = d3.select('#map');
+  svg.selectAll('*').remove();
+
+  const defs = svg.append('defs');
+  // Subtle outer glow filter
+  const f = defs.append('filter').attr('id', 'glow').attr('x', '-50%').attr('y', '-50%').attr('width', '200%').attr('height', '200%');
+  f.append('feGaussianBlur').attr('stdDeviation', '2.5').attr('result', 'b');
+  const m = f.append('feMerge'); m.append('feMergeNode').attr('in', 'b'); m.append('feMergeNode').attr('in', 'SourceGraphic');
+
+  // Sphere (water)
+  svg.append('path').datum({ type: 'Sphere' }).attr('class', 'sphere').attr('d', pathGen);
+
+  // Graticule
+  const grat = d3.geoGraticule().step([30, 30]);
+  svg.append('path').datum(grat()).attr('class', 'graticule').attr('d', pathGen);
+
+  // Countries
+  svg.append('g')
+    .selectAll('path')
+    .data(worldGeo.features)
+    .join('path')
+    .attr('class', 'country')
+    .attr('d', pathGen)
+    .append('title').text(d => d.properties && d.properties.name || '');
 }
 
 function render(d) {
@@ -243,77 +333,76 @@ function render(d) {
   document.getElementById('s_countries').textContent = d.totals.countries;
   document.getElementById('s_ts').textContent = fmtTime(d._meta.ts);
 
-  const map = document.getElementById('map');
-  const a = d.anchors || {};
-  const uaeP = proj(a.uae.lat, a.uae.lon);
-  const ctP  = proj(a.ct.lat,  a.ct.lon);
-  const uswP = proj(a.usw.lat, a.usw.lon);
+  const svg = d3.select('#map');
+  // Remove previous overlay group(s)
+  svg.selectAll('.overlay').remove();
+  const g = svg.append('g').attr('class', 'overlay');
 
-  // Build
-  let svg = '<rect x="0" y="0" width="360" height="180" fill="rgba(2,8,20,0.6)"/>';
+  const anchors = d.anchors;
+  const uaeProj = projection([anchors.uae.lon, anchors.uae.lat]);
+  const ctProj  = projection([anchors.ct.lon,  anchors.ct.lat]);
+  const uswProj = projection([anchors.usw.lon, anchors.usw.lat]);
 
-  // Grid
-  for (let lat = -60; lat <= 60; lat += 30) {
-    const y = 90 - lat;
-    svg += `<line x1="0" y1="${y}" x2="360" y2="${y}" stroke="rgba(0,212,255,0.07)" stroke-width="0.18"/>`;
-  }
-  for (let lon = -150; lon <= 150; lon += 30) {
-    const x = lon + 180;
-    svg += `<line x1="${x}" y1="0" x2="${x}" y2="180" stroke="rgba(0,212,255,0.07)" stroke-width="0.18"/>`;
-  }
-  svg += `<line x1="0" y1="90" x2="360" y2="90" stroke="rgba(0,212,255,0.16)" stroke-width="0.3" stroke-dasharray="2 2"/>`;
+  // Arcs (great-circle paths via LineString geometry)
+  const arcLayer = g.append('g').attr('class', 'arcs');
 
-  // Continents
-  for (const p of CONTINENT_PATHS) {
-    svg += `<path d="${p}" fill="rgba(0,212,255,0.07)" stroke="rgba(0,212,255,0.20)" stroke-width="0.25"/>`;
-  }
-
-  // Connection lines miner → relay
+  // Miner arcs
   for (const m of d.miners) {
     if (m.lat == null) continue;
-    const p = proj(m.lat, m.lon);
-    if (m.vias.includes('ct'))
-      svg += `<path d="${arcPath(p.x,p.y,ctP.x,ctP.y,0.15)}" stroke="rgba(0,212,255,0.55)" stroke-width="0.25" fill="none" opacity="0.7"/>`;
-    if (m.vias.includes('usw'))
-      svg += `<path d="${arcPath(p.x,p.y,uswP.x,uswP.y,0.15)}" stroke="rgba(127,229,255,0.55)" stroke-width="0.25" fill="none" opacity="0.7"/>`;
-    if (m.vias.includes('direct'))
-      svg += `<path d="${arcPath(p.x,p.y,uaeP.x,uaeP.y,0.15)}" stroke="rgba(251,191,36,0.65)" stroke-width="0.25" fill="none" opacity="0.7"/>`;
+    const make = (targetLat, targetLon, cls) => {
+      const line = { type: 'LineString', coordinates: [[m.lon, m.lat], [targetLon, targetLat]] };
+      arcLayer.append('path')
+        .datum(line)
+        .attr('class', `arc ${cls}`)
+        .attr('d', pathGen);
+    };
+    if (m.vias.includes('ct'))     make(anchors.ct.lat, anchors.ct.lon, 'arc-miner-ct');
+    if (m.vias.includes('usw'))    make(anchors.usw.lat, anchors.usw.lon, 'arc-miner-usw');
+    if (m.vias.includes('direct')) make(anchors.uae.lat, anchors.uae.lon, 'arc-miner-dir');
   }
-  // Backbone CT → UAE and USW → UAE
-  svg += `<path d="${arcPath(ctP.x,ctP.y,uaeP.x,uaeP.y,0.10)}" stroke="rgba(0,212,255,0.9)" stroke-width="0.55" fill="none" filter="drop-shadow(0 0 1.2px #00d4ff)"/>`;
-  svg += `<path d="${arcPath(uswP.x,uswP.y,uaeP.x,uaeP.y,0.20)}" stroke="rgba(0,212,255,0.9)" stroke-width="0.55" fill="none" filter="drop-shadow(0 0 1.2px #00d4ff)"/>`;
+
+  // Backbone arcs (relays → UAE pool)
+  for (const [lat, lon] of [[anchors.ct.lat, anchors.ct.lon], [anchors.usw.lat, anchors.usw.lon]]) {
+    const line = { type: 'LineString', coordinates: [[lon, lat], [anchors.uae.lon, anchors.uae.lat]] };
+    arcLayer.append('path')
+      .datum(line)
+      .attr('class', 'arc arc-backbone')
+      .attr('d', pathGen);
+  }
 
   // Miner dots
+  const dotsLayer = g.append('g').attr('class', 'dots');
   for (const m of d.miners) {
     if (m.lat == null) continue;
-    const p = proj(m.lat, m.lon);
-    const color = m.pool_port === 3336 ? '#fbbf24' :
-                  m.pool_port === 3334 ? '#7fe5ff' : '#00d4ff';
-    svg += `<circle cx="${p.x}" cy="${p.y}" r="2.4" fill="${color}" opacity="0.20"/>
-            <circle cx="${p.x}" cy="${p.y}" r="1.0" fill="${color}" filter="drop-shadow(0 0 1.5px ${color})">
-              <title>${m.city}, ${m.country} · via ${m.vias.join(',')}</title>
-            </circle>`;
+    const p = projection([m.lon, m.lat]);
+    if (!p) continue;
+    const cls = m.pool_port === 3336 ? 'solo' : m.pool_port === 3334 ? 'asic' : '';
+    const dotClass = cls ? `miner-dot miner-dot-${cls}` : 'miner-dot';
+    const haloClass = cls ? `miner-halo miner-halo-${cls}` : 'miner-halo';
+
+    dotsLayer.append('circle').attr('cx', p[0]).attr('cy', p[1]).attr('r', 5).attr('class', haloClass);
+    dotsLayer.append('circle').attr('cx', p[0]).attr('cy', p[1]).attr('r', 2.2).attr('class', dotClass)
+      .style('filter', 'drop-shadow(0 0 3px currentColor)')
+      .append('title').text(`${m.city}, ${m.country} · via ${m.vias.join(',')}`);
   }
 
   // Anchors (CT, USW, UAE)
-  const drawAnchor = (p, color, label, sub, r2 = 1.6) => `
-    <g>
-      <circle cx="${p.x}" cy="${p.y}" r="5.5" fill="${color}" opacity="0.18">
-        <animate attributeName="r" values="5.5;8;5.5" dur="2.5s" repeatCount="indefinite"/>
-        <animate attributeName="opacity" values="0.18;0.05;0.18" dur="2.5s" repeatCount="indefinite"/>
-      </circle>
-      <circle cx="${p.x}" cy="${p.y}" r="${r2}" fill="${color}" stroke="#fff" stroke-width="0.3" filter="drop-shadow(0 0 2px ${color})">
-        <title>${label} · ${sub}</title>
-      </circle>
-      <text x="${p.x + r2 + 1.5}" y="${p.y - 0.5}" font-family="Space Grotesk" font-weight="600" font-size="2.8" fill="${color}">${label}</text>
-      <text x="${p.x + r2 + 1.5}" y="${p.y + 2.5}" font-family="JetBrains Mono" font-size="2.2" fill="rgba(255,255,255,0.55)">${sub}</text>
-    </g>`;
+  const drawAnchor = (parent, p, color, label, sub, isGold = false) => {
+    const grp = parent.append('g').attr('transform', `translate(${p[0]},${p[1]})`);
+    grp.append('circle').attr('r', 10).attr('class', 'anchor-halo')
+       .style('fill', color);
+    grp.append('circle').attr('r', 4.5).style('fill', color).style('stroke', '#fff').style('stroke-width', 0.8)
+       .style('filter', `drop-shadow(0 0 4px ${color})`);
+    grp.append('text').attr('class', isGold ? 'anchor-label gold' : 'anchor-label')
+       .attr('x', 8).attr('y', -1).text(label);
+    grp.append('text').attr('class', 'anchor-sublabel')
+       .attr('x', 8).attr('y', 10).text(sub);
+  };
 
-  svg += drawAnchor(ctP,  '#00d4ff', 'CT RELAY',  'af-south-1');
-  svg += drawAnchor(uswP, '#00d4ff', 'USW RELAY', 'us-west-2');
-  svg += drawAnchor(uaeP, '#fbbf24', 'UAE POOL',  'Ras Al Khaimah', 2.0);
-
-  map.innerHTML = svg;
+  const anchLayer = g.append('g').attr('class', 'anchors');
+  drawAnchor(anchLayer, ctProj,  '#00d4ff', 'CT RELAY',  'af-south-1');
+  drawAnchor(anchLayer, uswProj, '#00d4ff', 'USW RELAY', 'us-west-2');
+  drawAnchor(anchLayer, uaeProj, '#fbbf24', 'UAE POOL',  'Ras Al Khaimah', true);
 
   // Country grid
   const counts = {};
@@ -327,8 +416,7 @@ function render(d) {
   ).join('');
 }
 
-load();
-setInterval(load, 60000);
+init();
 </script>
 </body>
 </html>
