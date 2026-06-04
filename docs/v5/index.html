@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DagTech Mesh v5 — Live-Polled (honest)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-0: #050810;
+    --bg-1: #080b14;
+    --bg-2: #0a0f1c;
+    --bg-3: #0f1626;
+    --panel: rgba(15, 22, 38, 0.85);
+    --panel-bright: rgba(20, 30, 50, 0.92);
+    --panel-border: rgba(56, 120, 220, 0.28);
+    --panel-border-bright: rgba(107, 180, 255, 0.55);
+    --blue: #3aa0ff;
+    --blue-soft: #6bd6ff;
+    --blue-dim: hsl(210, 60%, 45%);
+    --blue-deep: #1a73e8;
+    --blue-glow: rgba(58, 160, 255, 0.4);
+    --text-0: #e6eef9;
+    --text-1: #9bb1cf;
+    --text-2: #5d7398;
+    --text-3: #3d5378;
+    --led-ok: #6bd6ff;
+    --led-warn: #ffa53d;
+    --led-warn-glow: rgba(255, 165, 61, 0.5);
+    --led-bad: #ff4d4d;
+    --led-bad-glow: rgba(255, 77, 77, 0.5);
+    --led-dead: #3d5378;
+    --wire-primary: #3aa0ff;
+    --wire-dedicated: #6bd6ff;
+    --wire-failover: #5d7398;
+    --wire-service: #4fa6e6;
+    --wire-static: #2a3a55;   /* dim, no-evidence wire */
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg-0);
+    color: var(--text-0);
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(56, 144, 255, 0.10) 0%, transparent 50%),
+      radial-gradient(ellipse at 0% 100%, rgba(107, 180, 255, 0.06) 0%, transparent 50%),
+      var(--bg-0);
+    background-attachment: fixed;
+    padding: 16px 20px;
+  }
+  h1, h2, h3, h4 { font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600; }
+  code, .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* HEADER */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 22px; background: var(--panel);
+    border: 1px solid var(--panel-border); border-radius: 14px;
+    backdrop-filter: blur(12px); margin-bottom: 12px;
+    box-shadow: 0 0 40px rgba(56, 144, 255, 0.08);
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-mark {
+    width: 42px; height: 42px; position: relative; border-radius: 10px;
+    background: radial-gradient(circle at 30% 30%, var(--blue-soft), var(--blue) 30%, var(--blue-deep));
+    box-shadow: 0 0 18px var(--blue-glow), inset 0 0 12px rgba(255,255,255,0.15);
+  }
+  .brand-mark::before {
+    content: ""; position: absolute; inset: 7px;
+    border: 2px solid rgba(255,255,255,0.9);
+    border-radius: 6px;
+    border-right-color: transparent; border-bottom-color: transparent;
+  }
+  .brand-text h1 { font-size: 20px; color: var(--text-0); letter-spacing: -0.3px; }
+  .brand-text h1 span { color: var(--blue-soft); }
+  .brand-text p { font-size: 11px; color: var(--text-2); margin-top: 2px; letter-spacing: 1px; text-transform: uppercase; }
+
+  .header-meta { display: flex; align-items: center; gap: 22px; font-size: 12px; }
+  .meta-item { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .meta-label { text-transform: uppercase; letter-spacing: 1.2px; font-size: 9px; color: var(--text-3); }
+  .meta-value { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--blue-soft); font-weight: 600; }
+  .meta-value.err { color: var(--led-bad); }
+  .meta-value.stale { color: var(--led-warn); }
+  .pulse-led {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+    background: var(--led-ok); box-shadow: 0 0 10px var(--led-ok);
+    animation: pulseBright 2s infinite; margin-right: 6px;
+  }
+  .pulse-led.err { background: var(--led-bad); box-shadow: 0 0 10px var(--led-bad-glow); }
+
+  /* HONESTY BANNER */
+  .honest-banner {
+    background: rgba(56, 120, 220, 0.08);
+    border: 1px solid var(--panel-border);
+    border-left: 3px solid var(--blue-soft);
+    border-radius: 10px;
+    padding: 10px 16px;
+    margin-bottom: 14px;
+    font-size: 12px;
+    color: var(--text-1);
+    display: flex;
+    gap: 22px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .honest-banner strong { color: var(--text-0); font-family: 'Space Grotesk', sans-serif; letter-spacing: 0.3px; }
+  .honest-banner code { color: var(--blue-soft); }
+  .honest-banner .sep { color: var(--text-3); }
+
+  @keyframes pulseBright { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.7); } }
+  @keyframes spin        { to { transform: rotate(360deg); } }
+  @keyframes spinRev     { to { transform: rotate(-360deg); } }
+  @keyframes pulseSoft   { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.9; } }
+  @keyframes flow        { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -32; } }
+  @keyframes blink       { 0%, 90%, 100% { opacity: 0.3; } 95% { opacity: 1; } }
+
+  /* MESH CONTAINER */
+  .mesh-frame {
+    background: var(--bg-1);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 60px rgba(56, 144, 255, 0.04) inset;
+  }
+  .mesh-frame::before {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(58, 160, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(58, 160, 255, 0.025) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+  }
+  .mesh-svg {
+    width: 100%; height: auto; display: block; position: relative; z-index: 1;
+    min-height: 760px;
+  }
+
+  /* Column labels */
+  .col-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    fill: var(--text-3);
+  }
+  .col-label-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px; fill: var(--text-3);
+  }
+
+  /* FOOTER / LEGEND */
+  footer {
+    margin-top: 14px; padding: 14px 22px; background: var(--panel);
+    border: 1px solid var(--panel-border); border-radius: 12px;
+    font-size: 11px; color: var(--text-1);
+  }
+  footer .legend-row {
+    display: flex; gap: 18px; align-items: center; flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  footer .legend-row:last-child { margin-bottom: 0; }
+  footer strong {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--text-0);
+    margin-right: 6px; text-transform: uppercase; letter-spacing: 1.5px; font-size: 10px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .legend-dot.ok   { background: var(--led-ok);   box-shadow: 0 0 6px var(--led-ok); }
+  .legend-dot.warn { background: var(--led-warn); box-shadow: 0 0 8px var(--led-warn-glow); }
+  .legend-dot.bad  { background: var(--led-bad);  box-shadow: 0 0 8px var(--led-bad-glow); }
+  .legend-dot.dead { background: var(--led-dead); }
+  .legend-line {
+    width: 24px; height: 2px; display: inline-block; background: var(--wire-primary);
+  }
+  .legend-line.dedicated { background: var(--wire-dedicated); }
+  .legend-line.static { background: var(--wire-static); }
+  .legend-line.service { background: var(--wire-service); opacity: 0.7; }
+  .src-list { display: flex; flex-direction: column; gap: 4px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-2); }
+  .src-list b { color: var(--blue-soft); font-weight: 500; }
+  .src-list em { color: var(--text-3); font-style: normal; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark"></div>
+    <div class="brand-text">
+      <h1>DagTech <span>Mesh v5</span></h1>
+      <p>Honest live-polled status · — means NO live source · ERR means fetch failed</p>
+    </div>
+  </div>
+  <div class="header-meta">
+    <div class="meta-item"><span class="meta-label">OUR EVM TIP</span><span class="meta-value" id="our-evm">—</span></div>
+    <div class="meta-item"><span class="meta-label">MAINNET EVM TIP</span><span class="meta-value" id="mainnet-evm">—</span></div>
+    <div class="meta-item"><span class="meta-label">LAG vs MAINNET</span><span class="meta-value" id="evm-lag">—</span></div>
+    <div class="meta-item"><span class="meta-label">LAST POLL (UTC)</span><span class="meta-value"><span class="pulse-led" id="poll-led"></span><span id="last-update">—</span></span></div>
+  </div>
+</header>
+
+<div class="honest-banner">
+  <strong>HONEST STATUS</strong>
+  <span>Live-polled every <code>30s</code>.</span>
+  <span class="sep">·</span>
+  <span>Generated: <code id="gen-ts">—</code></span>
+  <span class="sep">·</span>
+  <span>Panels showing <code>—</code> have NO live source wired yet.</span>
+  <span class="sep">·</span>
+  <span><code>ERR</code> means the fetch failed (red), not stale-green.</span>
+</div>
+
+<div class="mesh-frame">
+<svg class="mesh-svg" viewBox="0 0 1600 780" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+
+  <defs>
+    <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="40%" stop-color="#6bd6ff" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#3aa0ff" stop-opacity="0.3"/>
+    </radialGradient>
+    <radialGradient id="haloGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#6bd6ff" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#3aa0ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="globeGrad" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#1a73e8" stop-opacity="0.7"/>
+      <stop offset="60%" stop-color="#0a1428"/>
+      <stop offset="100%" stop-color="#050810"/>
+    </radialGradient>
+    <linearGradient id="boxGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f1626"/>
+      <stop offset="100%" stop-color="#080b14"/>
+    </linearGradient>
+    <linearGradient id="boxGradX" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f1c30"/>
+      <stop offset="100%" stop-color="#080b14"/>
+    </linearGradient>
+
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.5"/>
+      <feComposite in2="SourceGraphic" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- COLUMN LABELS -->
+  <g>
+    <text class="col-label" x="160" y="20">01 · MAINNET</text>
+    <text class="col-label-num" x="160" y="32">live-polled</text>
+    <text class="col-label" x="430" y="20">02 · RELAYS</text>
+    <text class="col-label-num" x="430" y="32">no public probe</text>
+    <text class="col-label" x="720" y="20">03 · NODES</text>
+    <text class="col-label-num" x="720" y="32">live JSON-RPC</text>
+    <text class="col-label" x="1040" y="20">04 · POOLS</text>
+    <text class="col-label-num" x="1040" y="32">endpoint pending (task #92)</text>
+    <text class="col-label" x="1340" y="20">05 · ENDPOINTS</text>
+    <text class="col-label-num" x="1340" y="32">no public probe</text>
+  </g>
+
+  <!-- =========================================================== -->
+  <!-- WIRES — STATIC DIM HINTS (no animation = no evidence of flow) -->
+  <!-- =========================================================== -->
+
+  <!-- Mainnet → CT relay -->
+  <path d="M 250 200 Q 320 200 360 230" fill="none" stroke="var(--wire-static)" stroke-width="1" opacity="0.4" stroke-dasharray="3 6"/>
+  <!-- Mainnet → USW relay -->
+  <path d="M 250 200 Q 320 310 360 380" fill="none" stroke="var(--wire-static)" stroke-width="1" opacity="0.4" stroke-dasharray="3 6"/>
+
+  <!-- Relays → Nodes (dim static) -->
+  <path d="M 500 240 Q 600 200 660 170" fill="none" stroke="var(--wire-static)" stroke-width="0.8" opacity="0.3" stroke-dasharray="3 6"/>
+  <path d="M 500 240 Q 600 250 660 280" fill="none" stroke="var(--wire-static)" stroke-width="0.8" opacity="0.3" stroke-dasharray="3 6"/>
+  <path d="M 500 240 Q 600 350 660 410" fill="none" stroke="var(--wire-static)" stroke-width="0.8" opacity="0.3" stroke-dasharray="3 6"/>
+  <path d="M 500 240 Q 600 470 660 530" fill="none" stroke="var(--wire-static)" stroke-width="0.8" opacity="0.3" stroke-dasharray="3 6"/>
+
+  <path d="M 500 390 Q 600 280 660 170" fill="none" stroke="var(--wire-static)" stroke-width="0.8" opacity="0.3" stroke-dasharray="3 6"/>
+  <path d="M 500 390 Q 600 340 660 280" fill="none" stroke="var(--wire-static)" stroke-width="0.8" opacity="0.3" stroke-dasharray="3 6"/>
+  <path d="M 500 390 Q 600 400 660 410" fill="none" stroke="var(--wire-static)" stroke-width="0.8" opacity="0.3" stroke-dasharray="3 6"/>
+  <path d="M 500 390 Q 600 460 660 530" fill="none" stroke="var(--wire-static)" stroke-width="0.8" opacity="0.3" stroke-dasharray="3 6"/>
+
+  <!-- Node → Pool wires (static dim — no live evidence of which node feeds which pool right now) -->
+  <path d="M 850 170 Q 920 220 970 290" fill="none" stroke="var(--wire-static)" stroke-width="1" opacity="0.35" stroke-dasharray="3 6"/>
+  <path d="M 850 170 Q 920 260 970 380" fill="none" stroke="var(--wire-static)" stroke-width="1" opacity="0.35" stroke-dasharray="3 6"/>
+  <path d="M 850 170 Q 920 360 970 580" fill="none" stroke="var(--wire-static)" stroke-width="1" opacity="0.35" stroke-dasharray="3 6"/>
+
+  <path d="M 850 280 Q 920 285 970 290" fill="none" stroke="var(--wire-static)" stroke-width="1" opacity="0.35" stroke-dasharray="3 6"/>
+  <path d="M 850 280 Q 920 330 970 380" fill="none" stroke="var(--wire-static)" stroke-width="1" opacity="0.35" stroke-dasharray="3 6"/>
+  <path d="M 850 280 Q 920 420 970 580" fill="none" stroke="var(--wire-static)" stroke-width="1" opacity="0.35" stroke-dasharray="3 6"/>
+
+  <path d="M 850 410 Q 920 350 970 295" fill="none" stroke="var(--wire-static)" stroke-width="0.8" opacity="0.25" stroke-dasharray="2 8"/>
+  <path d="M 850 410 Q 920 390 970 385" fill="none" stroke="var(--wire-static)" stroke-width="0.8" opacity="0.25" stroke-dasharray="2 8"/>
+  <path d="M 850 410 Q 920 490 970 575" fill="none" stroke="var(--wire-static)" stroke-width="0.8" opacity="0.25" stroke-dasharray="2 8"/>
+
+  <!-- node-x100 → hans-solo — KEPT as dedicated brighter wire because firmware locks X100 to one pool (memory: x100_firmware_single_pool_only) -->
+  <path d="M 850 530 Q 920 510 970 480" fill="none" stroke="var(--wire-dedicated)" stroke-width="1.5" opacity="0.55" stroke-dasharray="4 6"/>
+
+  <!-- Pool → Miner wires -->
+  <path d="M 1170 480 Q 1240 380 1300 290" fill="none" stroke="var(--wire-dedicated)" stroke-width="1.5" opacity="0.55" stroke-dasharray="4 6"/>
+  <path d="M 1170 290 Q 1240 380 1300 415" fill="none" stroke="var(--wire-static)" stroke-width="1" opacity="0.35" stroke-dasharray="3 6"/>
+  <path d="M 1170 380 Q 1240 460 1300 510" fill="none" stroke="var(--wire-static)" stroke-width="1" opacity="0.35" stroke-dasharray="3 6"/>
+  <path d="M 1170 580 Q 1240 575 1300 595" fill="none" stroke="var(--wire-static)" stroke-width="1" opacity="0.35" stroke-dasharray="3 6"/>
+  <path d="M 1170 580 Q 1240 625 1300 645" fill="none" stroke="var(--wire-static)" stroke-width="1" opacity="0.35" stroke-dasharray="3 6"/>
+  <path d="M 1170 580 Q 1240 670 1300 690" fill="none" stroke="var(--wire-static)" stroke-width="1" opacity="0.35" stroke-dasharray="3 6"/>
+
+  <!-- =========================================================== -->
+  <!-- COL 1 — MAINNET (live-polled bdagscan + our gateway) -->
+  <!-- =========================================================== -->
+
+  <!-- BlockDAG L1 (architectural icon only — no fake live LEDs) -->
+  <g transform="translate(180 200)">
+    <circle r="55" fill="url(#haloGlow)" opacity="0.45"/>
+    <circle r="42" fill="none" stroke="#3aa0ff" stroke-width="0.5" stroke-dasharray="3 4" opacity="0.4"/>
+    <g style="animation: spin 14s linear infinite; transform-origin: center; transform-box: fill-box;">
+      <path d="M 0 -35 L 6 -25 L 2 -18 L -2 -18 L -6 -25 Z" fill="#3aa0ff" opacity="0.45"/>
+      <path d="M 0 -35 L 6 -25 L 2 -18 L -2 -18 L -6 -25 Z" transform="rotate(72)" fill="#3aa0ff" opacity="0.45"/>
+      <path d="M 0 -35 L 6 -25 L 2 -18 L -2 -18 L -6 -25 Z" transform="rotate(144)" fill="#3aa0ff" opacity="0.45"/>
+      <path d="M 0 -35 L 6 -25 L 2 -18 L -2 -18 L -6 -25 Z" transform="rotate(216)" fill="#3aa0ff" opacity="0.45"/>
+      <path d="M 0 -35 L 6 -25 L 2 -18 L -2 -18 L -6 -25 Z" transform="rotate(288)" fill="#3aa0ff" opacity="0.45"/>
+    </g>
+    <circle r="9" fill="url(#coreGlow)" opacity="0.7"/>
+    <circle r="3" fill="#ffffff"/>
+    <text y="70" text-anchor="middle" fill="#6bd6ff" font-size="11" font-family="Space Grotesk" font-weight="600">BlockDAG L1</text>
+    <text y="82" text-anchor="middle" fill="#5d7398" font-size="7" font-family="JetBrains Mono">architectural</text>
+  </g>
+
+  <!-- bdagscan public RPC — LIVE -->
+  <g transform="translate(100 340)">
+    <rect width="160" height="78" rx="8" fill="url(#boxGrad)" stroke="#3aa0ff" stroke-width="0.8" opacity="0.95"/>
+    <circle id="led-bdagscan" cx="14" cy="14" r="3" fill="var(--led-dead)"/>
+    <text x="26" y="17" fill="#6bd6ff" font-size="9" font-family="JetBrains Mono" font-weight="600">bdagscan RPC</text>
+    <text x="10" y="34" fill="#5d7398" font-size="7" font-family="JetBrains Mono">eth_blockNumber</text>
+    <text x="10" y="50" fill="#9bb1cf" font-size="10" font-family="JetBrains Mono" font-weight="600" id="t-bdagscan-evm">—</text>
+    <text x="10" y="62" fill="#5d7398" font-size="7" font-family="JetBrains Mono">getBlockCount (DAG)</text>
+    <text x="10" y="74" fill="#9bb1cf" font-size="10" font-family="JetBrains Mono" font-weight="600" id="t-bdagscan-dag">—</text>
+  </g>
+
+  <!-- Our public RPC gateway — LIVE -->
+  <g transform="translate(100 440)">
+    <rect width="160" height="78" rx="8" fill="url(#boxGrad)" stroke="#3aa0ff" stroke-width="0.8" opacity="0.95"/>
+    <circle id="led-ourgw" cx="14" cy="14" r="3" fill="var(--led-dead)"/>
+    <text x="26" y="17" fill="#6bd6ff" font-size="9" font-family="JetBrains Mono" font-weight="600">rpc.dagtech</text>
+    <text x="10" y="34" fill="#5d7398" font-size="7" font-family="JetBrains Mono">eth_blockNumber</text>
+    <text x="10" y="50" fill="#9bb1cf" font-size="10" font-family="JetBrains Mono" font-weight="600" id="t-ourgw-evm">—</text>
+    <text x="10" y="62" fill="#5d7398" font-size="7" font-family="JetBrains Mono">getBlockCount · isCurrent</text>
+    <text x="10" y="74" fill="#9bb1cf" font-size="10" font-family="JetBrains Mono" font-weight="600" id="t-ourgw-dag">—</text>
+  </g>
+
+  <!-- =========================================================== -->
+  <!-- COL 2 — RELAYS (NO DATA — no probe yet) -->
+  <!-- =========================================================== -->
+
+  <!-- CT Relay -->
+  <g transform="translate(430 240)">
+    <ellipse cx="0" cy="50" rx="40" ry="4" fill="#3aa0ff" opacity="0.12"/>
+    <circle r="32" fill="url(#globeGrad)" stroke="#5d7398" stroke-width="0.8" stroke-dasharray="3 3" opacity="0.7"/>
+    <ellipse rx="32" ry="10" fill="none" stroke="#5d7398" stroke-width="0.3" opacity="0.4"/>
+    <ellipse rx="10" ry="32" fill="none" stroke="#5d7398" stroke-width="0.3" opacity="0.3"/>
+    <line x1="-32" y1="0" x2="32" y2="0" stroke="#5d7398" stroke-width="0.3" opacity="0.4"/>
+    <text y="58" text-anchor="middle" fill="#9bb1cf" font-size="10" font-family="Space Grotesk" font-weight="600">CT Relay</text>
+    <text y="70" text-anchor="middle" fill="#5d7398" font-size="7" font-family="JetBrains Mono">af-south-1 · WG</text>
+    <text y="82" text-anchor="middle" fill="#3d5378" font-size="7" font-family="JetBrains Mono">no public probe</text>
+    <circle cx="40" cy="-32" r="3" fill="var(--led-dead)"/>
+  </g>
+
+  <!-- USW Relay -->
+  <g transform="translate(430 390)">
+    <ellipse cx="0" cy="50" rx="40" ry="4" fill="#3aa0ff" opacity="0.12"/>
+    <circle r="32" fill="url(#globeGrad)" stroke="#5d7398" stroke-width="0.8" stroke-dasharray="3 3" opacity="0.7"/>
+    <ellipse rx="32" ry="10" fill="none" stroke="#5d7398" stroke-width="0.3" opacity="0.4"/>
+    <ellipse rx="10" ry="32" fill="none" stroke="#5d7398" stroke-width="0.3" opacity="0.3"/>
+    <line x1="-32" y1="0" x2="32" y2="0" stroke="#5d7398" stroke-width="0.3" opacity="0.4"/>
+    <text y="58" text-anchor="middle" fill="#9bb1cf" font-size="10" font-family="Space Grotesk" font-weight="600">US-West Relay</text>
+    <text y="70" text-anchor="middle" fill="#5d7398" font-size="7" font-family="JetBrains Mono">us-west-2 · WG</text>
+    <text y="82" text-anchor="middle" fill="#3d5378" font-size="7" font-family="JetBrains Mono">no public probe</text>
+    <circle cx="40" cy="-32" r="3" fill="var(--led-dead)"/>
+  </g>
+
+  <!-- =========================================================== -->
+  <!-- COL 3 — NODES (live-polled per node via gateway; nodes 1/2/3/x100 -->
+  <!--          share one gateway endpoint, so we can only reflect the    -->
+  <!--          aggregate state — see the legend note)                    -->
+  <!-- =========================================================== -->
+
+  <!-- node-1 — driven by our gateway poll -->
+  <g transform="translate(680 130)">
+    <rect width="170" height="80" rx="8" fill="url(#boxGrad)" stroke="#3aa0ff" stroke-width="1"/>
+    <rect x="6" y="6" width="158" height="12" rx="2" fill="#050810" stroke="#3aa0ff" stroke-width="0.4"/>
+    <text x="14" y="15" fill="#6bd6ff" font-size="7" font-family="JetBrains Mono" font-weight="600">NODE-1 · GATEWAY-BACKED</text>
+    <circle id="led-node1" cx="156" cy="12" r="2.5" fill="var(--led-dead)"/>
+    <text x="14" y="32" fill="#5d7398" font-size="7" font-family="JetBrains Mono">DAG height (qng)</text>
+    <text x="14" y="46" fill="#9bb1cf" font-size="12" font-family="JetBrains Mono" font-weight="600" id="n1-dag">—</text>
+    <text x="14" y="60" fill="#5d7398" font-size="7" font-family="JetBrains Mono">EVM height</text>
+    <text x="14" y="74" fill="#9bb1cf" font-size="11" font-family="JetBrains Mono" font-weight="600" id="n1-evm">—</text>
+    <text x="164" y="32" text-anchor="end" fill="#5d7398" font-size="7" font-family="JetBrains Mono">isCurrent</text>
+    <text x="164" y="46" text-anchor="end" fill="#9bb1cf" font-size="10" font-family="JetBrains Mono" font-weight="600" id="n1-current">—</text>
+    <text x="164" y="60" text-anchor="end" fill="#5d7398" font-size="7" font-family="JetBrains Mono">DAG-EVM gap</text>
+    <text x="164" y="74" text-anchor="end" fill="#9bb1cf" font-size="10" font-family="JetBrains Mono" font-weight="600" id="n1-gap">—</text>
+  </g>
+
+  <!-- node-2 — NO DATA -->
+  <g transform="translate(680 245)">
+    <rect width="170" height="80" rx="8" fill="url(#boxGrad)" stroke="#5d7398" stroke-width="1" stroke-dasharray="3 4" opacity="0.8"/>
+    <rect x="6" y="6" width="158" height="12" rx="2" fill="#050810" stroke="#5d7398" stroke-width="0.4"/>
+    <text x="14" y="15" fill="#9bb1cf" font-size="7" font-family="JetBrains Mono" font-weight="600">NODE-2 · NO PER-NODE PROBE</text>
+    <circle id="led-node2" cx="156" cy="12" r="2.5" fill="var(--led-dead)"/>
+    <text x="14" y="34" fill="#5d7398" font-size="7" font-family="JetBrains Mono">DAG height</text>
+    <text x="14" y="48" fill="#5d7398" font-size="11" font-family="JetBrains Mono" font-weight="600">—</text>
+    <text x="14" y="62" fill="#5d7398" font-size="7" font-family="JetBrains Mono">EVM height</text>
+    <text x="14" y="74" fill="#5d7398" font-size="11" font-family="JetBrains Mono" font-weight="600">—</text>
+    <text x="164" y="48" text-anchor="end" fill="#3d5378" font-size="6" font-family="JetBrains Mono">no direct endpoint</text>
+    <text x="164" y="60" text-anchor="end" fill="#3d5378" font-size="6" font-family="JetBrains Mono">behind HAProxy</text>
+    <text x="164" y="72" text-anchor="end" fill="#3d5378" font-size="6" font-family="JetBrains Mono">opaque from outside</text>
+  </g>
+
+  <!-- node-3 — NO DATA -->
+  <g transform="translate(680 370)">
+    <rect width="170" height="80" rx="8" fill="url(#boxGrad)" stroke="#5d7398" stroke-width="1" stroke-dasharray="3 4" opacity="0.8"/>
+    <rect x="6" y="6" width="158" height="12" rx="2" fill="#050810" stroke="#5d7398" stroke-width="0.4"/>
+    <text x="14" y="15" fill="#9bb1cf" font-size="7" font-family="JetBrains Mono" font-weight="600">NODE-3 · NO PER-NODE PROBE</text>
+    <circle id="led-node3" cx="156" cy="12" r="2.5" fill="var(--led-dead)"/>
+    <text x="14" y="34" fill="#5d7398" font-size="7" font-family="JetBrains Mono">DAG height</text>
+    <text x="14" y="48" fill="#5d7398" font-size="11" font-family="JetBrains Mono" font-weight="600">—</text>
+    <text x="14" y="62" fill="#5d7398" font-size="7" font-family="JetBrains Mono">EVM height</text>
+    <text x="14" y="74" fill="#5d7398" font-size="11" font-family="JetBrains Mono" font-weight="600">—</text>
+    <text x="164" y="48" text-anchor="end" fill="#3d5378" font-size="6" font-family="JetBrains Mono">no direct endpoint</text>
+    <text x="164" y="60" text-anchor="end" fill="#3d5378" font-size="6" font-family="JetBrains Mono">backup pool · standby</text>
+    <text x="164" y="72" text-anchor="end" fill="#3d5378" font-size="6" font-family="JetBrains Mono">opaque from outside</text>
+  </g>
+
+  <!-- node-x100 — NO DATA (no direct probe; X100 ASIC firmware doesn't expose RPC) -->
+  <g transform="translate(680 500)">
+    <rect width="170" height="80" rx="8" fill="url(#boxGradX)" stroke="#5d7398" stroke-width="1" stroke-dasharray="3 4" opacity="0.85"/>
+    <rect x="6" y="6" width="158" height="12" rx="2" fill="#050810" stroke="#5d7398" stroke-width="0.5"/>
+    <text x="14" y="15" fill="#9bb1cf" font-size="7" font-family="JetBrains Mono" font-weight="700">NODE-X100 · NO PROBE</text>
+    <circle id="led-x100" cx="156" cy="12" r="2.5" fill="var(--led-dead)"/>
+    <text x="14" y="34" fill="#5d7398" font-size="7" font-family="JetBrains Mono">dedicated to hans-solo</text>
+    <text x="14" y="48" fill="#5d7398" font-size="7" font-family="JetBrains Mono">no public stratum probe</text>
+    <text x="14" y="62" fill="#5d7398" font-size="7" font-family="JetBrains Mono">share counter</text>
+    <text x="14" y="74" fill="#5d7398" font-size="11" font-family="JetBrains Mono" font-weight="600">—</text>
+    <text x="164" y="48" text-anchor="end" fill="#3d5378" font-size="6" font-family="JetBrains Mono">single-pool firmware</text>
+    <text x="164" y="60" text-anchor="end" fill="#3d5378" font-size="6" font-family="JetBrains Mono">stratum-only out</text>
+    <text x="164" y="72" text-anchor="end" fill="#3d5378" font-size="6" font-family="JetBrains Mono">no API exposed</text>
+  </g>
+
+  <!-- =========================================================== -->
+  <!-- COL 4 — POOLS (NO DATA — endpoint pending) -->
+  <!-- =========================================================== -->
+
+  <!-- asic-pool — NO DATA -->
+  <g transform="translate(990 250)">
+    <rect width="180" height="75" rx="8" fill="url(#boxGrad)" stroke="#5d7398" stroke-width="1" stroke-dasharray="3 4" opacity="0.9"/>
+    <rect x="6" y="6" width="168" height="12" rx="2" fill="#050810" stroke="#5d7398" stroke-width="0.4"/>
+    <text x="14" y="15" fill="#9bb1cf" font-size="7" font-family="JetBrains Mono" font-weight="600">ASIC-POOL · :3334</text>
+    <circle id="led-pool-asic" cx="166" cy="12" r="2.5" fill="var(--led-dead)"/>
+    <text x="14" y="32" fill="#9bb1cf" font-size="9" font-family="Inter">stratum V1 · PROP</text>
+    <text x="14" y="46" fill="#5d7398" font-size="7" font-family="JetBrains Mono">hashrate</text>
+    <text x="14" y="60" fill="#5d7398" font-size="14" font-family="JetBrains Mono" font-weight="700" id="rate-asic-pool">NO DATA</text>
+    <text x="170" y="46" text-anchor="end" fill="#5d7398" font-size="7" font-family="JetBrains Mono">workers</text>
+    <text x="170" y="60" text-anchor="end" fill="#5d7398" font-size="11" font-family="JetBrains Mono" font-weight="700" id="workers-asic-pool">—</text>
+    <text x="14" y="71" fill="#3d5378" font-size="6" font-family="JetBrains Mono">endpoint not wired (task #92)</text>
+  </g>
+
+  <!-- cpu-gpu-pool — NO DATA -->
+  <g transform="translate(990 345)">
+    <rect width="180" height="75" rx="8" fill="url(#boxGrad)" stroke="#5d7398" stroke-width="1" stroke-dasharray="3 4" opacity="0.9"/>
+    <rect x="6" y="6" width="168" height="12" rx="2" fill="#050810" stroke="#5d7398" stroke-width="0.4"/>
+    <text x="14" y="15" fill="#9bb1cf" font-size="7" font-family="JetBrains Mono" font-weight="600">CPU-GPU-POOL · :3335</text>
+    <circle id="led-pool-cpu" cx="166" cy="12" r="2.5" fill="var(--led-dead)"/>
+    <text x="14" y="32" fill="#9bb1cf" font-size="9" font-family="Inter">stratum V1 · PPLNS</text>
+    <text x="14" y="46" fill="#5d7398" font-size="7" font-family="JetBrains Mono">hashrate</text>
+    <text x="14" y="60" fill="#5d7398" font-size="14" font-family="JetBrains Mono" font-weight="700" id="rate-cpu-gpu-pool">NO DATA</text>
+    <text x="170" y="46" text-anchor="end" fill="#5d7398" font-size="7" font-family="JetBrains Mono">workers</text>
+    <text x="170" y="60" text-anchor="end" fill="#5d7398" font-size="11" font-family="JetBrains Mono" font-weight="700" id="workers-cpu-gpu-pool">—</text>
+    <text x="14" y="71" fill="#3d5378" font-size="6" font-family="JetBrains Mono">endpoint not wired (task #92)</text>
+  </g>
+
+  <!-- hans-solo — NO DATA -->
+  <g transform="translate(990 440)">
+    <rect width="180" height="75" rx="8" fill="url(#boxGradX)" stroke="#5d7398" stroke-width="1" stroke-dasharray="3 4" opacity="0.9"/>
+    <rect x="6" y="6" width="168" height="12" rx="2" fill="#050810" stroke="#5d7398" stroke-width="0.5"/>
+    <text x="14" y="15" fill="#9bb1cf" font-size="7" font-family="JetBrains Mono" font-weight="700">HANS-SOLO · :3336</text>
+    <circle id="led-pool-hans" cx="166" cy="12" r="2.5" fill="var(--led-dead)"/>
+    <text x="14" y="32" fill="#9bb1cf" font-size="9" font-family="Inter">stratum V1 · SOLO</text>
+    <text x="14" y="46" fill="#5d7398" font-size="7" font-family="JetBrains Mono">hashrate</text>
+    <text x="14" y="60" fill="#5d7398" font-size="14" font-family="JetBrains Mono" font-weight="700" id="rate-hans-solo">NO DATA</text>
+    <text x="170" y="46" text-anchor="end" fill="#5d7398" font-size="7" font-family="JetBrains Mono">workers</text>
+    <text x="170" y="60" text-anchor="end" fill="#5d7398" font-size="11" font-family="JetBrains Mono" font-weight="700" id="workers-hans-solo">—</text>
+    <text x="14" y="71" fill="#3d5378" font-size="6" font-family="JetBrains Mono">endpoint not wired (task #92)</text>
+  </g>
+
+  <!-- rpc-failover (HAProxy) — partially live (gateway poll proves it's serving) -->
+  <g transform="translate(990 545)">
+    <rect width="180" height="75" rx="8" fill="url(#boxGrad)" stroke="#4fa6e6" stroke-width="1"/>
+    <rect x="6" y="6" width="168" height="12" rx="2" fill="#050810" stroke="#4fa6e6" stroke-width="0.4"/>
+    <text x="14" y="15" fill="#4fa6e6" font-size="7" font-family="JetBrains Mono" font-weight="600">RPC-FAILOVER · HAProxy</text>
+    <circle id="led-haproxy" cx="166" cy="12" r="2.5" fill="var(--led-dead)"/>
+    <text x="14" y="32" fill="#9bb1cf" font-size="9" font-family="Inter">HTTP proxy · sync-aware</text>
+    <text x="14" y="46" fill="#5d7398" font-size="7" font-family="JetBrains Mono">inferred from gateway poll</text>
+    <text x="14" y="60" fill="#5d7398" font-size="7" font-family="JetBrains Mono">gateway responding:</text>
+    <text x="170" y="60" text-anchor="end" fill="#9bb1cf" font-size="10" font-family="JetBrains Mono" font-weight="600" id="haproxy-ok">—</text>
+    <text x="14" y="71" fill="#3d5378" font-size="6" font-family="JetBrains Mono">per-backend health: no public probe</text>
+  </g>
+
+  <!-- ARCHITECTURE NOTE -->
+  <g transform="translate(880 660)">
+    <rect width="290" height="42" rx="6" fill="rgba(107, 214, 255, 0.05)" stroke="rgba(107, 214, 255, 0.3)" stroke-width="0.5"/>
+    <text x="10" y="15" fill="#9bb1cf" font-size="7" font-family="JetBrains Mono" font-weight="600">PER-NODE / PER-POOL DATA: NOT YET WIRED</text>
+    <text x="10" y="27" fill="#5d7398" font-size="6" font-family="JetBrains Mono">gateway only exposes aggregate (rpc.dagtech.network)</text>
+    <text x="10" y="36" fill="#5d7398" font-size="6" font-family="JetBrains Mono">node-2/3/x100 + pool stats need task #92 (per-host probe)</text>
+  </g>
+
+  <!-- =========================================================== -->
+  <!-- COL 5 — ENDPOINTS / MINERS (no public probe) -->
+  <!-- =========================================================== -->
+
+  <!-- X100 -->
+  <g transform="translate(1300 240)">
+    <rect width="220" height="100" rx="10" fill="url(#boxGradX)" stroke="#5d7398" stroke-width="1.2" stroke-dasharray="3 4" opacity="0.85"/>
+    <rect x="6" y="6" width="208" height="14" rx="2" fill="#050810" stroke="#5d7398" stroke-width="0.5"/>
+    <text x="14" y="16" fill="#9bb1cf" font-size="8" font-family="JetBrains Mono" font-weight="700">X100 · GOLDSHELL</text>
+    <circle id="led-miner-x100" cx="208" cy="13" r="2.5" fill="var(--led-dead)"/>
+    <g transform="translate(38, 56)">
+      <circle r="18" fill="#050810" stroke="#5d7398" stroke-width="0.6"/>
+      <circle r="3" fill="#0a1428" stroke="#5d7398"/>
+    </g>
+    <g transform="translate(80, 56)">
+      <circle r="18" fill="#050810" stroke="#5d7398" stroke-width="0.6"/>
+      <circle r="3" fill="#0a1428" stroke="#5d7398"/>
+    </g>
+    <text x="170" y="50" text-anchor="middle" fill="#5d7398" font-size="16" font-family="JetBrains Mono" font-weight="700" id="x100-rate">—</text>
+    <text x="170" y="62" text-anchor="middle" fill="#5d7398" font-size="7" font-family="JetBrains Mono">MH/s (no probe)</text>
+    <text x="14" y="93" fill="#3d5378" font-size="6" font-family="JetBrains Mono">stratum out only · hans-solo:3336</text>
+  </g>
+
+  <!-- X30 ASICs -->
+  <g transform="translate(1300 380)">
+    <rect width="220" height="65" rx="8" fill="url(#boxGrad)" stroke="#5d7398" stroke-width="1" stroke-dasharray="3 4" opacity="0.85"/>
+    <rect x="6" y="6" width="208" height="12" rx="2" fill="#050810" stroke="#5d7398" stroke-width="0.4"/>
+    <text x="14" y="15" fill="#9bb1cf" font-size="7" font-family="JetBrains Mono" font-weight="600">X30 ASICs</text>
+    <circle id="led-miner-x30" cx="206" cy="12" r="2" fill="var(--led-dead)"/>
+    <g transform="translate(14, 30)">
+      <rect width="22" height="22" rx="2" fill="#050810" stroke="#5d7398" stroke-width="0.5"/>
+      <circle cx="6" cy="11" r="4" fill="none" stroke="#5d7398" stroke-width="0.4"/>
+      <circle cx="16" cy="11" r="4" fill="none" stroke="#5d7398" stroke-width="0.4"/>
+    </g>
+    <g transform="translate(40, 30)">
+      <rect width="22" height="22" rx="2" fill="#050810" stroke="#5d7398" stroke-width="0.5"/>
+      <circle cx="6" cy="11" r="4" fill="none" stroke="#5d7398" stroke-width="0.4"/>
+      <circle cx="16" cy="11" r="4" fill="none" stroke="#5d7398" stroke-width="0.4"/>
+    </g>
+    <g transform="translate(66, 30)">
+      <rect width="22" height="22" rx="2" fill="#050810" stroke="#5d7398" stroke-width="0.5"/>
+      <circle cx="6" cy="11" r="4" fill="none" stroke="#5d7398" stroke-width="0.4"/>
+      <circle cx="16" cy="11" r="4" fill="none" stroke="#5d7398" stroke-width="0.4"/>
+    </g>
+    <text x="100" y="42" fill="#9bb1cf" font-size="9" font-family="Inter">→ asic-pool :3334</text>
+    <text x="14" y="58" fill="#3d5378" font-size="6" font-family="JetBrains Mono">no probe · presence inferred only</text>
+  </g>
+
+  <!-- GPU/CPU Rigs -->
+  <g transform="translate(1300 470)">
+    <rect width="220" height="65" rx="8" fill="url(#boxGrad)" stroke="#5d7398" stroke-width="1" stroke-dasharray="3 4" opacity="0.85"/>
+    <rect x="6" y="6" width="208" height="12" rx="2" fill="#050810" stroke="#5d7398" stroke-width="0.4"/>
+    <text x="14" y="15" fill="#9bb1cf" font-size="7" font-family="JetBrains Mono" font-weight="600">GPU + CPU RIGS</text>
+    <circle id="led-miner-gpu" cx="206" cy="12" r="2" fill="var(--led-dead)"/>
+    <g transform="translate(14, 28)">
+      <rect width="14" height="26" rx="1" fill="#050810" stroke="#5d7398" stroke-width="0.5"/>
+      <circle cx="7" cy="8" r="3" fill="none" stroke="#5d7398" stroke-width="0.4"/>
+      <line x1="3" y1="16" x2="11" y2="16" stroke="#5d7398" stroke-width="0.3"/>
+      <line x1="3" y1="19" x2="11" y2="19" stroke="#5d7398" stroke-width="0.3"/>
+    </g>
+    <g transform="translate(32, 28)">
+      <rect width="14" height="26" rx="1" fill="#050810" stroke="#5d7398" stroke-width="0.5"/>
+      <circle cx="7" cy="8" r="3" fill="none" stroke="#5d7398" stroke-width="0.4"/>
+      <line x1="3" y1="16" x2="11" y2="16" stroke="#5d7398" stroke-width="0.3"/>
+      <line x1="3" y1="19" x2="11" y2="19" stroke="#5d7398" stroke-width="0.3"/>
+    </g>
+    <g transform="translate(50, 28)">
+      <rect width="14" height="26" rx="1" fill="#050810" stroke="#5d7398" stroke-width="0.5"/>
+      <circle cx="7" cy="8" r="3" fill="none" stroke="#5d7398" stroke-width="0.4"/>
+      <line x1="3" y1="16" x2="11" y2="16" stroke="#5d7398" stroke-width="0.3"/>
+      <line x1="3" y1="19" x2="11" y2="19" stroke="#5d7398" stroke-width="0.3"/>
+    </g>
+    <text x="80" y="42" fill="#9bb1cf" font-size="9" font-family="Inter">→ cpu-gpu-pool :3335</text>
+    <text x="14" y="58" fill="#3d5378" font-size="6" font-family="JetBrains Mono">no probe · presence inferred only</text>
+  </g>
+
+  <!-- Services (frontends) -->
+  <g transform="translate(1300 570)">
+    <rect width="220" height="160" rx="8" fill="url(#boxGrad)" stroke="#4fa6e6" stroke-width="0.9"/>
+    <rect x="6" y="6" width="208" height="12" rx="2" fill="#050810" stroke="#4fa6e6" stroke-width="0.4"/>
+    <text x="14" y="15" fill="#4fa6e6" font-size="7" font-family="JetBrains Mono" font-weight="600">SERVICES · FRONTENDS</text>
+    <g transform="translate(10, 28)">
+      <circle cx="6" cy="6" r="3" fill="var(--led-dead)"/>
+      <text x="15" y="9" fill="#9bb1cf" font-size="9" font-family="Space Grotesk" font-weight="500">Explorer</text>
+      <text x="15" y="20" fill="#5d7398" font-size="6" font-family="JetBrains Mono">explorer.dagtech.network</text>
+      <text x="200" y="9" text-anchor="end" fill="#3d5378" font-size="6" font-family="JetBrains Mono">no probe</text>
+    </g>
+    <line x1="10" y1="54" x2="210" y2="54" stroke="#4fa6e6" stroke-width="0.3" opacity="0.3"/>
+    <g transform="translate(10, 58)">
+      <circle cx="6" cy="6" r="3" fill="var(--led-dead)"/>
+      <text x="15" y="9" fill="#9bb1cf" font-size="9" font-family="Space Grotesk" font-weight="500">Stats + Grafana</text>
+      <text x="15" y="20" fill="#5d7398" font-size="6" font-family="JetBrains Mono">stats.dagtech.network</text>
+      <text x="200" y="9" text-anchor="end" fill="#3d5378" font-size="6" font-family="JetBrains Mono">no probe</text>
+    </g>
+    <line x1="10" y1="84" x2="210" y2="84" stroke="#4fa6e6" stroke-width="0.3" opacity="0.3"/>
+    <g transform="translate(10, 88)">
+      <circle cx="6" cy="6" r="3" fill="var(--led-dead)"/>
+      <text x="15" y="9" fill="#9bb1cf" font-size="9" font-family="Space Grotesk" font-weight="500">Netstats</text>
+      <text x="15" y="20" fill="#5d7398" font-size="6" font-family="JetBrains Mono">netstats.dagtech.network</text>
+      <text x="200" y="9" text-anchor="end" fill="#3d5378" font-size="6" font-family="JetBrains Mono">no probe</text>
+    </g>
+    <line x1="10" y1="114" x2="210" y2="114" stroke="#4fa6e6" stroke-width="0.3" opacity="0.3"/>
+    <g transform="translate(10, 118)">
+      <circle id="led-rpc-gw" cx="6" cy="6" r="3" fill="var(--led-dead)"/>
+      <text x="15" y="9" fill="#9bb1cf" font-size="9" font-family="Space Grotesk" font-weight="500">RPC Gateway</text>
+      <text x="15" y="20" fill="#5d7398" font-size="6" font-family="JetBrains Mono">rpc.dagtech.network</text>
+      <text x="200" y="9" text-anchor="end" fill="#6bd6ff" font-size="6" font-family="JetBrains Mono" id="gw-status">—</text>
+    </g>
+  </g>
+
+</svg>
+</div>
+
+<footer>
+  <div class="legend-row">
+    <strong>LEDs</strong>
+    <div class="legend-item"><span class="legend-dot ok"></span><span>live + healthy (isCurrent=true, lag &le; 100 blocks)</span></div>
+    <div class="legend-item"><span class="legend-dot warn"></span><span style="color:#ffa53d;">live but lagging (lag &le; 10K) OR isCurrent=false</span></div>
+    <div class="legend-item"><span class="legend-dot bad"></span><span style="color:#ff4d4d;">ERR (fetch failed) or lag &gt; 10K</span></div>
+    <div class="legend-item"><span class="legend-dot dead"></span><span style="color:#5d7398;">no live source wired</span></div>
+  </div>
+  <div class="legend-row">
+    <strong>WIRES</strong>
+    <div class="legend-item"><span class="legend-line dedicated"></span><span>Architectural-known dedicated link (X100→hans-solo, by firmware lock)</span></div>
+    <div class="legend-item"><span class="legend-line static"></span><span>Static hint (architecture only — no live evidence of active flow)</span></div>
+    <span style="margin-left:auto; font-size:10px; color:var(--text-3);">v5 deliberately omits animated wires until per-link traffic data is wired.</span>
+  </div>
+  <div class="legend-row" style="border-top: 1px solid rgba(56,120,220,0.18); padding-top: 10px;">
+    <strong>SOURCES</strong>
+    <div class="src-list">
+      <span><b>POST https://rpc.dagtech.network/</b> &mdash; JSON-RPC: <code>eth_blockNumber</code>, <code>getBlockCount</code>, <code>isCurrent</code> &mdash; <em>drives: header tip, node-1 panel, RPC Gateway LED, HAProxy LED</em></span>
+      <span><b>POST https://rpc.bdagscan.com/</b> &mdash; JSON-RPC: <code>eth_blockNumber</code>, <code>getBlockCount</code> &mdash; <em>drives: mainnet tip, lag calc, bdagscan panel</em></span>
+      <span style="color:#5d7398;"><b>pools / per-node / relays / miners / frontends</b> &mdash; no live source &mdash; <em>panels render &mdash; or NO DATA, never green</em></span>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const RPC = 'https://rpc.dagtech.network';
+  const BDAGSCAN = 'https://rpc.bdagscan.com';
+  const POLL_MS = 30000;
+
+  async function jsonRpc(url, method, params=[]) {
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({jsonrpc:'2.0', id:1, method, params}),
+        signal: AbortSignal.timeout(8000)
+      });
+      if (!r.ok) return { error: 'HTTP ' + r.status };
+      const j = await r.json();
+      if (j.error) return { error: j.error.message || 'rpc error' };
+      return { result: j.result };
+    } catch (e) {
+      const msg = (e && e.message) ? e.message : 'fetch failed';
+      // crude CORS sniff — DOMException from fetch with no status usually means CORS or net
+      return { error: msg };
+    }
+  }
+
+  function fmtBlock(v) {
+    if (v == null) return '—';
+    let n;
+    if (typeof v === 'string' && v.startsWith('0x')) n = Number(BigInt(v));
+    else n = Number(v);
+    if (!isFinite(n)) return '—';
+    return n.toLocaleString('en-US');
+  }
+  function toBigInt(v) {
+    if (v == null) return null;
+    try {
+      if (typeof v === 'string' && v.startsWith('0x')) return BigInt(v);
+      return BigInt(v);
+    } catch { return null; }
+  }
+  function setText(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+  function setFill(id, color) {
+    const el = document.getElementById(id);
+    if (el) el.setAttribute('fill', color);
+  }
+  function setColor(id, color) {
+    const el = document.getElementById(id);
+    if (el) el.style.color = color;
+  }
+
+  // LED constants matching CSS vars
+  const LED = {
+    ok:   '#6bd6ff',
+    warn: '#ffa53d',
+    bad:  '#ff4d4d',
+    dead: '#3d5378'
+  };
+
+  function ledForLag(lag) {
+    if (lag == null) return LED.dead;
+    if (lag <= 100) return LED.ok;
+    if (lag <= 10000) return LED.warn;
+    return LED.bad;
+  }
+  function colorForLag(lag) {
+    if (lag == null) return '#5d7398';
+    if (lag <= 100) return '#6bd6ff';
+    if (lag <= 10000) return '#ffa53d';
+    return '#ff4d4d';
+  }
+
+  function nowUtcStr() {
+    const d = new Date();
+    return d.toISOString().substring(11, 19) + 'Z';
+  }
+  function fullUtcStr() {
+    return new Date().toISOString().replace('T', ' ').substring(0, 19) + 'Z';
+  }
+
+  async function pullData() {
+    // 1) bdagscan (mainnet truth)
+    const [bdsEvm, bdsDag] = await Promise.all([
+      jsonRpc(BDAGSCAN, 'eth_blockNumber'),
+      jsonRpc(BDAGSCAN, 'getBlockCount')
+    ]);
+    if (bdsEvm.error) {
+      setText('t-bdagscan-evm', 'ERR');
+      setColor('t-bdagscan-evm', LED.bad);
+      setFill('led-bdagscan', LED.bad);
+      setText('mainnet-evm', 'ERR');
+      document.getElementById('mainnet-evm').classList.add('err');
+    } else {
+      const v = fmtBlock(bdsEvm.result);
+      setText('t-bdagscan-evm', v);
+      setColor('t-bdagscan-evm', '#9bb1cf');
+      setText('mainnet-evm', v);
+      document.getElementById('mainnet-evm').classList.remove('err','stale');
+      setFill('led-bdagscan', LED.ok);
+    }
+    if (bdsDag.error) {
+      setText('t-bdagscan-dag', 'ERR');
+      setColor('t-bdagscan-dag', LED.bad);
+    } else {
+      setText('t-bdagscan-dag', fmtBlock(bdsDag.result));
+      setColor('t-bdagscan-dag', '#9bb1cf');
+    }
+
+    // 2) Our gateway
+    const [gwEvm, gwDag, gwCurrent] = await Promise.all([
+      jsonRpc(RPC, 'eth_blockNumber'),
+      jsonRpc(RPC, 'getBlockCount'),
+      jsonRpc(RPC, 'isCurrent')
+    ]);
+
+    // Gateway-level LEDs (RPC Gateway + HAProxy reflect "did we get a result?")
+    const gwUp = !gwEvm.error && !gwDag.error;
+    if (gwUp) {
+      setFill('led-rpc-gw', LED.ok);
+      setText('gw-status', 'live');
+      setColor('gw-status', LED.ok);
+      setFill('led-haproxy', LED.ok);
+      setText('haproxy-ok', 'YES');
+      setColor('haproxy-ok', LED.ok);
+    } else {
+      setFill('led-rpc-gw', LED.bad);
+      setText('gw-status', 'ERR');
+      setColor('gw-status', LED.bad);
+      setFill('led-haproxy', LED.bad);
+      setText('haproxy-ok', 'NO');
+      setColor('haproxy-ok', LED.bad);
+    }
+
+    // bdagscan panel
+    setFill('led-ourgw', gwUp ? LED.ok : LED.bad);
+    if (gwEvm.error) {
+      setText('t-ourgw-evm', 'ERR');
+      setColor('t-ourgw-evm', LED.bad);
+      setText('our-evm', 'ERR');
+      document.getElementById('our-evm').classList.add('err');
+    } else {
+      const v = fmtBlock(gwEvm.result);
+      setText('t-ourgw-evm', v);
+      setColor('t-ourgw-evm', '#9bb1cf');
+      setText('our-evm', v);
+      document.getElementById('our-evm').classList.remove('err','stale');
+    }
+    if (gwDag.error) {
+      setText('t-ourgw-dag', 'ERR');
+      setColor('t-ourgw-dag', LED.bad);
+    } else {
+      setText('t-ourgw-dag', fmtBlock(gwDag.result));
+      setColor('t-ourgw-dag', '#9bb1cf');
+    }
+
+    // 3) Node-1 panel (driven by gateway = HAProxy-routed primary node, which is node-1 today)
+    if (gwDag.error) {
+      setText('n1-dag', 'ERR');
+      setColor('n1-dag', LED.bad);
+    } else {
+      setText('n1-dag', fmtBlock(gwDag.result));
+      setColor('n1-dag', '#e6eef9');
+    }
+    if (gwEvm.error) {
+      setText('n1-evm', 'ERR');
+      setColor('n1-evm', LED.bad);
+    } else {
+      setText('n1-evm', fmtBlock(gwEvm.result));
+      setColor('n1-evm', '#e6eef9');
+    }
+    if (gwCurrent.error) {
+      setText('n1-current', 'ERR');
+      setColor('n1-current', LED.bad);
+    } else {
+      const cur = gwCurrent.result === true || gwCurrent.result === 'true';
+      setText('n1-current', cur ? 'TRUE' : 'FALSE');
+      setColor('n1-current', cur ? LED.ok : LED.warn);
+    }
+
+    // DAG-EVM gap on node-1
+    const dagBI = toBigInt(gwDag.result);
+    const evmBI = toBigInt(gwEvm.result);
+    let n1Gap = null;
+    if (dagBI != null && evmBI != null) {
+      const diff = dagBI - evmBI;
+      n1Gap = Number(diff > 0n ? diff : -diff);
+      setText('n1-gap', n1Gap.toLocaleString('en-US'));
+      setColor('n1-gap', colorForLag(n1Gap));
+    } else {
+      setText('n1-gap', '—');
+      setColor('n1-gap', '#5d7398');
+    }
+
+    // Node-1 LED: combine isCurrent + gap
+    let n1Led = LED.dead;
+    if (gwCurrent.error || gwEvm.error || gwDag.error) n1Led = LED.bad;
+    else if (gwCurrent.result !== true) n1Led = LED.warn;
+    else if (n1Gap == null) n1Led = LED.dead;
+    else n1Led = ledForLag(n1Gap);
+    setFill('led-node1', n1Led);
+
+    // 4) Header — lag vs mainnet
+    const ourEvm = toBigInt(gwEvm.result);
+    const mainEvm = toBigInt(bdsEvm.result);
+    if (ourEvm != null && mainEvm != null) {
+      const diff = mainEvm - ourEvm;
+      const lag = Number(diff < 0n ? -diff : diff);
+      const sign = diff < 0n ? '+' : (diff > 0n ? '-' : '±');
+      setText('evm-lag', sign + lag.toLocaleString('en-US'));
+      setColor('evm-lag', colorForLag(lag));
+    } else if (gwEvm.error || bdsEvm.error) {
+      setText('evm-lag', 'ERR');
+      setColor('evm-lag', LED.bad);
+    } else {
+      setText('evm-lag', '—');
+      setColor('evm-lag', '#5d7398');
+    }
+
+    // 5) Last-poll timestamp
+    setText('last-update', nowUtcStr());
+    document.getElementById('poll-led').classList.remove('err');
+    if (!gwUp) document.getElementById('poll-led').classList.add('err');
+  }
+
+  // Initial generation timestamp
+  setText('gen-ts', fullUtcStr());
+
+  pullData();
+  setInterval(pullData, POLL_MS);
+</script>
+
+</body>
+</html>
