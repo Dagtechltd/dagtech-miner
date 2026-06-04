@@ -335,9 +335,9 @@ const platforms = {
     steps: [
       {
         title: 'Download the Installer',
-        subtitle: 'Download the <strong>DagTech Miner Setup</strong> from GitHub. It\'s a single .exe file — no git, no command line, no compiling needed.',
-        tip: 'The installer is about 11 MB and includes everything: miner binary, dashboard, Python runtime, and GPU support. Click the link below to download.',
-        preview: ['<span class="g">Download from GitHub:</span>', '', '<span class="b">github.com/Dagtechltd/dagtech-miner/releases</span>', '', '<span class="c">File: DagTech-Miner-v3.0.0-Setup.exe</span>', '<span class="c">Size: ~11 MB</span>']
+        subtitle: 'Click the button below to download <strong>DagTech Miner Setup</strong>. It\'s a single .exe file (11 MB) — no git, no command line, no compiling needed. Includes everything: miner, dashboard, Python runtime, and GPU support.',
+        downloadBtn: {url: 'https://github.com/Dagtechltd/dagtech-miner/releases/download/v3.0.0/DagTech-Miner-v3.0.0-Setup.exe', label: 'Download DagTech Miner v3.0.0', size: '11 MB'},
+        tip: 'After downloading, find the file in your Downloads folder and double-click it to start the setup wizard.'
       },
       {
         title: 'Run the Setup Wizard',
@@ -412,6 +412,16 @@ function render() {
     html += `<div class="step-card ${active}" id="step-${i}">`;
     html += `<div class="step-header"><div class="step-number">${i+1}</div><h3 class="step-title">${s.title}</h3></div>`;
     html += `<p class="step-subtitle">${s.subtitle}</p>`;
+
+    if (s.downloadBtn) {
+      html += `<div style="text-align:center;margin:1.5rem 0;">`;
+      html += `<a href="${s.downloadBtn.url}" target="_blank" style="display:inline-flex;align-items:center;gap:0.7rem;background:linear-gradient(135deg,var(--primary),#0a4cbf);color:white;padding:1rem 2.5rem;border-radius:0.85rem;font-weight:700;font-size:1.1rem;text-decoration:none;box-shadow:0 0 30px hsl(210 100% 56%/0.35);transition:all 0.2s;">`;
+      html += `<svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`;
+      html += `${s.downloadBtn.label}`;
+      html += `</a>`;
+      html += `<div style="margin-top:0.6rem;font-size:0.8rem;color:var(--muted);">${s.downloadBtn.size} &bull; Windows 10+</div>`;
+      html += `</div>`;
+    }
 
     if (s.warn) {
       html += `<div class="warn-box"><span class="tip-icon">&#9888;&#65039;</span><p>${s.warn}</p></div>`;
