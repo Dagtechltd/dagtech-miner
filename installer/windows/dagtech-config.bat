@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
-set "CONFIG=%APPDATA%\DagTech Miner\config.env"
-set "INSTALL_DIR=%APPDATA%\DagTech Miner"
+set "CONFIG=%USERPROFILE%\.dagtech-miner\config.env"
+set "INSTALL_DIR=%USERPROFILE%\.dagtech-miner"
 
 echo.
 echo   =============================================

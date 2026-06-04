@@ -18,7 +18,7 @@ AppPublisher={#AppPublisher}
 AppPublisherURL={#AppURL}
 AppSupportURL={#MinerURL}
 AppUpdatesURL={#MinerURL}
-DefaultDirName={userappdata}\DagTech Miner
+DefaultDirName={%USERPROFILE}\.dagtech-miner
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 ; LicenseFile=..\..\LICENSE
@@ -61,6 +61,7 @@ Source: "..\..\bin\windows\dagtech-miner.exe"; DestDir: "{app}\bin"; Flags: igno
 Source: "..\..\bin\windows\dagtech-gpu-miner.exe"; DestDir: "{app}\bin"; Flags: ignoreversion skipifsourcedoesntexist
 Source: "..\..\bin\windows\dagtech-start.bat"; DestDir: "{app}\bin"; Flags: ignoreversion
 Source: "..\..\bin\windows\dagtech-stop.bat"; DestDir: "{app}\bin"; Flags: ignoreversion
+Source: "dagtech-config.bat"; DestDir: "{app}\bin"; Flags: ignoreversion
 
 ; Dashboard
 Source: "..\..\dashboard\index.html"; DestDir: "{app}\dashboard"; Flags: ignoreversion
@@ -97,8 +98,8 @@ Root: HKCU; Subkey: "Environment"; ValueType: expandsz; ValueName: "Path"; Value
 [Run]
 ; Add Defender exclusion
 Filename: "powershell.exe"; Parameters: "-Command ""Add-MpPreference -ExclusionPath '{app}'"""; StatusMsg: "Adding Windows Defender exclusion..."; Flags: runhidden; Tasks: defenderexclusion
-; Configuration wizard
-Filename: "{app}\bin\dagtech-config.bat"; StatusMsg: "Opening configuration wizard..."; Flags: nowait postinstall skipifsilent; Description: "Configure wallet and pool settings"
+; Configuration wizard — always run on fresh install
+Filename: "{app}\bin\dagtech-config.bat"; StatusMsg: "Opening configuration wizard..."; Flags: nowait postinstall; Description: "Configure wallet and pool settings"
 ; Open dashboard
 Filename: "http://localhost:8881"; Flags: nowait postinstall skipifsilent shellexec; Description: "Open mining dashboard"
 ; Start mining
