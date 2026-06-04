@@ -141,6 +141,21 @@ def detect_hardware():
     return hw
 
 
+def stop_miner():
+    """Stop the miner process."""
+    system = platform.system()
+    try:
+        if system == "Windows":
+            subprocess.run(["taskkill", "/f", "/im", "dagtech-miner.exe"], capture_output=True, timeout=5)
+            subprocess.run(["taskkill", "/f", "/im", "dagtech-gpu-miner.exe"], capture_output=True, timeout=5)
+        else:
+            subprocess.run(["pkill", "-f", "dagtech-miner"], capture_output=True, timeout=5)
+            subprocess.run(["pkill", "-f", "dagtech-gpu-miner"], capture_output=True, timeout=5)
+        return True
+    except Exception as e:
+        return str(e)
+
+
 def restart_miner():
     """Stop and restart the miner process."""
     system = platform.system()
@@ -231,11 +246,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
         elif self.path == "/api/restart":
             try:
-                result = restart_miner()
-                if result is True:
-                    self._json_response(200, {"status": "restarting"})
+                length = int(self.headers.get("Content-Length", 0))
+                body = json.loads(self.rfile.read(length)) if length > 0 else {}
+                action = body.get("action", "restart")
+                if action == "stop":
+                    stop_miner()
+                    self._json_response(200, {"status": "stopped"})
                 else:
-                    self._json_response(500, {"error": result})
+                    result = restart_miner()
+                    if result is True:
+                        self._json_response(200, {"status": "restarting"})
+                    else:
+                        self._json_response(500, {"error": result})
             except Exception as e:
                 self._json_response(500, {"error": str(e)})
 

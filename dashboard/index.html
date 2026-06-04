@@ -392,6 +392,69 @@ body::before {
   border-radius: 0 4px 4px 0;
 }
 
+/* ===== MINER START/STOP BUTTON ===== */
+.miner-toggle-btn {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: 3px solid var(--blue);
+  background: rgba(30, 144, 255, 0.08);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  outline: none;
+  color: var(--blue-bright);
+}
+.miner-toggle-btn:hover {
+  background: rgba(30, 144, 255, 0.15);
+  box-shadow: 0 0 40px rgba(30, 144, 255, 0.3), 0 0 80px rgba(30, 144, 255, 0.1);
+  transform: scale(1.05);
+}
+.miner-toggle-btn:active {
+  transform: scale(0.95);
+}
+.miner-toggle-btn.running {
+  border-color: var(--blue-bright);
+  background: rgba(30, 144, 255, 0.12);
+  box-shadow: 0 0 30px rgba(30, 144, 255, 0.25), 0 0 60px rgba(30, 144, 255, 0.08);
+  animation: pulseGlow 2s ease-in-out infinite;
+}
+.miner-toggle-btn.stopped {
+  border-color: var(--blue-dim);
+  color: var(--text-secondary);
+}
+.miner-toggle-ring {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 1px solid rgba(30, 144, 255, 0.15);
+  pointer-events: none;
+}
+.miner-toggle-btn.running .miner-toggle-ring {
+  border-color: rgba(30, 144, 255, 0.3);
+  animation: ringPulse 2s ease-in-out infinite;
+}
+.miner-toggle-icon svg { width: 36px; height: 36px; }
+.miner-toggle-label {
+  margin-top: 12px;
+  font-family: var(--font-heading);
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.5px;
+}
+@keyframes pulseGlow {
+  0%, 100% { box-shadow: 0 0 30px rgba(30, 144, 255, 0.25), 0 0 60px rgba(30, 144, 255, 0.08); }
+  50% { box-shadow: 0 0 45px rgba(30, 144, 255, 0.35), 0 0 90px rgba(30, 144, 255, 0.12); }
+}
+@keyframes ringPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.08); opacity: 0.6; }
+}
+
 /* ===== WALLET ADDRESS ===== */
 .wallet-addr {
   font-family: var(--font-mono);
@@ -1003,17 +1066,20 @@ input[type="range"] {
         </div>
       </div>
 
-      <!-- CPU -->
-      <div class="card">
-        <div class="card-label">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></svg>
-          CPU
-        </div>
-        <div class="big-number" id="mCpu">--%</div>
-        <div class="progress-track">
+      <!-- MINER CONTROL -->
+      <div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;">
+        <button id="btnMinerToggle" class="miner-toggle-btn stopped" onclick="toggleMiner()">
+          <div class="miner-toggle-icon" id="toggleIcon">
+            <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor" width="40" height="40"><polygon points="6,3 20,12 6,21"/></svg>
+            <svg id="iconStop" viewBox="0 0 24 24" fill="currentColor" width="40" height="40" style="display:none"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+          </div>
+          <div class="miner-toggle-ring"></div>
+        </button>
+        <div class="miner-toggle-label" id="toggleLabel">Start Mining</div>
+        <div class="card-subtitle" id="mCpu" style="margin-top:8px">CPU: --%</div>
+        <div class="progress-track" style="width:100%;margin-top:6px">
           <div class="progress-fill" id="mCpuBar" style="width:0%"></div>
         </div>
-        <div class="card-subtitle" id="mTemp">Temp: --</div>
       </div>
 
       <!-- EST DAILY -->
@@ -1325,9 +1391,50 @@ function fmtUptime(s) {
   return m + 'm';
 }
 
-function fmtTemp(t) {
-  if (!t || t <= 0) return 'N/A';
-  return t.toFixed(0) + '°C';
+
+// ===== MINER START/STOP =====
+let minerRunning = false;
+
+function updateToggleBtn(running) {
+  minerRunning = running;
+  const btn = document.getElementById('btnMinerToggle');
+  const label = document.getElementById('toggleLabel');
+  const iconPlay = document.getElementById('iconPlay');
+  const iconStop = document.getElementById('iconStop');
+  if (running) {
+    btn.classList.remove('stopped');
+    btn.classList.add('running');
+    iconPlay.style.display = 'none';
+    iconStop.style.display = 'block';
+    label.textContent = 'Mining Active';
+    label.style.color = 'var(--blue-bright)';
+  } else {
+    btn.classList.remove('running');
+    btn.classList.add('stopped');
+    iconPlay.style.display = 'block';
+    iconStop.style.display = 'none';
+    label.textContent = 'Start Mining';
+    label.style.color = 'var(--text-secondary)';
+  }
+}
+
+async function toggleMiner() {
+  const btn = document.getElementById('btnMinerToggle');
+  btn.style.pointerEvents = 'none';
+  try {
+    if (minerRunning) {
+      const res = await fetch('/api/restart', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({action:'stop'}) });
+      showToast('Miner stopped');
+      updateToggleBtn(false);
+    } else {
+      const res = await fetch('/api/restart', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({action:'start'}) });
+      showToast('Miner starting...');
+      updateToggleBtn(true);
+    }
+  } catch (e) {
+    showToast('Error: ' + e.message);
+  }
+  setTimeout(() => { btn.style.pointerEvents = 'auto'; }, 2000);
 }
 
 // ===== METRICS FETCH =====
@@ -1366,9 +1473,9 @@ async function fetchMetrics() {
 
     // CPU
     const cpuPct = d.cpu_usage != null ? d.cpu_usage.toFixed(1) : '--';
-    document.getElementById('mCpu').textContent = cpuPct + '%';
+    document.getElementById('mCpu').textContent = 'CPU: ' + cpuPct + '%';
     document.getElementById('mCpuBar').style.width = (d.cpu_usage || 0) + '%';
-    document.getElementById('mTemp').textContent = 'Temp: ' + fmtTemp(d.cpu_temp);
+    updateToggleBtn(true);
 
     // Wallet
     if (d.wallet) {
@@ -1390,6 +1497,7 @@ async function fetchMetrics() {
 
   } catch (e) {
     setOnline(false);
+    updateToggleBtn(false);
   }
 }
 
