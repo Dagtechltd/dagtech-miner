@@ -135,6 +135,19 @@ begin
   WizardForm.WelcomeLabel2.Font.Size := 9;
 end;
 
+// Kill running miner and dashboard before installing (prevents file lock)
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  ResultCode: Integer;
+begin
+  Exec('taskkill', '/f /im dagtech-miner.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec('taskkill', '/f /im dagtech-gpu-miner.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec('taskkill', '/f /im python.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Exec('taskkill', '/f /im python3.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Sleep(1000);
+  Result := '';
+end;
+
 // Check system requirements
 function InitializeSetup: Boolean;
 var
