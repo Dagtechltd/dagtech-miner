@@ -50,10 +50,10 @@ WelcomeLabel1=Welcome to {#AppName}
 WelcomeLabel2=This will install {#AppName} v{#AppVersion} on your computer.%n%nThe miner connects to the BlockDAG Network and earns BDAG coins using your CPU and optional NVIDIA GPU.%n%nVisit {#MinerURL} for documentation and guides.
 
 [Tasks]
-Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Shortcuts:"; Flags: checked
-Name: "startmenuicon"; Description: "Create a &Start Menu entry"; GroupDescription: "Shortcuts:"; Flags: checked
+Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Shortcuts:"
+Name: "startmenuicon"; Description: "Create a Start Menu entry"; GroupDescription: "Shortcuts:"
 Name: "autostart"; Description: "Start mining automatically on Windows login"; GroupDescription: "Options:"; Flags: unchecked
-Name: "defenderexclusion"; Description: "Add Windows Defender exclusion (recommended - prevents false positive deletion)"; GroupDescription: "Security:"; Flags: checked
+Name: "defenderexclusion"; Description: "Add Windows Defender exclusion (recommended)"; GroupDescription: "Security:"
 
 [Files]
 ; Core miner binaries
