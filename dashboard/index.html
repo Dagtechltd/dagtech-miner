@@ -461,38 +461,48 @@ body::before {
   color: var(--text-secondary);
   z-index: 2;
 }
-.miner-toggle-btn:hover {
-  border-color: var(--blue);
-  color: var(--blue-bright);
-  background: radial-gradient(circle at 40% 35%, rgba(30, 144, 255, 0.2) 0%, rgba(8, 11, 20, 0.9) 70%);
-  box-shadow: 0 0 40px rgba(30, 144, 255, 0.25), 0 0 80px rgba(30, 144, 255, 0.08);
-  transform: scale(1.06);
+.miner-toggle-btn:hover { transform: scale(1.06); }
+.miner-toggle-btn.stopped:hover {
+  border-color: #ff5555;
+  box-shadow: 0 0 40px rgba(255, 80, 80, 0.3), 0 0 80px rgba(255, 50, 50, 0.1);
+}
+.miner-toggle-btn.running:hover {
+  border-color: #55ffaa;
+  box-shadow: 0 0 50px rgba(50, 255, 136, 0.4), 0 0 100px rgba(50, 255, 136, 0.15);
 }
 .miner-toggle-btn:active { transform: scale(0.94); }
 
-/* STOPPED state */
-.miner-toggle-btn.stopped { border-color: var(--blue-dim); color: var(--text-secondary); }
-.miner-toggle-btn.stopped ~ .reactor-ring,
-.miner-toggle-btn.stopped ~ .reactor-ring-2,
-.miner-toggle-btn.stopped ~ .reactor-ring-3 { opacity: 0.3; }
-.miner-toggle-btn.stopped ~ .reactor-particle { opacity: 0; }
-
-/* RUNNING state — the reactor comes alive */
-.miner-toggle-btn.running {
-  border-color: var(--blue-bright);
-  color: var(--blue-bright);
-  background: radial-gradient(circle at 40% 35%, rgba(30, 144, 255, 0.25) 0%, rgba(10, 20, 50, 0.9) 60%);
-  box-shadow:
-    0 0 20px rgba(30, 144, 255, 0.3),
-    0 0 50px rgba(30, 144, 255, 0.15),
-    0 0 100px rgba(30, 144, 255, 0.05),
-    inset 0 0 30px rgba(30, 144, 255, 0.1);
-  animation: coreGlow 2.5s ease-in-out infinite;
+/* STOPPED state — red, warning, dormant but visible */
+.miner-toggle-btn.stopped {
+  border-color: #cc3333;
+  color: #ff5555;
+  background: radial-gradient(circle at 40% 35%, rgba(255, 50, 50, 0.15) 0%, rgba(20, 8, 8, 0.95) 70%);
+  box-shadow: 0 0 20px rgba(255, 50, 50, 0.15), 0 0 50px rgba(255, 50, 50, 0.05), inset 0 0 20px rgba(255, 50, 50, 0.05);
+  animation: coreRedPulse 3s ease-in-out infinite;
 }
-.miner-toggle-btn.running ~ .reactor-ring { opacity: 1; border-color: rgba(30, 144, 255, 0.35); }
-.miner-toggle-btn.running ~ .reactor-ring-2 { opacity: 1; border-top-color: rgba(102, 179, 255, 0.6); border-right-color: rgba(102, 179, 255, 0.6); }
-.miner-toggle-btn.running ~ .reactor-ring-3 { opacity: 1; }
-.miner-toggle-btn.running ~ .reactor-particle { opacity: 1; }
+.miner-toggle-btn.stopped .miner-toggle-icon svg { filter: drop-shadow(0 0 6px rgba(255, 80, 80, 0.4)); }
+.miner-toggle-btn.stopped ~ .reactor-ring { opacity: 0.6; border-color: rgba(255, 50, 50, 0.2); }
+.miner-toggle-btn.stopped ~ .reactor-ring-2 { opacity: 0.5; border-color: rgba(255, 50, 50, 0.1); border-top-color: rgba(255, 80, 80, 0.3); border-right-color: rgba(255, 80, 80, 0.3); }
+.miner-toggle-btn.stopped ~ .reactor-ring-3 { opacity: 0.4; border-color: rgba(255, 50, 50, 0.1); }
+.miner-toggle-btn.stopped ~ .reactor-particle { opacity: 0.5; background: #ff5555; box-shadow: 0 0 6px #ff3333, 0 0 12px rgba(255, 50, 50, 0.3); }
+
+/* RUNNING state — green, luminous, alive */
+.miner-toggle-btn.running {
+  border-color: #33ff88;
+  color: #33ff88;
+  background: radial-gradient(circle at 40% 35%, rgba(50, 255, 136, 0.25) 0%, rgba(8, 20, 14, 0.9) 60%);
+  box-shadow:
+    0 0 25px rgba(50, 255, 136, 0.35),
+    0 0 60px rgba(50, 255, 136, 0.15),
+    0 0 120px rgba(50, 255, 136, 0.05),
+    inset 0 0 35px rgba(50, 255, 136, 0.1);
+  animation: coreGreenGlow 2s ease-in-out infinite;
+}
+.miner-toggle-btn.running .miner-toggle-icon svg { filter: drop-shadow(0 0 10px rgba(50, 255, 136, 0.6)); }
+.miner-toggle-btn.running ~ .reactor-ring { opacity: 1; border-color: rgba(50, 255, 136, 0.3); }
+.miner-toggle-btn.running ~ .reactor-ring-2 { opacity: 1; border-color: rgba(50, 255, 136, 0.15); border-top-color: rgba(100, 255, 170, 0.5); border-right-color: rgba(100, 255, 170, 0.5); }
+.miner-toggle-btn.running ~ .reactor-ring-3 { opacity: 1; border-color: rgba(50, 255, 136, 0.15); }
+.miner-toggle-btn.running ~ .reactor-particle { opacity: 1; background: #33ff88; box-shadow: 0 0 8px #33ff88, 0 0 16px rgba(50, 255, 136, 0.4); }
 
 .miner-toggle-icon { position: relative; z-index: 3; }
 .miner-toggle-icon svg { width: 40px; height: 40px; filter: drop-shadow(0 0 8px rgba(30, 144, 255, 0.5)); }
@@ -511,9 +521,13 @@ body::before {
 /* Animations */
 @keyframes spinSlow { to { transform: rotate(360deg); } }
 @keyframes spinFast { to { transform: rotate(360deg); } }
-@keyframes coreGlow {
-  0%, 100% { box-shadow: 0 0 20px rgba(30,144,255,0.3), 0 0 50px rgba(30,144,255,0.15), 0 0 100px rgba(30,144,255,0.05), inset 0 0 30px rgba(30,144,255,0.1); }
-  50% { box-shadow: 0 0 35px rgba(30,144,255,0.45), 0 0 70px rgba(30,144,255,0.2), 0 0 120px rgba(30,144,255,0.08), inset 0 0 40px rgba(30,144,255,0.15); }
+@keyframes coreGreenGlow {
+  0%, 100% { box-shadow: 0 0 25px rgba(50,255,136,0.35), 0 0 60px rgba(50,255,136,0.15), 0 0 120px rgba(50,255,136,0.05), inset 0 0 35px rgba(50,255,136,0.1); }
+  50% { box-shadow: 0 0 40px rgba(50,255,136,0.5), 0 0 80px rgba(50,255,136,0.25), 0 0 150px rgba(50,255,136,0.08), inset 0 0 50px rgba(50,255,136,0.15); }
+}
+@keyframes coreRedPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(255,50,50,0.15), 0 0 50px rgba(255,50,50,0.05), inset 0 0 20px rgba(255,50,50,0.05); }
+  50% { box-shadow: 0 0 30px rgba(255,50,50,0.25), 0 0 60px rgba(255,50,50,0.1), inset 0 0 25px rgba(255,50,50,0.08); }
 }
 @keyframes orbit1 {
   0% { top: 0; left: 50%; } 25% { top: 50%; left: 100%; } 50% { top: 100%; left: 50%; } 75% { top: 50%; left: 0; } 100% { top: 0; left: 50%; }
@@ -1484,14 +1498,14 @@ function updateToggleBtn(running) {
     iconPlay.style.display = 'none';
     iconStop.style.display = 'block';
     label.textContent = 'Mining Active';
-    label.style.color = 'var(--blue-bright)';
+    label.style.color = '#33ff88';
   } else {
     btn.classList.remove('running');
     btn.classList.add('stopped');
     iconPlay.style.display = 'block';
     iconStop.style.display = 'none';
-    label.textContent = 'Start Mining';
-    label.style.color = 'var(--text-secondary)';
+    label.textContent = 'Stopped';
+    label.style.color = '#ff5555';
   }
 }
 
