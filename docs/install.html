@@ -334,53 +334,40 @@ const platforms = {
   windows: {
     steps: [
       {
-        title: 'Prerequisites',
-        subtitle: 'Before you start, you need two things installed on your Windows machine:',
-        tip: '<strong>1. Git for Windows</strong> — download free from <a href="https://git-scm.com/download/win" target="_blank" style="color:var(--glow)">git-scm.com</a>. Use all default options during install.<br><br><strong>2. Windows Defender exclusion</strong> — crypto mining software is often flagged as a false positive by antivirus. Add an exclusion <strong>before</strong> installing to avoid the binary being silently deleted.',
-        cmd: 'powershell -Command "Add-MpPreference -ExclusionPath \'%USERPROFILE%\\.dagtech-miner\'"',
-        warn: 'If you skip the Defender exclusion, Windows may silently delete the miner binary during installation. You\'ll see "file not found" errors when trying to start mining. Run the command above in an <strong>Administrator</strong> Command Prompt.',
-        preview: ['<span class="b">C:\\Users\\You></span> powershell -Command "Add-MpPreference ..."', '<span class="g">Exclusion added successfully</span>', '', '<span class="c">This tells Windows Defender to leave the</span>', '<span class="c">miner folder alone. The miner is open source</span>', '<span class="c">— you can audit every line of code on GitHub.</span>']
+        title: 'Download the Installer',
+        subtitle: 'Download the <strong>DagTech Miner Setup</strong> from GitHub. It\'s a single .exe file — no git, no command line, no compiling needed.',
+        tip: 'The installer is about 11 MB and includes everything: miner binary, dashboard, Python runtime, and GPU support. Click the link below to download.',
+        preview: ['<span class="g">Download from GitHub:</span>', '', '<span class="b">github.com/Dagtechltd/dagtech-miner/releases</span>', '', '<span class="c">File: DagTech-Miner-v3.0.0-Setup.exe</span>', '<span class="c">Size: ~11 MB</span>']
       },
       {
-        title: 'Open Command Prompt',
-        subtitle: 'Press <strong>Win + R</strong>, type <strong>cmd</strong>, and press Enter. Or search for "Command Prompt" in the Start Menu. Make sure you\'re in your <strong>home folder</strong> (not System32).',
-        tip: 'Your prompt should show <code style="color:var(--glow)">C:\\Users\\YourName></code>. If it shows <code style="color:var(--glow)">C:\\Windows\\System32></code>, type <code style="color:var(--glow)">cd %USERPROFILE%</code> first.',
-        preview: ['<span class="b">C:\\Users\\You></span> _', '', '<span class="g">Ready to go!</span>']
+        title: 'Run the Setup Wizard',
+        subtitle: 'Double-click the downloaded <strong>DagTech-Miner-v3.0.0-Setup.exe</strong>. Windows may show a UAC prompt — click <strong>Yes</strong> to allow the installer to run. This is needed for the Windows Defender exclusion.',
+        warn: 'If Windows SmartScreen shows "Windows protected your PC", click <strong>More info</strong> then <strong>Run anyway</strong>. The installer is safe — the source code is open on GitHub.',
+        preview: ['<span class="b">Setup - DagTech Miner v3.0.0</span>', '', '<span class="c">Welcome to DagTech Miner</span>', '<span class="c">This will install DagTech Miner v3.0.0</span>', '<span class="c">on your computer.</span>', '', '<span class="g">[Next >]</span>']
       },
       {
-        title: 'Clone the Repository',
-        subtitle: 'Download the DagTech Miner package from GitHub. This includes a <strong>pre-built Windows binary</strong> — no compiler needed.',
-        cmd: 'git clone https://github.com/Dagtechltd/dagtech-miner.git\ncd dagtech-miner',
-        preview: ['<span class="b">C:\\Users\\You></span> git clone https://github.com/Dagtechltd/dagtech-miner.git', 'Cloning into \'dagtech-miner\'...', '<span class="g">Receiving objects: 100% (847/847), 2.1 MiB, done.</span>', '<span class="b">C:\\Users\\You></span> cd dagtech-miner']
+        title: 'Choose Options',
+        subtitle: 'The setup wizard shows checkboxes for shortcuts and security options. We recommend keeping all defaults, especially the <strong>Windows Defender exclusion</strong> — this prevents your antivirus from falsely flagging the miner.',
+        preview: ['<span class="b">Select Additional Tasks:</span>', '', '<span class="g">  [x] Create a desktop shortcut</span>', '<span class="g">  [x] Create a Start Menu entry</span>', '<span class="c">  [ ] Start mining on Windows login</span>', '<span class="g">  [x] Add Windows Defender exclusion</span>'],
+        tip: 'The "Start mining on Windows login" option makes your PC mine automatically every time you log in. Leave it unchecked unless you want 24/7 mining.'
       },
       {
-        title: 'Run the Installer',
-        subtitle: 'Run the Windows batch installer. It auto-detects your CPU, RAM, and NVIDIA GPU. No admin rights required.',
-        cmd: 'install.bat',
-        preview: ['<span class="b">C:\\Users\\You\\dagtech-miner></span> install.bat', '', '<span class="b">  =============================================</span>', '<span class="c">    DagTech Miner - Windows Installer</span>', '<span class="b">  =============================================</span>', '', '<span class="c">[DagTech]</span> Detecting hardware...', '<span class="g">  CPU:     (your processor auto-detected)</span>', '<span class="g">  Cores:   (your core count)</span>', '<span class="g">  RAM:     (your memory)</span>', '<span class="g">[DagTech] GPU check complete</span>']
-      },
-      {
-        title: 'Enter Your Wallet Address',
-        subtitle: 'Type your <strong>BlockDAG wallet address</strong>. It must start with <strong>0x</strong> followed by exactly 40 hex characters.',
-        warn: 'Triple-check your address! Mining rewards sent to the wrong wallet cannot be recovered.',
-        preview: ['<span class="b">  Enter wallet address (0x...):</span> <span class="g">0x6387C32ccDD60BfBa00EC70A67715Dcd52E8083f</span>', '<span class="g">  ✓ Wallet address accepted</span>']
-      },
-      {
-        title: 'Choose Mining Mode',
-        subtitle: 'If you have an <strong>NVIDIA GPU</strong>, choose option 3 for maximum hashrate. CPU-only works on any Windows machine. Set your thread count (default is half your cores).',
-        preview: ['<span class="c">  Mining mode:</span>', '    1) CPU only', '    2) GPU only', '    <span class="b">3) CPU + GPU [recommended]</span>', '', '<span class="b">  Choice [1-3]:</span> <span class="g">3</span>', '<span class="g">[DagTech] Mode: both</span>', '<span class="b">  CPU threads (1-20, default 10):</span> <span class="g">10</span>'],
-        tip: 'No NVIDIA GPU? No problem — just pick option 1 (CPU only). AMD GPUs are not yet supported.'
+        title: 'Configure Your Mining Settings',
+        subtitle: 'The installer asks for your mining configuration — all in the setup wizard, no command line needed. Enter your <strong>wallet address</strong>, choose a <strong>worker name</strong>, and set your <strong>pool</strong> and <strong>thread count</strong>.',
+        warn: 'Triple-check your wallet address! It must start with <strong>0x</strong> followed by exactly 40 characters. Mining rewards sent to the wrong address cannot be recovered.',
+        preview: ['<span class="b">Mining Configuration:</span>', '', '<span class="c">Wallet Address (0x...):</span>', '<span class="g">  0xYourWalletAddressHere</span>', '<span class="c">Worker Name:</span> <span class="g">MyPC</span>', '<span class="c">Pool Host:</span> <span class="g">excalibur.dagtech.network</span>', '<span class="c">Pool Port:</span> <span class="g">3335</span>', '<span class="c">CPU Threads:</span> <span class="g">4</span>'],
+        tip: 'Upgrading? The installer detects your existing configuration and pre-fills all the fields. Just review and click Next.'
       },
       {
         title: 'Installation Completes',
-        subtitle: 'The installer checks for Python (auto-installs if missing for the dashboard), copies the pre-built binaries, creates <strong>Desktop and Start Menu shortcuts</strong>, and configures everything. No compiling needed on Windows!',
-        preview: ['<span class="g">[DagTech] Python: 3.12.7 ✓</span>', '<span class="g">[DagTech] CPU miner binary installed ✓</span>', '<span class="g">[DagTech] GPU miner binary installed ✓</span>', '<span class="g">[DagTech] Dashboard installed ✓</span>', '<span class="g">[DagTech] Desktop shortcut created ✓</span>', '<span class="g">[DagTech] Start Menu entries created ✓</span>', '', '<span class="b">  =============================================</span>', '<span class="g">    Installation Complete!</span>', '<span class="b">  =============================================</span>']
+        subtitle: 'The installer copies all files, creates shortcuts, adds the Defender exclusion, and starts the dashboard server. Everything is automatic — just wait for it to finish.',
+        preview: ['<span class="g">  Creating shortcuts... done</span>', '<span class="g">  Adding Defender exclusion... done</span>', '<span class="g">  Starting dashboard server... done</span>', '<span class="g">  Writing configuration... done</span>', '', '<span class="b">  Setup completed successfully.</span>']
       },
       {
-        title: 'Start Mining!',
-        subtitle: 'Say <strong>Y</strong> to start now, or later just <strong>double-click "DagTech Miner"</strong> on your Desktop. The dashboard opens in your browser automatically.',
-        cmd: 'dagtech-start.bat',
-        preview: ['<span class="b">  Start mining now? [Y/n]:</span> <span class="g">Y</span>', '', '<span class="g">[DagTech] Starting GPU miner (background)...</span>', '<span class="g">[DagTech] Starting CPU miner...</span>', '<span class="g">[DagTech] Dashboard: http://localhost:8881</span>', '', '<span class="b">  DagTech Miner - dagtech.network</span>', '<span class="c">  Pool: excalibur.dagtech.network:3335</span>', '<span class="g">[CONNECT] Connected, subscribing...</span>', '<span class="g">[SHARE] ACCEPTED ✓</span>', '<span class="g">[SHARE] ACCEPTED ✓</span>', '<span class="b">[HASHRATE] 31.2 KH/s | Shares: 3047 accepted</span>'],
+        title: 'Open Dashboard and Start Mining!',
+        subtitle: 'After installation, your browser opens the <strong>DagTech Dashboard</strong>. Click the big <strong>Start Mining</strong> button to begin. You can also configure advanced settings like GPU intensity and pool profiles in the Settings tab.',
+        tip: 'You can always open the dashboard later by going to <code style="color:var(--glow)">http://localhost:8881</code> in your browser, or clicking "DagTech Miner" in your Start Menu.',
+        preview: ['<span class="g">Dashboard: http://localhost:8881</span>', '', '<span class="b">  ╔═══════════════════════════════╗</span>', '<span class="g">  ║   Click START MINING button   ║</span>', '<span class="b">  ╚═══════════════════════════════╝</span>', '', '<span class="c">Settings tab: pool profiles, GPU tuning,</span>', '<span class="c">CPU threads, mining mode (CPU/GPU/Both)</span>'],
         final: true,
         dashUrl: 'http://localhost:8881'
       }
