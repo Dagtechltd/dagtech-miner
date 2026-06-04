@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DagTech Mesh — Live Architecture Deep-Dive</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg-0: #050810;
+    --bg-1: #080b14;
+    --bg-2: #0a0f1c;
+    --bg-3: #0f1626;
+    --panel: rgba(15, 22, 38, 0.85);
+    --panel-bright: rgba(20, 30, 50, 0.92);
+    --panel-border: rgba(56, 120, 220, 0.28);
+    --panel-border-bright: rgba(107, 180, 255, 0.55);
+    --blue: #3aa0ff;
+    --blue-soft: #6bd6ff;
+    --blue-dim: hsl(210, 60%, 45%);
+    --blue-deep: #1a73e8;
+    --blue-glow: rgba(58, 160, 255, 0.4);
+    --text-0: #e6eef9;
+    --text-1: #9bb1cf;
+    --text-2: #5d7398;
+    --text-3: #3d5378;
+    --led-ok: #6bd6ff;
+    --led-warn: #ffa53d;       /* amber-orange for warnings (catching up, high load) */
+    --led-warn-glow: rgba(255, 165, 61, 0.5);
+    --led-bad: #ff4d4d;        /* red for critical / down */
+    --led-bad-glow: rgba(255, 77, 77, 0.5);
+    --wire-primary: #3aa0ff;
+    --wire-dedicated: #6bd6ff;
+    --wire-failover: #5d7398;
+    --wire-service: #4fa6e6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg-0);
+    color: var(--text-0);
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(56, 144, 255, 0.10) 0%, transparent 50%),
+      radial-gradient(ellipse at 0% 100%, rgba(107, 180, 255, 0.06) 0%, transparent 50%),
+      var(--bg-0);
+    background-attachment: fixed;
+    padding: 16px 20px;
+  }
+  h1, h2, h3, h4 { font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600; }
+  code, .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* HEADER */
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 22px; background: var(--panel);
+    border: 1px solid var(--panel-border); border-radius: 14px;
+    backdrop-filter: blur(12px); margin-bottom: 16px;
+    box-shadow: 0 0 40px rgba(56, 144, 255, 0.08);
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-mark {
+    width: 42px; height: 42px; position: relative; border-radius: 10px;
+    background: radial-gradient(circle at 30% 30%, var(--blue-soft), var(--blue) 30%, var(--blue-deep));
+    box-shadow: 0 0 18px var(--blue-glow), inset 0 0 12px rgba(255,255,255,0.15);
+  }
+  .brand-mark::before {
+    content: ""; position: absolute; inset: 7px;
+    border: 2px solid rgba(255,255,255,0.9);
+    border-radius: 6px;
+    border-right-color: transparent; border-bottom-color: transparent;
+  }
+  .brand-text h1 { font-size: 20px; color: var(--text-0); letter-spacing: -0.3px; }
+  .brand-text h1 span { color: var(--blue-soft); }
+  .brand-text p { font-size: 11px; color: var(--text-2); margin-top: 2px; letter-spacing: 1px; text-transform: uppercase; }
+
+  .header-meta { display: flex; align-items: center; gap: 22px; font-size: 12px; }
+  .meta-item { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .meta-label { text-transform: uppercase; letter-spacing: 1.2px; font-size: 9px; color: var(--text-3); }
+  .meta-value { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--blue-soft); font-weight: 600; }
+  .pulse-led {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+    background: var(--led-ok); box-shadow: 0 0 10px var(--led-ok);
+    animation: pulseBright 2s infinite; margin-right: 6px;
+  }
+  @keyframes pulseBright { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(0.7); } }
+  @keyframes spin        { to { transform: rotate(360deg); } }
+  @keyframes spinRev     { to { transform: rotate(-360deg); } }
+  @keyframes pulseSoft   { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.9; } }
+  @keyframes shimmer     { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.7; } }
+  @keyframes flow        { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -32; } }
+  @keyframes flowRev     { from { stroke-dashoffset: 0; } to { stroke-dashoffset: 32; } }
+  @keyframes flowSlow    { from { stroke-dashoffset: 0; } to { stroke-dashoffset: -60; } }
+  @keyframes blink       { 0%, 90%, 100% { opacity: 0.3; } 95% { opacity: 1; } }
+  @keyframes ringExpand  { 0% { r: 4; opacity: 0.9; } 100% { r: 18; opacity: 0; } }
+
+  /* MESH CONTAINER */
+  .mesh-frame {
+    background: var(--bg-1);
+    border: 1px solid var(--panel-border);
+    border-radius: 16px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 0 60px rgba(56, 144, 255, 0.04) inset;
+  }
+  .mesh-frame::before {
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(58, 160, 255, 0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(58, 160, 255, 0.025) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+  }
+  .mesh-svg {
+    width: 100%; height: auto; display: block; position: relative; z-index: 1;
+    min-height: 720px;
+  }
+
+  /* Column labels */
+  .col-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    fill: var(--text-3);
+  }
+  .col-label-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px; fill: var(--text-3);
+  }
+
+  /* Status legend in footer */
+  footer {
+    margin-top: 14px; padding: 14px 22px; background: var(--panel);
+    border: 1px solid var(--panel-border); border-radius: 12px;
+    display: flex; gap: 24px; align-items: center; flex-wrap: wrap;
+    font-size: 11px; color: var(--text-1);
+  }
+  footer strong {
+    font-family: 'Space Grotesk', sans-serif; font-weight: 600; color: var(--text-0);
+    margin-right: 8px; text-transform: uppercase; letter-spacing: 1.5px; font-size: 10px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .legend-dot.ok   { background: var(--led-ok);   box-shadow: 0 0 6px var(--led-ok); }
+  .legend-dot.warn { background: var(--led-warn); box-shadow: 0 0 8px var(--led-warn-glow); }
+  .legend-dot.bad  { background: var(--led-bad);  box-shadow: 0 0 8px var(--led-bad-glow); }
+  .legend-dot.cool { background: var(--text-2); }
+  .legend-dot.dead { background: var(--text-3); }
+  .legend-line {
+    width: 24px; height: 2px; display: inline-block; background: var(--wire-primary);
+  }
+  .legend-line.dedicated { background: var(--wire-dedicated); }
+  .legend-line.failover { background: transparent; border-top: 2px dashed var(--wire-failover); height: 0; }
+  .legend-line.service { background: var(--wire-service); opacity: 0.7; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark"></div>
+    <div class="brand-text">
+      <h1>DagTech <span>Mesh</span></h1>
+      <p>Live architecture · who feeds who · flows left → right</p>
+    </div>
+  </div>
+  <div class="header-meta">
+    <div class="meta-item"><span class="meta-label">CHAIN TIP</span><span class="meta-value" id="chain-tip">—</span></div>
+    <div class="meta-item"><span class="meta-label">EVM BLOCK</span><span class="meta-value" id="evm-block">—</span></div>
+    <div class="meta-item"><span class="meta-label">WALLET 0x6387</span><span class="meta-value" id="wallet-balance">—</span></div>
+    <div class="meta-item"><span class="meta-label">LIVE</span><span class="meta-value"><span class="pulse-led"></span><span id="last-update">—</span></span></div>
+  </div>
+</header>
+
+<div class="mesh-frame">
+<svg class="mesh-svg" viewBox="0 0 1600 760" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+
+  <defs>
+    <!-- gradients -->
+    <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.95"/>
+      <stop offset="40%" stop-color="#6bd6ff" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#3aa0ff" stop-opacity="0.3"/>
+    </radialGradient>
+    <radialGradient id="haloGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#6bd6ff" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#3aa0ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="globeGrad" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#1a73e8" stop-opacity="0.7"/>
+      <stop offset="60%" stop-color="#0a1428"/>
+      <stop offset="100%" stop-color="#050810"/>
+    </radialGradient>
+    <linearGradient id="boxGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f1626"/>
+      <stop offset="100%" stop-color="#080b14"/>
+    </linearGradient>
+    <linearGradient id="boxGradX" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0f1c30"/>
+      <stop offset="100%" stop-color="#080b14"/>
+    </linearGradient>
+
+    <!-- glow filters -->
+    <filter id="softGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.5"/>
+      <feComposite in2="SourceGraphic" operator="over"/>
+    </filter>
+
+    <!-- arrowhead markers -->
+    <marker id="arrowB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#3aa0ff"/>
+    </marker>
+    <marker id="arrowBSoft" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#5d7398"/>
+    </marker>
+    <marker id="arrowBright" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6bd6ff"/>
+    </marker>
+
+    <!-- reusable gauge half-arc background -->
+    <path id="gaugeArc" d="M -16 0 A 16 16 0 0 1 16 0" fill="none" stroke="#1a2a44" stroke-width="3"/>
+  </defs>
+
+  <!-- COLUMN LABELS (top headers) -->
+  <g>
+    <text class="col-label" x="160" y="20">01 · MAINNET</text>
+    <text class="col-label-num" x="160" y="32">consensus</text>
+    <text class="col-label" x="430" y="20">02 · RELAYS</text>
+    <text class="col-label-num" x="430" y="32">WireGuard P2P</text>
+    <text class="col-label" x="720" y="20">03 · NODES</text>
+    <text class="col-label-num" x="720" y="32">QNG + EVM</text>
+    <text class="col-label" x="1040" y="20">04 · POOLS</text>
+    <text class="col-label-num" x="1040" y="32">stratum + RPC proxy</text>
+    <text class="col-label" x="1340" y="20">05 · ENDPOINTS</text>
+    <text class="col-label-num" x="1340" y="32">miners + services</text>
+  </g>
+
+  <!-- =========================================================== -->
+  <!-- WIRES — DRAW FIRST so components render on top -->
+  <!-- =========================================================== -->
+
+  <!-- Mainnet → CT relay -->
+  <path d="M 250 200 Q 320 200 360 230" fill="none" stroke="var(--wire-primary)" stroke-width="1.5" opacity="0.75" stroke-dasharray="6 8" style="animation: flow 1.6s linear infinite;"/>
+  <!-- Mainnet → USW relay -->
+  <path d="M 250 200 Q 320 310 360 380" fill="none" stroke="var(--wire-primary)" stroke-width="1.5" opacity="0.75" stroke-dasharray="6 8" style="animation: flow 1.8s linear infinite;"/>
+
+  <!-- Relays → Nodes (each relay feeds all 4 nodes via P2P) -->
+  <!-- CT → node-1 -->
+  <path d="M 500 240 Q 600 200 660 170" fill="none" stroke="var(--wire-primary)" stroke-width="1" opacity="0.45" stroke-dasharray="4 6" style="animation: flow 2.4s linear infinite;"/>
+  <!-- CT → node-2 -->
+  <path d="M 500 240 Q 600 250 660 280" fill="none" stroke="var(--wire-primary)" stroke-width="1" opacity="0.45" stroke-dasharray="4 6" style="animation: flow 2.6s linear infinite;"/>
+  <!-- CT → node-3 -->
+  <path d="M 500 240 Q 600 350 660 410" fill="none" stroke="var(--wire-primary)" stroke-width="1" opacity="0.35" stroke-dasharray="4 6" style="animation: flow 2.8s linear infinite;"/>
+  <!-- CT → node-x100 -->
+  <path d="M 500 240 Q 600 470 660 530" fill="none" stroke="var(--wire-dedicated)" stroke-width="1.2" opacity="0.55" stroke-dasharray="4 6" style="animation: flow 2.2s linear infinite;"/>
+
+  <!-- USW → node-1 -->
+  <path d="M 500 390 Q 600 280 660 170" fill="none" stroke="var(--wire-primary)" stroke-width="1" opacity="0.45" stroke-dasharray="4 6" style="animation: flow 2.5s linear infinite;"/>
+  <!-- USW → node-2 -->
+  <path d="M 500 390 Q 600 340 660 280" fill="none" stroke="var(--wire-primary)" stroke-width="1" opacity="0.45" stroke-dasharray="4 6" style="animation: flow 2.7s linear infinite;"/>
+  <!-- USW → node-3 -->
+  <path d="M 500 390 Q 600 400 660 410" fill="none" stroke="var(--wire-primary)" stroke-width="1" opacity="0.35" stroke-dasharray="4 6" style="animation: flow 2.9s linear infinite;"/>
+  <!-- USW → node-x100 -->
+  <path d="M 500 390 Q 600 460 660 530" fill="none" stroke="var(--wire-dedicated)" stroke-width="1.2" opacity="0.55" stroke-dasharray="4 6" style="animation: flow 2.3s linear infinite;"/>
+
+  <!-- ========== Node → Pool wires ========== -->
+
+  <!-- node-x100 → hans-solo (DEDICATED, bright) -->
+  <path d="M 850 530 Q 920 510 970 480" fill="none" stroke="var(--wire-dedicated)" stroke-width="2.5" opacity="0.95" stroke-dasharray="8 6" style="animation: flow 1.2s linear infinite;" marker-end="url(#arrowBright)"/>
+
+  <!-- node-1 → asic-pool (ACTIVE PRIMARY — node-1 caught up, sharing load with node-2) -->
+  <path d="M 850 170 Q 920 220 970 290" fill="none" stroke="var(--wire-primary)" stroke-width="2" opacity="0.85" stroke-dasharray="6 6" style="animation: flow 1.5s linear infinite;" marker-end="url(#arrowB)"/>
+  <!-- node-1 → cpu-gpu-pool (ACTIVE PRIMARY) -->
+  <path d="M 850 170 Q 920 260 970 380" fill="none" stroke="var(--wire-primary)" stroke-width="2" opacity="0.85" stroke-dasharray="6 6" style="animation: flow 1.5s linear infinite;" marker-end="url(#arrowB)"/>
+  <!-- node-1 → rpc-failover (ACTIVE PRIMARY for HAProxy) -->
+  <path d="M 850 170 Q 920 360 970 580" fill="none" stroke="var(--wire-service)" stroke-width="2" opacity="0.85" stroke-dasharray="5 7" style="animation: flow 1.8s linear infinite;" marker-end="url(#arrowB)"/>
+
+  <!-- node-2 → asic-pool (PRIMARY) -->
+  <path d="M 850 280 Q 920 285 970 290" fill="none" stroke="var(--wire-primary)" stroke-width="2" opacity="0.85" stroke-dasharray="6 6" style="animation: flow 1.4s linear infinite;" marker-end="url(#arrowB)"/>
+  <!-- node-2 → cpu-gpu-pool -->
+  <path d="M 850 280 Q 920 330 970 380" fill="none" stroke="var(--wire-primary)" stroke-width="2" opacity="0.85" stroke-dasharray="6 6" style="animation: flow 1.4s linear infinite;" marker-end="url(#arrowB)"/>
+  <!-- node-2 → rpc-failover (BACKUP per HAProxy · STANDBY · only kicks in if node-1 fails) -->
+  <path d="M 850 280 Q 920 420 970 580" fill="none" stroke="var(--wire-failover)" stroke-width="1" opacity="0.3" stroke-dasharray="2 10"/>
+
+  <!-- node-3 → asic-pool (FAILOVER · STANDBY · NO ACTIVE FLOW — wider gaps, no animation) -->
+  <path d="M 850 410 Q 920 350 970 295" fill="none" stroke="var(--wire-failover)" stroke-width="1" opacity="0.3" stroke-dasharray="2 10"/>
+  <!-- node-3 → cpu-gpu-pool (FAILOVER · STANDBY · NO ACTIVE FLOW) -->
+  <path d="M 850 410 Q 920 390 970 385" fill="none" stroke="var(--wire-failover)" stroke-width="1" opacity="0.3" stroke-dasharray="2 10"/>
+  <!-- node-3 → rpc-failover (BACKUP per HAProxy config · STANDBY · NO ACTIVE FLOW until 1+2 fail) -->
+  <path d="M 850 410 Q 920 490 970 575" fill="none" stroke="var(--wire-failover)" stroke-width="1" opacity="0.3" stroke-dasharray="2 10"/>
+
+  <!-- ========== Pool → Miner wires (col 4 → col 5) ========== -->
+
+  <!-- hans-solo → X100 (DEDICATED) -->
+  <path d="M 1170 480 Q 1240 380 1300 290" fill="none" stroke="var(--wire-dedicated)" stroke-width="2.8" opacity="0.95" stroke-dasharray="10 6" style="animation: flow 1s linear infinite;" marker-end="url(#arrowBright)"/>
+
+  <!-- asic-pool → X30 -->
+  <path d="M 1170 290 Q 1240 380 1300 415" fill="none" stroke="var(--wire-primary)" stroke-width="2" opacity="0.8" stroke-dasharray="7 6" style="animation: flow 1.4s linear infinite;" marker-end="url(#arrowB)"/>
+
+  <!-- cpu-gpu-pool → GPU/CPU rigs -->
+  <path d="M 1170 380 Q 1240 460 1300 510" fill="none" stroke="var(--wire-primary)" stroke-width="2" opacity="0.8" stroke-dasharray="7 6" style="animation: flow 1.3s linear infinite;" marker-end="url(#arrowB)"/>
+
+  <!-- rpc-failover → Explorer -->
+  <path d="M 1170 580 Q 1240 575 1300 595" fill="none" stroke="var(--wire-service)" stroke-width="1.5" opacity="0.75" stroke-dasharray="5 7" style="animation: flow 1.6s linear infinite;" marker-end="url(#arrowB)"/>
+  <!-- rpc-failover → Stats -->
+  <path d="M 1170 580 Q 1240 625 1300 645" fill="none" stroke="var(--wire-service)" stroke-width="1.5" opacity="0.75" stroke-dasharray="5 7" style="animation: flow 1.7s linear infinite;" marker-end="url(#arrowB)"/>
+  <!-- rpc-failover → Netstats -->
+  <path d="M 1170 580 Q 1240 670 1300 690" fill="none" stroke="var(--wire-service)" stroke-width="1.5" opacity="0.75" stroke-dasharray="5 7" style="animation: flow 1.8s linear infinite;" marker-end="url(#arrowB)"/>
+
+  <!-- ========== Traveling pulse dots on hot paths ========== -->
+  <circle r="2.5" fill="#6bd6ff" filter="url(#softGlow)">
+    <animateMotion dur="2.4s" repeatCount="indefinite" path="M 250 200 Q 320 200 360 230"/>
+  </circle>
+  <circle r="2.5" fill="#6bd6ff" filter="url(#softGlow)">
+    <animateMotion dur="2.6s" repeatCount="indefinite" path="M 250 200 Q 320 310 360 380"/>
+  </circle>
+  <circle r="3" fill="#6bd6ff" filter="url(#softGlow)">
+    <animateMotion dur="1.6s" repeatCount="indefinite" path="M 850 530 Q 920 510 970 480"/>
+  </circle>
+  <circle r="3" fill="#6bd6ff" filter="url(#softGlow)">
+    <animateMotion dur="1.3s" repeatCount="indefinite" path="M 1170 480 Q 1240 380 1300 290"/>
+  </circle>
+  <circle r="2.5" fill="#3aa0ff" filter="url(#softGlow)">
+    <animateMotion dur="2s" repeatCount="indefinite" path="M 850 170 Q 920 220 970 290"/>
+  </circle>
+  <circle r="2.5" fill="#3aa0ff" filter="url(#softGlow)">
+    <animateMotion dur="2s" repeatCount="indefinite" path="M 850 280 Q 920 285 970 290"/>
+  </circle>
+  <circle r="2.5" fill="#3aa0ff" filter="url(#softGlow)">
+    <animateMotion dur="2.2s" repeatCount="indefinite" path="M 1170 290 Q 1240 380 1300 415"/>
+  </circle>
+  <circle r="2.5" fill="#3aa0ff" filter="url(#softGlow)">
+    <animateMotion dur="2.4s" repeatCount="indefinite" path="M 1170 380 Q 1240 460 1300 510"/>
+  </circle>
+
+  <!-- =========================================================== -->
+  <!-- COL 1 — MAINNET COMPONENTS -->
+  <!-- =========================================================== -->
+
+  <!-- BlockDAG Mainnet Reactor (small) -->
+  <g transform="translate(180 200)">
+    <circle r="55" fill="url(#haloGlow)" opacity="0.6"/>
+    <circle r="4" fill="none" stroke="#6bd6ff" stroke-width="1">
+      <animate attributeName="r" values="4;30;4" dur="2.4s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.9;0;0.9" dur="2.4s" repeatCount="indefinite"/>
+    </circle>
+    <circle r="42" fill="none" stroke="#3aa0ff" stroke-width="0.5" stroke-dasharray="3 4" opacity="0.5"/>
+    <g style="animation: spin 8s linear infinite; transform-origin: center; transform-box: fill-box;">
+      <path d="M 0 -35 L 6 -25 L 2 -18 L -2 -18 L -6 -25 Z" fill="#3aa0ff" opacity="0.6"/>
+      <path d="M 0 -35 L 6 -25 L 2 -18 L -2 -18 L -6 -25 Z" transform="rotate(72)" fill="#3aa0ff" opacity="0.6"/>
+      <path d="M 0 -35 L 6 -25 L 2 -18 L -2 -18 L -6 -25 Z" transform="rotate(144)" fill="#3aa0ff" opacity="0.6"/>
+      <path d="M 0 -35 L 6 -25 L 2 -18 L -2 -18 L -6 -25 Z" transform="rotate(216)" fill="#3aa0ff" opacity="0.6"/>
+      <path d="M 0 -35 L 6 -25 L 2 -18 L -2 -18 L -6 -25 Z" transform="rotate(288)" fill="#3aa0ff" opacity="0.6"/>
+    </g>
+    <g style="animation: spinRev 3s linear infinite; transform-origin: center; transform-box: fill-box;">
+      <path d="M 0 -18 Q 4 -12 3 -6 Q 0 -4 -3 -6 Q -4 -12 0 -18 Z" fill="#6bd6ff" opacity="0.8"/>
+      <path d="M 0 -18 Q 4 -12 3 -6 Q 0 -4 -3 -6 Q -4 -12 0 -18 Z" transform="rotate(120)" fill="#6bd6ff" opacity="0.8"/>
+      <path d="M 0 -18 Q 4 -12 3 -6 Q 0 -4 -3 -6 Q -4 -12 0 -18 Z" transform="rotate(240)" fill="#6bd6ff" opacity="0.8"/>
+    </g>
+    <circle r="9" fill="url(#coreGlow)" style="animation: pulseSoft 2s infinite;"/>
+    <circle r="3" fill="#ffffff"/>
+    <text y="70" text-anchor="middle" fill="#6bd6ff" font-size="11" font-family="Space Grotesk" font-weight="600">BlockDAG L1</text>
+    <text y="84" text-anchor="middle" fill="#5d7398" font-size="8" font-family="JetBrains Mono">tip · <tspan id="t-mainnet-tip">—</tspan></text>
+  </g>
+
+  <!-- bdagscan (small box below reactor) -->
+  <g transform="translate(100 350)">
+    <rect width="160" height="56" rx="8" fill="url(#boxGrad)" stroke="#3aa0ff" stroke-width="0.8" opacity="0.85"/>
+    <circle cx="14" cy="14" r="3" fill="#6bd6ff" style="animation: blink 2s infinite;"/>
+    <text x="26" y="17" fill="#6bd6ff" font-size="9" font-family="JetBrains Mono" font-weight="600">bdagscan</text>
+    <text x="26" y="32" fill="#5d7398" font-size="7" font-family="JetBrains Mono">public RPC · CF anycast</text>
+    <text x="26" y="46" fill="#9bb1cf" font-size="9" font-family="JetBrains Mono" id="t-bdagscan-block">—</text>
+    <!-- mini sparkline placeholder -->
+    <polyline id="spark-bdagscan" points="100,46 110,42 120,44 130,40 140,42 150,38"
+              fill="none" stroke="#6bd6ff" stroke-width="1.2" opacity="0.7"/>
+  </g>
+
+  <!-- Mainnet stats card -->
+  <g transform="translate(100 460)">
+    <rect width="160" height="60" rx="8" fill="url(#boxGrad)" stroke="#3aa0ff" stroke-width="0.6" opacity="0.7"/>
+    <text x="10" y="16" fill="#5d7398" font-size="8" font-family="JetBrains Mono" letter-spacing="1">PEER GEO</text>
+    <text x="10" y="32" fill="#9bb1cf" font-size="9" font-family="Inter">center of mass:</text>
+    <text x="10" y="46" fill="#6bd6ff" font-size="11" font-family="Space Grotesk" font-weight="600">US-West</text>
+  </g>
+
+  <!-- =========================================================== -->
+  <!-- COL 2 — RELAYS (smaller globes) -->
+  <!-- =========================================================== -->
+
+  <!-- CT Relay -->
+  <g transform="translate(430 240)">
+    <ellipse cx="0" cy="50" rx="40" ry="4" fill="#3aa0ff" opacity="0.18"/>
+    <g style="animation: spin 9s linear infinite; transform-origin: center; transform-box: fill-box;">
+      <ellipse rx="55" ry="12" fill="none" stroke="#3aa0ff" stroke-width="0.5" stroke-dasharray="2 5" opacity="0.6"/>
+    </g>
+    <circle r="32" fill="url(#globeGrad)" stroke="#3aa0ff" stroke-width="0.8"/>
+    <ellipse rx="32" ry="10" fill="none" stroke="#3aa0ff" stroke-width="0.4" opacity="0.5"/>
+    <ellipse rx="10" ry="32" fill="none" stroke="#3aa0ff" stroke-width="0.3" opacity="0.35"/>
+    <line x1="-32" y1="0" x2="32" y2="0" stroke="#6bd6ff" stroke-width="0.4" opacity="0.5"/>
+    <!-- CT marker -->
+    <circle cx="5" cy="14" r="2" fill="#6bd6ff" style="animation: pulseBright 2s infinite;"/>
+    <circle cx="5" cy="14" r="2" fill="none" stroke="#6bd6ff" stroke-width="0.8">
+      <animate attributeName="r" values="2;9;2" dur="2s" repeatCount="indefinite"/>
+      <animate attributeName="opacity" values="0.9;0;0.9" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    <!-- orbiting sat -->
+    <g style="animation: spin 4s linear infinite; transform-origin: center; transform-box: fill-box;">
+      <circle cx="55" cy="0" r="2" fill="#6bd6ff"/>
+    </g>
+    <text y="58" text-anchor="middle" fill="#6bd6ff" font-size="10" font-family="Space Grotesk" font-weight="600">CT Relay</text>
+    <text y="70" text-anchor="middle" fill="#5d7398" font-size="7" font-family="JetBrains Mono">af-south-1 · 129ms</text>
+    <!-- status -->
+    <circle cx="40" cy="-32" r="3" fill="#6bd6ff" style="animation: pulseBright 2s infinite;"/>
+  </g>
+
+  <!-- USW Relay -->
+  <g transform="translate(430 390)">
+    <ellipse cx="0" cy="50" rx="40" ry="4" fill="#3aa0ff" opacity="0.18"/>
+    <g style="animation: spinRev 9s linear infinite; transform-origin: center; transform-box: fill-box;">
+      <ellipse rx="55" ry="12" fill="none" stroke="#3aa0ff" stroke-width="0.5" stroke-dasharray="2 5" opacity="0.6"/>
+    </g>
+    <circle r="32" fill="url(#globeGrad)" stroke="#3aa0ff" stroke-width="0.8"/>
+    <ellipse rx="32" ry="10" fill="none" stroke="#3aa0ff" stroke-width="0.4" opacity="0.5"/>
+    <ellipse rx="10" ry="32" fill="none" stroke="#3aa0ff" stroke-width="0.3" opacity="0.35"/>
+    <line x1="-32" y1="0" x2="32" y2="0" stroke="#6bd6ff" stroke-width="0.4" opacity="0.5"/>
+    <circle cx="-15" cy="-8" r="2" fill="#6bd6ff" style="animation: pulseBright 2s infinite; animation-delay: 0.5s;"/>
+    <circle cx="-15" cy="-8" r="2" fill="none" stroke="#6bd6ff" stroke-width="0.8">
+      <animate attributeName="r" values="2;9;2" dur="2s" repeatCount="indefinite" begin="0.5s"/>
+      <animate attributeName="opacity" values="0.9;0;0.9" dur="2s" repeatCount="indefinite" begin="0.5s"/>
+    </circle>
+    <g style="animation: spinRev 4s linear infinite; transform-origin: center; transform-box: fill-box;">
+      <circle cx="-55" cy="0" r="2" fill="#6bd6ff"/>
+    </g>
+    <text y="58" text-anchor="middle" fill="#6bd6ff" font-size="10" font-family="Space Grotesk" font-weight="600">US-West Relay</text>
+    <text y="70" text-anchor="middle" fill="#5d7398" font-size="7" font-family="JetBrains Mono">us-west-2 · 255ms</text>
+    <circle cx="40" cy="-32" r="3" fill="#6bd6ff" style="animation: pulseBright 2s infinite; animation-delay: 0.5s;"/>
+  </g>
+
+  <!-- =========================================================== -->
+  <!-- COL 3 — NODES (with dual gauges + sparklines) -->
+  <!-- =========================================================== -->
+
+  <!-- NODE template gets: chassis, name, fan, two gauges (sync + load), status LED, sparkline -->
+
+  <!-- node-1 (at tip — healthy) -->
+  <g transform="translate(680 130)">
+    <rect width="170" height="80" rx="8" fill="url(#boxGrad)" stroke="#3aa0ff" stroke-width="1"/>
+    <rect x="6" y="6" width="158" height="12" rx="2" fill="#050810" stroke="#3aa0ff" stroke-width="0.4"/>
+    <text x="14" y="15" fill="#6bd6ff" font-size="7" font-family="JetBrains Mono" font-weight="600">NODE-1 · GENERAL · ACTIVE</text>
+    <circle cx="156" cy="12" r="2" fill="#6bd6ff" style="animation: blink 1.5s infinite;"/>
+    <circle cx="20" cy="40" r="11" fill="#050810" stroke="#3aa0ff" stroke-width="0.6"/>
+    <g style="animation: spin 3s linear infinite; transform-origin: 20px 40px;">
+      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" fill="#3aa0ff" opacity="0.6"/>
+      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" transform="rotate(120 20 40)" fill="#3aa0ff" opacity="0.6"/>
+      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" transform="rotate(240 20 40)" fill="#3aa0ff" opacity="0.6"/>
+    </g>
+    <circle cx="20" cy="40" r="2" fill="#3aa0ff"/>
+    <g transform="translate(60 48)">
+      <use href="#gaugeArc"/>
+      <path d="M -16 0 A 16 16 0 0 1 16 0" fill="none" stroke="#6bd6ff" stroke-width="3" stroke-dasharray="50 100"/>
+      <line x1="0" y1="0" x2="0" y2="-14" stroke="#6bd6ff" stroke-width="1.2" transform-origin="0 0" style="transform:rotate(90deg)"/>
+      <circle cx="0" cy="0" r="2" fill="#6bd6ff"/>
+      <text x="0" y="14" text-anchor="middle" fill="#6bd6ff" font-size="6" font-family="JetBrains Mono" font-weight="600">SYNC 100%</text>
+    </g>
+    <g transform="translate(108 48)">
+      <use href="#gaugeArc"/>
+      <path d="M -16 0 A 16 16 0 0 1 16 0" fill="none" stroke="#3aa0ff" stroke-width="3" stroke-dasharray="55 100" opacity="0.85"/>
+      <line x1="0" y1="0" x2="0" y2="-14" stroke="#3aa0ff" stroke-width="1.2" transform-origin="0 0" style="transform:rotate(99deg)"/>
+      <circle cx="0" cy="0" r="2" fill="#3aa0ff"/>
+      <text x="0" y="14" text-anchor="middle" fill="#5d7398" font-size="6" font-family="JetBrains Mono">LOAD 55%</text>
+    </g>
+    <polyline points="146,36 150,33 154,32 158,32 162,31" fill="none" stroke="#6bd6ff" stroke-width="1" opacity="0.75"/>
+    <circle cx="14" cy="72" r="1.5" fill="#6bd6ff" style="animation: blink 1.6s infinite;"/>
+    <circle cx="22" cy="72" r="1.5" fill="#6bd6ff" style="animation: blink 1.8s infinite;"/>
+    <circle cx="30" cy="72" r="1.5" fill="#6bd6ff" style="animation: blink 2s infinite;"/>
+    <text x="42" y="74" fill="#5d7398" font-size="6" font-family="JetBrains Mono">QNG · EVM · WS</text>
+  </g>
+
+  <!-- node-2 (at tip) -->
+  <g transform="translate(680 245)">
+    <rect width="170" height="80" rx="8" fill="url(#boxGrad)" stroke="#3aa0ff" stroke-width="1"/>
+    <rect x="6" y="6" width="158" height="12" rx="2" fill="#050810" stroke="#3aa0ff" stroke-width="0.4"/>
+    <text x="14" y="15" fill="#6bd6ff" font-size="7" font-family="JetBrains Mono" font-weight="600">NODE-2 · GENERAL</text>
+    <circle cx="156" cy="12" r="2" fill="#6bd6ff" style="animation: blink 1.5s infinite;"/>
+    <circle cx="20" cy="40" r="11" fill="#050810" stroke="#3aa0ff" stroke-width="0.6"/>
+    <g style="animation: spinRev 2.5s linear infinite; transform-origin: 20px 40px;">
+      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" fill="#6bd6ff" opacity="0.65"/>
+      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" transform="rotate(120 20 40)" fill="#6bd6ff" opacity="0.65"/>
+      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" transform="rotate(240 20 40)" fill="#6bd6ff" opacity="0.65"/>
+    </g>
+    <circle cx="20" cy="40" r="2" fill="#6bd6ff"/>
+    <g transform="translate(60 48)">
+      <use href="#gaugeArc"/>
+      <path d="M -16 0 A 16 16 0 0 1 16 0" fill="none" stroke="#6bd6ff" stroke-width="3" stroke-dasharray="50 100"/>
+      <line x1="0" y1="0" x2="0" y2="-14" stroke="#6bd6ff" stroke-width="1.2" transform-origin="0 0" style="transform:rotate(90deg)"/>
+      <circle cx="0" cy="0" r="2" fill="#6bd6ff"/>
+      <text x="0" y="14" text-anchor="middle" fill="#5d7398" font-size="6" font-family="JetBrains Mono">SYNC 100%</text>
+    </g>
+    <g transform="translate(108 48)">
+      <use href="#gaugeArc"/>
+      <path d="M -16 0 A 16 16 0 0 1 16 0" fill="none" stroke="hsl(210, 80%, 65%)" stroke-width="3" stroke-dasharray="42 100"/>
+      <line x1="0" y1="0" x2="0" y2="-14" stroke="#3aa0ff" stroke-width="1.2" transform-origin="0 0" style="transform:rotate(75deg)"/>
+      <circle cx="0" cy="0" r="2" fill="#3aa0ff"/>
+      <text x="0" y="14" text-anchor="middle" fill="#5d7398" font-size="6" font-family="JetBrains Mono">LOAD 42%</text>
+    </g>
+    <polyline points="146,36 150,34 154,33 158,32 162,32" fill="none" stroke="#6bd6ff" stroke-width="1" opacity="0.75"/>
+    <circle cx="14" cy="72" r="1.5" fill="#6bd6ff" style="animation: blink 1.6s infinite;"/>
+    <circle cx="22" cy="72" r="1.5" fill="#6bd6ff" style="animation: blink 1.8s infinite;"/>
+    <circle cx="30" cy="72" r="1.5" fill="#6bd6ff" style="animation: blink 2s infinite;"/>
+    <text x="42" y="74" fill="#5d7398" font-size="6" font-family="JetBrains Mono">QNG · EVM · WS</text>
+  </g>
+
+  <!-- node-3 (failover/standby) -->
+  <g transform="translate(680 370)">
+    <rect width="170" height="80" rx="8" fill="url(#boxGrad)" stroke="#5d7398" stroke-width="1" stroke-dasharray="4 4" opacity="0.92"/>
+    <rect x="6" y="6" width="158" height="12" rx="2" fill="#050810" stroke="#5d7398" stroke-width="0.4"/>
+    <text x="14" y="15" fill="#9bb1cf" font-size="7" font-family="JetBrains Mono" font-weight="600">NODE-3 · WARM STANDBY · AT TIP</text>
+    <circle cx="156" cy="12" r="2" fill="#6bd6ff" style="animation: blink 1.5s infinite;"/>
+    <circle cx="20" cy="40" r="11" fill="#050810" stroke="#5d7398" stroke-width="0.6"/>
+    <g style="animation: spin 4s linear infinite; transform-origin: 20px 40px;">
+      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" fill="#5d7398" opacity="0.7"/>
+      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" transform="rotate(120 20 40)" fill="#5d7398" opacity="0.7"/>
+      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" transform="rotate(240 20 40)" fill="#5d7398" opacity="0.7"/>
+    </g>
+    <circle cx="20" cy="40" r="2" fill="#9bb1cf"/>
+    <g transform="translate(60 48)">
+      <use href="#gaugeArc"/>
+      <path d="M -16 0 A 16 16 0 0 1 16 0" fill="none" stroke="#5d7398" stroke-width="3" stroke-dasharray="48 100"/>
+      <line x1="0" y1="0" x2="0" y2="-14" stroke="#9bb1cf" stroke-width="1.2" transform-origin="0 0" style="transform:rotate(86deg)"/>
+      <circle cx="0" cy="0" r="2" fill="#9bb1cf"/>
+      <text x="0" y="14" text-anchor="middle" fill="#5d7398" font-size="6" font-family="JetBrains Mono">SYNC 96%</text>
+    </g>
+    <g transform="translate(108 48)">
+      <use href="#gaugeArc"/>
+      <path d="M -16 0 A 16 16 0 0 1 16 0" fill="none" stroke="#5d7398" stroke-width="3" stroke-dasharray="11 100"/>
+      <line x1="0" y1="0" x2="0" y2="-14" stroke="#5d7398" stroke-width="1.2" transform-origin="0 0" style="transform:rotate(20deg)"/>
+      <circle cx="0" cy="0" r="2" fill="#5d7398"/>
+      <text x="0" y="14" text-anchor="middle" fill="#5d7398" font-size="6" font-family="JetBrains Mono">LOAD 11%</text>
+    </g>
+    <polyline points="146,38 150,35 154,33 158,32 162,31" fill="none" stroke="#9bb1cf" stroke-width="1" opacity="0.6"/>
+    <circle cx="14" cy="72" r="1.5" fill="#9bb1cf" style="animation: blink 2s infinite;"/>
+    <circle cx="22" cy="72" r="1.5" fill="#5d7398" style="animation: blink 2.2s infinite;"/>
+    <circle cx="30" cy="72" r="1.5" fill="#9bb1cf" style="animation: blink 2.4s infinite;"/>
+    <text x="42" y="74" fill="#5d7398" font-size="6" font-family="JetBrains Mono">FAILOVER · SERVICES</text>
+  </g>
+
+  <!-- node-x100 (DEDICATED, bright highlight) -->
+  <g transform="translate(680 500)">
+    <rect width="170" height="80" rx="8" fill="url(#boxGradX)" stroke="#6bd6ff" stroke-width="1.5"/>
+    <rect x="6" y="6" width="158" height="12" rx="2" fill="#050810" stroke="#6bd6ff" stroke-width="0.5"/>
+    <text x="14" y="15" fill="#6bd6ff" font-size="7" font-family="JetBrains Mono" font-weight="700">NODE-X100 · DEDICATED</text>
+    <circle cx="156" cy="12" r="2.5" fill="#6bd6ff" style="animation: pulseBright 1.6s infinite;"/>
+    <circle cx="20" cy="40" r="11" fill="#050810" stroke="#6bd6ff" stroke-width="0.8"/>
+    <g style="animation: spin 1.5s linear infinite; transform-origin: 20px 40px;">
+      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" fill="#6bd6ff" opacity="0.85"/>
+      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" transform="rotate(72 20 40)" fill="#6bd6ff" opacity="0.85"/>
+      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" transform="rotate(144 20 40)" fill="#6bd6ff" opacity="0.85"/>
+      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" transform="rotate(216 20 40)" fill="#6bd6ff" opacity="0.85"/>
+      <path d="M 20 32 Q 23 36 22 39 Q 20 40 18 39 Q 17 36 20 32 Z" transform="rotate(288 20 40)" fill="#6bd6ff" opacity="0.85"/>
+    </g>
+    <circle cx="20" cy="40" r="2" fill="#ffffff"/>
+    <g transform="translate(60 48)">
+      <use href="#gaugeArc"/>
+      <path d="M -16 0 A 16 16 0 0 1 16 0" fill="none" stroke="#6bd6ff" stroke-width="3" stroke-dasharray="50 100"/>
+      <line x1="0" y1="0" x2="0" y2="-14" stroke="#6bd6ff" stroke-width="1.4" transform-origin="0 0" style="transform:rotate(90deg)"/>
+      <circle cx="0" cy="0" r="2" fill="#6bd6ff"/>
+      <text x="0" y="14" text-anchor="middle" fill="#6bd6ff" font-size="6" font-family="JetBrains Mono">SYNC 100%</text>
+    </g>
+    <g transform="translate(108 48)">
+      <use href="#gaugeArc"/>
+      <path d="M -16 0 A 16 16 0 0 1 16 0" fill="none" stroke="#6bd6ff" stroke-width="3" stroke-dasharray="38 100"/>
+      <line x1="0" y1="0" x2="0" y2="-14" stroke="#6bd6ff" stroke-width="1.4" transform-origin="0 0" style="transform:rotate(68deg)"/>
+      <circle cx="0" cy="0" r="2" fill="#6bd6ff"/>
+      <text x="0" y="14" text-anchor="middle" fill="#6bd6ff" font-size="6" font-family="JetBrains Mono">LOAD 38%</text>
+    </g>
+    <polyline points="146,34 150,32 154,33 158,32 162,31" fill="none" stroke="#6bd6ff" stroke-width="1.3"/>
+    <circle cx="14" cy="72" r="1.6" fill="#6bd6ff" style="animation: blink 1.4s infinite;"/>
+    <circle cx="22" cy="72" r="1.6" fill="#6bd6ff" style="animation: blink 1.6s infinite;"/>
+    <circle cx="30" cy="72" r="1.6" fill="#6bd6ff" style="animation: blink 1.8s infinite;"/>
+    <text x="42" y="74" fill="#6bd6ff" font-size="6" font-family="JetBrains Mono">X100 ASIC ONLY</text>
+  </g>
+
+  <!-- =========================================================== -->
+  <!-- COL 4 — POOLS (stratum + RPC proxy) -->
+  <!-- =========================================================== -->
+
+  <!-- asic-pool — with total hashrate readout -->
+  <g transform="translate(990 250)">
+    <rect width="180" height="75" rx="8" fill="url(#boxGrad)" stroke="#3aa0ff" stroke-width="1"/>
+    <rect x="6" y="6" width="168" height="12" rx="2" fill="#050810" stroke="#3aa0ff" stroke-width="0.4"/>
+    <text x="14" y="15" fill="#6bd6ff" font-size="7" font-family="JetBrains Mono" font-weight="600">ASIC-POOL · :3334</text>
+    <circle cx="166" cy="12" r="2" fill="#6bd6ff" style="animation: pulseBright 1.5s infinite;"/>
+    <text x="14" y="32" fill="#9bb1cf" font-size="9" font-family="Inter">stratum V1 · PROP</text>
+    <text x="14" y="46" fill="#5d7398" font-size="7" font-family="JetBrains Mono">node-1/2 primary · 3 failover</text>
+    <!-- HASHRATE readout (right side) -->
+    <text x="170" y="40" text-anchor="end" fill="#6bd6ff" font-size="16" font-family="JetBrains Mono" font-weight="700" id="rate-asic-pool">—</text>
+    <text x="170" y="52" text-anchor="end" fill="#9bb1cf" font-size="7" font-family="JetBrains Mono" id="rate-asic-pool-unit">total H/s</text>
+    <!-- mini activity bars (smaller, beneath rate) -->
+    <g transform="translate(115, 66)">
+      <rect x="0"  y="-7" width="2" height="7"  fill="#3aa0ff" style="animation: pulseSoft 1.6s infinite;"/>
+      <rect x="4"  y="-5" width="2" height="5"  fill="#6bd6ff" style="animation: pulseSoft 1.6s infinite; animation-delay:0.2s;"/>
+      <rect x="8"  y="-9" width="2" height="9"  fill="#3aa0ff" style="animation: pulseSoft 1.6s infinite; animation-delay:0.4s;"/>
+      <rect x="12" y="-6" width="2" height="6"  fill="#6bd6ff" style="animation: pulseSoft 1.6s infinite; animation-delay:0.6s;"/>
+      <rect x="16" y="-10" width="2" height="10" fill="#3aa0ff" style="animation: pulseSoft 1.6s infinite; animation-delay:0.8s;"/>
+      <rect x="20" y="-5" width="2" height="5"  fill="#6bd6ff" style="animation: pulseSoft 1.6s infinite; animation-delay:1s;"/>
+    </g>
+    <text x="14" y="70" fill="#5d7398" font-size="6" font-family="JetBrains Mono">PROP · 1% · workers <tspan fill="#6bd6ff" id="workers-asic-pool">—</tspan></text>
+  </g>
+
+  <!-- cpu-gpu-pool — with total hashrate readout -->
+  <g transform="translate(990 345)">
+    <rect width="180" height="75" rx="8" fill="url(#boxGrad)" stroke="#3aa0ff" stroke-width="1"/>
+    <rect x="6" y="6" width="168" height="12" rx="2" fill="#050810" stroke="#3aa0ff" stroke-width="0.4"/>
+    <text x="14" y="15" fill="#6bd6ff" font-size="7" font-family="JetBrains Mono" font-weight="600">CPU-GPU-POOL · :3335</text>
+    <circle cx="166" cy="12" r="2" fill="#6bd6ff" style="animation: pulseBright 1.7s infinite;"/>
+    <text x="14" y="32" fill="#9bb1cf" font-size="9" font-family="Inter">stratum V1 · PPLNS</text>
+    <text x="14" y="46" fill="#5d7398" font-size="7" font-family="JetBrains Mono">node-1/2 primary · 3 failover</text>
+    <!-- HASHRATE readout -->
+    <text x="170" y="40" text-anchor="end" fill="#6bd6ff" font-size="16" font-family="JetBrains Mono" font-weight="700" id="rate-cpu-gpu-pool">—</text>
+    <text x="170" y="52" text-anchor="end" fill="#9bb1cf" font-size="7" font-family="JetBrains Mono" id="rate-cpu-gpu-pool-unit">total H/s</text>
+    <g transform="translate(115, 66)">
+      <rect x="0"  y="-5"  width="2" height="5"  fill="#3aa0ff" style="animation: pulseSoft 1.4s infinite;"/>
+      <rect x="4"  y="-8"  width="2" height="8"  fill="#6bd6ff" style="animation: pulseSoft 1.4s infinite; animation-delay:0.2s;"/>
+      <rect x="8"  y="-3"  width="2" height="3"  fill="#3aa0ff" style="animation: pulseSoft 1.4s infinite; animation-delay:0.4s;"/>
+      <rect x="12" y="-7"  width="2" height="7"  fill="#6bd6ff" style="animation: pulseSoft 1.4s infinite; animation-delay:0.6s;"/>
+      <rect x="16" y="-5"  width="2" height="5"  fill="#3aa0ff" style="animation: pulseSoft 1.4s infinite; animation-delay:0.8s;"/>
+      <rect x="20" y="-9"  width="2" height="9"  fill="#6bd6ff" style="animation: pulseSoft 1.4s infinite; animation-delay:1s;"/>
+    </g>
+    <text x="14" y="70" fill="#5d7398" font-size="6" font-family="JetBrains Mono">PPLNS · 1% · workers <tspan fill="#6bd6ff" id="workers-cpu-gpu-pool">—</tspan></text>
+  </g>
+
+  <!-- hans-solo (DEDICATED, bright) -->
+  <g transform="translate(990 440)">
+    <rect width="180" height="75" rx="8" fill="url(#boxGradX)" stroke="#6bd6ff" stroke-width="1.5"/>
+    <rect x="6" y="6" width="168" height="12" rx="2" fill="#050810" stroke="#6bd6ff" stroke-width="0.5"/>
+    <text x="14" y="15" fill="#6bd6ff" font-size="7" font-family="JetBrains Mono" font-weight="700">HANS-SOLO · :3336</text>
+    <circle cx="166" cy="12" r="2.5" fill="#6bd6ff" style="animation: pulseBright 1.4s infinite;"/>
+    <text x="14" y="32" fill="#e6eef9" font-size="9" font-family="Inter">stratum V1 · SOLO</text>
+    <text x="14" y="46" fill="#6bd6ff" font-size="7" font-family="JetBrains Mono">routes: node-x100 ONLY</text>
+    <text x="14" y="58" fill="#9bb1cf" font-size="7" font-family="JetBrains Mono">no failover · isolation</text>
+    <g transform="translate(132, 56)">
+      <rect x="0"  y="-16" width="3" height="16" fill="#6bd6ff" style="animation: pulseBright 1s infinite;"/>
+      <rect x="6"  y="-18" width="3" height="18" fill="#6bd6ff" style="animation: pulseBright 1s infinite; animation-delay:0.1s;"/>
+      <rect x="12" y="-14" width="3" height="14" fill="#6bd6ff" style="animation: pulseBright 1s infinite; animation-delay:0.2s;"/>
+      <rect x="18" y="-20" width="3" height="20" fill="#6bd6ff" style="animation: pulseBright 1s infinite; animation-delay:0.3s;"/>
+      <rect x="24" y="-17" width="3" height="17" fill="#6bd6ff" style="animation: pulseBright 1s infinite; animation-delay:0.4s;"/>
+      <rect x="30" y="-19" width="3" height="19" fill="#6bd6ff" style="animation: pulseBright 1s infinite; animation-delay:0.5s;"/>
+    </g>
+    <text x="160" y="70" text-anchor="end" fill="#6bd6ff" font-size="6" font-family="JetBrains Mono">SOLO · 0% fee</text>
+  </g>
+
+  <!-- rpc-failover (services-only) -->
+  <g transform="translate(990 545)">
+    <rect width="180" height="75" rx="8" fill="url(#boxGrad)" stroke="#4fa6e6" stroke-width="1"/>
+    <rect x="6" y="6" width="168" height="12" rx="2" fill="#050810" stroke="#4fa6e6" stroke-width="0.4"/>
+    <text x="14" y="15" fill="#4fa6e6" font-size="7" font-family="JetBrains Mono" font-weight="600">RPC-FAILOVER · HAProxy</text>
+    <circle cx="166" cy="12" r="2" fill="#4fa6e6" style="animation: pulseBright 1.8s infinite;"/>
+    <text x="14" y="32" fill="#9bb1cf" font-size="9" font-family="Inter">HTTP proxy · sync-aware</text>
+    <text x="14" y="46" fill="#5d7398" font-size="7" font-family="JetBrains Mono">primary: node-1 · backup: 2+3</text>
+    <text x="14" y="58" fill="#6bd6ff" font-size="7" font-family="JetBrains Mono">2-stage check · auto-failover</text>
+    <g transform="translate(132, 56)">
+      <rect x="0"  y="-8"  width="3" height="8"  fill="#4fa6e6" style="animation: pulseSoft 1.8s infinite;"/>
+      <rect x="6"  y="-12" width="3" height="12" fill="#4fa6e6" style="animation: pulseSoft 1.8s infinite; animation-delay:0.2s;"/>
+      <rect x="12" y="-6"  width="3" height="6"  fill="#4fa6e6" style="animation: pulseSoft 1.8s infinite; animation-delay:0.4s;"/>
+      <rect x="18" y="-10" width="3" height="10" fill="#4fa6e6" style="animation: pulseSoft 1.8s infinite; animation-delay:0.6s;"/>
+      <rect x="24" y="-7"  width="3" height="7"  fill="#4fa6e6" style="animation: pulseSoft 1.8s infinite; animation-delay:0.8s;"/>
+      <rect x="30" y="-13" width="3" height="13" fill="#4fa6e6" style="animation: pulseSoft 1.8s infinite; animation-delay:1s;"/>
+    </g>
+    <text x="160" y="70" text-anchor="end" fill="#5d7398" font-size="6" font-family="JetBrains Mono">explorer + monitor</text>
+  </g>
+
+  <!-- ARCHITECTURE NOTE — HAProxy sync-aware check now LIVE -->
+  <g transform="translate(880 660)">
+    <rect width="290" height="42" rx="6" fill="rgba(107, 214, 255, 0.08)" stroke="rgba(107, 214, 255, 0.4)" stroke-width="0.5"/>
+    <text x="10" y="15" fill="#6bd6ff" font-size="7" font-family="JetBrains Mono" font-weight="700">✓ SYNC-AWARE FAILOVER LIVE</text>
+    <text x="10" y="27" fill="#9bb1cf" font-size="6" font-family="JetBrains Mono">HAProxy 2-stage check: RPC alive + getBlockTemplate</text>
+    <text x="10" y="36" fill="#9bb1cf" font-size="6" font-family="JetBrains Mono">(rejects "initial download"). Auto-failover on sync lag now active.</text>
+  </g>
+
+  <!-- =========================================================== -->
+  <!-- COL 5 — MINERS + SERVICES -->
+  <!-- =========================================================== -->
+
+  <!-- X100 (DEDICATED, with hashrate readout + sparkline) -->
+  <g transform="translate(1300 240)">
+    <rect width="220" height="100" rx="10" fill="url(#boxGradX)" stroke="#6bd6ff" stroke-width="1.5"/>
+    <rect x="6" y="6" width="208" height="14" rx="2" fill="#050810" stroke="#6bd6ff" stroke-width="0.5"/>
+    <text x="14" y="16" fill="#6bd6ff" font-size="8" font-family="JetBrains Mono" font-weight="700">X100 · GOLDSHELL · PRIORITY 1</text>
+    <circle cx="208" cy="13" r="2.5" fill="#6bd6ff" style="animation: pulseBright 1.2s infinite;"/>
+    <!-- twin fans -->
+    <g transform="translate(38, 56)">
+      <circle r="18" fill="#050810" stroke="#6bd6ff" stroke-width="0.6"/>
+      <g style="animation: spin 0.9s linear infinite; transform-origin: center; transform-box: fill-box;">
+        <path d="M 0 -15 Q 5 -10 3 -5 Q 0 -3 -3 -5 Q -5 -10 0 -15 Z" fill="#6bd6ff" opacity="0.7"/>
+        <path d="M 0 -15 Q 5 -10 3 -5 Q 0 -3 -3 -5 Q -5 -10 0 -15 Z" transform="rotate(60)" fill="#6bd6ff" opacity="0.7"/>
+        <path d="M 0 -15 Q 5 -10 3 -5 Q 0 -3 -3 -5 Q -5 -10 0 -15 Z" transform="rotate(120)" fill="#6bd6ff" opacity="0.7"/>
+        <path d="M 0 -15 Q 5 -10 3 -5 Q 0 -3 -3 -5 Q -5 -10 0 -15 Z" transform="rotate(180)" fill="#6bd6ff" opacity="0.7"/>
+        <path d="M 0 -15 Q 5 -10 3 -5 Q 0 -3 -3 -5 Q -5 -10 0 -15 Z" transform="rotate(240)" fill="#6bd6ff" opacity="0.7"/>
+        <path d="M 0 -15 Q 5 -10 3 -5 Q 0 -3 -3 -5 Q -5 -10 0 -15 Z" transform="rotate(300)" fill="#6bd6ff" opacity="0.7"/>
+      </g>
+      <circle r="3" fill="#0a1428" stroke="#6bd6ff"/>
+    </g>
+    <g transform="translate(80, 56)">
+      <circle r="18" fill="#050810" stroke="#6bd6ff" stroke-width="0.6"/>
+      <g style="animation: spinRev 0.9s linear infinite; transform-origin: center; transform-box: fill-box;">
+        <path d="M 0 -15 Q 5 -10 3 -5 Q 0 -3 -3 -5 Q -5 -10 0 -15 Z" fill="#6bd6ff" opacity="0.7"/>
+        <path d="M 0 -15 Q 5 -10 3 -5 Q 0 -3 -3 -5 Q -5 -10 0 -15 Z" transform="rotate(60)" fill="#6bd6ff" opacity="0.7"/>
+        <path d="M 0 -15 Q 5 -10 3 -5 Q 0 -3 -3 -5 Q -5 -10 0 -15 Z" transform="rotate(120)" fill="#6bd6ff" opacity="0.7"/>
+        <path d="M 0 -15 Q 5 -10 3 -5 Q 0 -3 -3 -5 Q -5 -10 0 -15 Z" transform="rotate(180)" fill="#6bd6ff" opacity="0.7"/>
+        <path d="M 0 -15 Q 5 -10 3 -5 Q 0 -3 -3 -5 Q -5 -10 0 -15 Z" transform="rotate(240)" fill="#6bd6ff" opacity="0.7"/>
+        <path d="M 0 -15 Q 5 -10 3 -5 Q 0 -3 -3 -5 Q -5 -10 0 -15 Z" transform="rotate(300)" fill="#6bd6ff" opacity="0.7"/>
+      </g>
+      <circle r="3" fill="#0a1428" stroke="#6bd6ff"/>
+    </g>
+    <!-- hashrate big -->
+    <text x="170" y="50" text-anchor="middle" fill="#6bd6ff" font-size="18" font-family="JetBrains Mono" font-weight="700">243</text>
+    <text x="170" y="62" text-anchor="middle" fill="#9bb1cf" font-size="7" font-family="JetBrains Mono">MH/s</text>
+    <!-- sparkline showing recent hashrate -->
+    <polyline points="115,80 130,76 145,78 160,74 175,72 190,75 205,73"
+              fill="none" stroke="#6bd6ff" stroke-width="1.4"/>
+    <text x="14" y="93" fill="#5d7398" font-size="6" font-family="JetBrains Mono">845 MHz · 0.86V · hans-solo:3336</text>
+  </g>
+
+  <!-- X30 ASICs -->
+  <g transform="translate(1300 380)">
+    <rect width="220" height="65" rx="8" fill="url(#boxGrad)" stroke="#3aa0ff" stroke-width="1"/>
+    <rect x="6" y="6" width="208" height="12" rx="2" fill="#050810" stroke="#3aa0ff" stroke-width="0.4"/>
+    <text x="14" y="15" fill="#6bd6ff" font-size="7" font-family="JetBrains Mono" font-weight="600">X30 ASICs · PRIORITY 3</text>
+    <circle cx="206" cy="12" r="2" fill="hsl(210, 70%, 60%)" style="animation: blink 2s infinite;"/>
+    <!-- mini ASIC icons -->
+    <g transform="translate(14, 30)">
+      <rect width="22" height="22" rx="2" fill="#050810" stroke="#3aa0ff" stroke-width="0.5"/>
+      <circle cx="6" cy="11" r="4" fill="none" stroke="#3aa0ff" stroke-width="0.4"/>
+      <circle cx="16" cy="11" r="4" fill="none" stroke="#3aa0ff" stroke-width="0.4"/>
+    </g>
+    <g transform="translate(40, 30)">
+      <rect width="22" height="22" rx="2" fill="#050810" stroke="#3aa0ff" stroke-width="0.5"/>
+      <circle cx="6" cy="11" r="4" fill="none" stroke="#3aa0ff" stroke-width="0.4"/>
+      <circle cx="16" cy="11" r="4" fill="none" stroke="#3aa0ff" stroke-width="0.4"/>
+    </g>
+    <g transform="translate(66, 30)">
+      <rect width="22" height="22" rx="2" fill="#050810" stroke="#3aa0ff" stroke-width="0.5"/>
+      <circle cx="6" cy="11" r="4" fill="none" stroke="#3aa0ff" stroke-width="0.4"/>
+      <circle cx="16" cy="11" r="4" fill="none" stroke="#3aa0ff" stroke-width="0.4"/>
+    </g>
+    <text x="100" y="42" fill="#9bb1cf" font-size="9" font-family="Inter">→ asic-pool :3334</text>
+    <text x="14" y="58" fill="#5d7398" font-size="6" font-family="JetBrains Mono">0x17e9...b50ac · CT via WG</text>
+  </g>
+
+  <!-- GPU/CPU Rigs -->
+  <g transform="translate(1300 470)">
+    <rect width="220" height="65" rx="8" fill="url(#boxGrad)" stroke="#3aa0ff" stroke-width="1"/>
+    <rect x="6" y="6" width="208" height="12" rx="2" fill="#050810" stroke="#3aa0ff" stroke-width="0.4"/>
+    <text x="14" y="15" fill="#6bd6ff" font-size="7" font-family="JetBrains Mono" font-weight="600">GPU + CPU RIGS · PRIORITY 2</text>
+    <circle cx="206" cy="12" r="2" fill="hsl(210, 70%, 60%)" style="animation: blink 2s infinite;"/>
+    <!-- mini tower icons -->
+    <g transform="translate(14, 28)">
+      <rect width="14" height="26" rx="1" fill="#050810" stroke="#3aa0ff" stroke-width="0.5"/>
+      <circle cx="7" cy="8" r="3" fill="none" stroke="#3aa0ff" stroke-width="0.4"/>
+      <line x1="3" y1="16" x2="11" y2="16" stroke="#3aa0ff" stroke-width="0.3"/>
+      <line x1="3" y1="19" x2="11" y2="19" stroke="#3aa0ff" stroke-width="0.3"/>
+    </g>
+    <g transform="translate(32, 28)">
+      <rect width="14" height="26" rx="1" fill="#050810" stroke="#3aa0ff" stroke-width="0.5"/>
+      <circle cx="7" cy="8" r="3" fill="none" stroke="#3aa0ff" stroke-width="0.4"/>
+      <line x1="3" y1="16" x2="11" y2="16" stroke="#3aa0ff" stroke-width="0.3"/>
+      <line x1="3" y1="19" x2="11" y2="19" stroke="#3aa0ff" stroke-width="0.3"/>
+    </g>
+    <g transform="translate(50, 28)">
+      <rect width="14" height="26" rx="1" fill="#050810" stroke="#3aa0ff" stroke-width="0.5"/>
+      <circle cx="7" cy="8" r="3" fill="none" stroke="#3aa0ff" stroke-width="0.4"/>
+      <line x1="3" y1="16" x2="11" y2="16" stroke="#3aa0ff" stroke-width="0.3"/>
+      <line x1="3" y1="19" x2="11" y2="19" stroke="#3aa0ff" stroke-width="0.3"/>
+    </g>
+    <text x="80" y="42" fill="#9bb1cf" font-size="9" font-family="Inter">→ cpu-gpu-pool :3335</text>
+    <text x="14" y="58" fill="#5d7398" font-size="6" font-family="JetBrains Mono">dagtech-miner · CT + USW · 10.10/10.20</text>
+  </g>
+
+  <!-- Explorer + Stats + Netstats (services, smaller cards) -->
+  <g transform="translate(1300 570)">
+    <rect width="220" height="160" rx="8" fill="url(#boxGrad)" stroke="#4fa6e6" stroke-width="0.9"/>
+    <rect x="6" y="6" width="208" height="12" rx="2" fill="#050810" stroke="#4fa6e6" stroke-width="0.4"/>
+    <text x="14" y="15" fill="#4fa6e6" font-size="7" font-family="JetBrains Mono" font-weight="600">SERVICES · FRONTENDS</text>
+    <!-- 3 service rows -->
+    <g transform="translate(10, 28)">
+      <circle cx="6" cy="6" r="3" fill="#4fa6e6" style="animation: blink 2s infinite;"/>
+      <text x="15" y="9" fill="#9bb1cf" font-size="9" font-family="Space Grotesk" font-weight="500">Explorer</text>
+      <text x="15" y="20" fill="#5d7398" font-size="6" font-family="JetBrains Mono">explorer.dagtech.network</text>
+      <text x="200" y="9" text-anchor="end" fill="#5d7398" font-size="6" font-family="JetBrains Mono">blockscout</text>
+    </g>
+    <line x1="10" y1="54" x2="210" y2="54" stroke="#4fa6e6" stroke-width="0.3" opacity="0.4"/>
+    <g transform="translate(10, 58)">
+      <circle cx="6" cy="6" r="3" fill="#4fa6e6" style="animation: blink 2.2s infinite;"/>
+      <text x="15" y="9" fill="#9bb1cf" font-size="9" font-family="Space Grotesk" font-weight="500">Stats + Grafana</text>
+      <text x="15" y="20" fill="#5d7398" font-size="6" font-family="JetBrains Mono">stats.dagtech.network</text>
+      <text x="200" y="9" text-anchor="end" fill="#5d7398" font-size="6" font-family="JetBrains Mono">prometheus</text>
+    </g>
+    <line x1="10" y1="84" x2="210" y2="84" stroke="#4fa6e6" stroke-width="0.3" opacity="0.4"/>
+    <g transform="translate(10, 88)">
+      <circle cx="6" cy="6" r="3" fill="#4fa6e6" style="animation: blink 2.4s infinite;"/>
+      <text x="15" y="9" fill="#9bb1cf" font-size="9" font-family="Space Grotesk" font-weight="500">Netstats</text>
+      <text x="15" y="20" fill="#5d7398" font-size="6" font-family="JetBrains Mono">netstats.dagtech.network</text>
+      <text x="200" y="9" text-anchor="end" fill="#5d7398" font-size="6" font-family="JetBrains Mono">realtime</text>
+    </g>
+    <line x1="10" y1="114" x2="210" y2="114" stroke="#4fa6e6" stroke-width="0.3" opacity="0.4"/>
+    <g transform="translate(10, 118)">
+      <circle cx="6" cy="6" r="3" fill="#4fa6e6" style="animation: blink 2.6s infinite;"/>
+      <text x="15" y="9" fill="#9bb1cf" font-size="9" font-family="Space Grotesk" font-weight="500">RPC Gateway</text>
+      <text x="15" y="20" fill="#5d7398" font-size="6" font-family="JetBrains Mono">rpc.dagtech.network · CACHE LIVE</text>
+      <text x="200" y="9" text-anchor="end" fill="#6bd6ff" font-size="6" font-family="JetBrains Mono">nginx</text>
+    </g>
+    <!-- mini sparkline footer -->
+    <polyline points="14,150 26,148 38,144 50,146 62,142 74,144 86,140 98,143 110,138 122,140 134,135 146,138 158,134 170,136 182,131 194,134 206,128"
+              fill="none" stroke="#4fa6e6" stroke-width="1" opacity="0.5"/>
+  </g>
+
+</svg>
+</div>
+
+<footer>
+  <strong>WIRES</strong>
+  <div class="legend-item"><span class="legend-line dedicated"></span><span>X100 dedicated · active</span></div>
+  <div class="legend-item"><span class="legend-line"></span><span>Active primary (carrying flow)</span></div>
+  <div class="legend-item"><span class="legend-line service"></span><span>Active service path</span></div>
+  <div class="legend-item"><span class="legend-line failover"></span><span style="color:#7f8da6;">Warm standby (ready, no flow)</span></div>
+  <strong style="margin-left:30px;">STATUS</strong>
+  <div class="legend-item"><span class="legend-dot ok"></span><span>Live / healthy</span></div>
+  <div class="legend-item"><span class="legend-dot warn"></span><span style="color:#ffa53d;font-weight:600;">Warning / catching up / overloaded</span></div>
+  <div class="legend-item"><span class="legend-dot bad"></span><span style="color:#ff4d4d;font-weight:600;">Critical / down</span></div>
+  <div class="legend-item"><span class="legend-dot cool"></span><span>Standby</span></div>
+  <div style="margin-left:auto; font-size:10px; color:var(--text-3); letter-spacing:1.2px; text-transform:uppercase;">
+    DagTech Mesh · live data via cached rpc.dagtech.network
+  </div>
+</footer>
+
+<script>
+  const RPC = 'https://rpc.dagtech.network';
+  const BDAGSCAN = 'https://rpc.bdagscan.com';
+  async function jsonRpc(url, method, params=[]) {
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({jsonrpc:'2.0', id:1, method, params})
+      });
+      const j = await r.json();
+      return j.result;
+    } catch(e) { return null; }
+  }
+  function fmtBdag(weiHex) {
+    if (!weiHex) return '—';
+    const w = BigInt(weiHex);
+    return (Number(w / (10n ** 14n)) / 10000).toLocaleString('en-US', {maximumFractionDigits: 0}) + ' BDAG';
+  }
+  function fmtBlock(hex) {
+    if (!hex) return '—';
+    return Number(BigInt(hex)).toLocaleString('en-US');
+  }
+  function setText(id, val) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = val;
+  }
+  function timeAgo(seconds) {
+    if (seconds < 60) return seconds + 's ago';
+    if (seconds < 3600) return Math.floor(seconds/60) + 'm ago';
+    return Math.floor(seconds/3600) + 'h ago';
+  }
+  let lastUpdateTs = Date.now();
+  setInterval(() => {
+    const elapsed = Math.floor((Date.now() - lastUpdateTs) / 1000);
+    setText('last-update', elapsed === 0 ? 'live' : timeAgo(elapsed));
+  }, 1000);
+
+  // Header chain-tip pill — turn amber if our cached RPC is more than 30 blocks behind public
+  function colorChainTip(ourBlock, publicBlock) {
+    const el = document.getElementById('chain-tip');
+    if (!el || !ourBlock || !publicBlock) return;
+    const lag = Number(BigInt(publicBlock) - BigInt(ourBlock));
+    if (lag > 100)     el.style.color = '#ff4d4d';
+    else if (lag > 30) el.style.color = '#ffa53d';
+    else               el.style.color = '#6bd6ff';
+  }
+
+  // Format hashrate with sensible units
+  function fmtRate(hps) {
+    if (hps == null || isNaN(hps) || hps <= 0) return ['—', 'total H/s'];
+    if (hps >= 1e12) return [(hps/1e12).toFixed(2), 'TH/s'];
+    if (hps >= 1e9)  return [(hps/1e9 ).toFixed(2), 'GH/s'];
+    if (hps >= 1e6)  return [(hps/1e6 ).toFixed(1), 'MH/s'];
+    if (hps >= 1e3)  return [(hps/1e3 ).toFixed(1), 'kH/s'];
+    return [Math.round(hps).toString(), 'H/s'];
+  }
+  function setRate(idBase, hps, workers) {
+    const [num, unit] = fmtRate(hps);
+    setText('rate-' + idBase, num);
+    setText('rate-' + idBase + '-unit', unit);
+    setText('workers-' + idBase, workers != null ? String(workers) : '—');
+  }
+
+  // Try to fetch pool stats from a CORS-friendly endpoint (TBD — to be added at rpc.dagtech.network/pools/stats)
+  // Expected JSON shape:
+  //   { "asic-pool":    { "hashrate_hps": 12345678, "workers": 3 },
+  //     "cpu-gpu-pool": { "hashrate_hps":   234567, "workers": 4 } }
+  async function pullPoolStats() {
+    const endpoints = [
+      'https://rpc.dagtech.network/pools/stats',
+      'https://stats.dagtech.network/api/pools',  // fallback if Grafana exposes a public proxy
+    ];
+    for (const url of endpoints) {
+      try {
+        const r = await fetch(url, { headers: {'Accept':'application/json'}, signal: AbortSignal.timeout(4000) });
+        if (!r.ok) continue;
+        const j = await r.json();
+        if (j['asic-pool'])    setRate('asic-pool',    j['asic-pool'].hashrate_hps,    j['asic-pool'].workers);
+        if (j['cpu-gpu-pool']) setRate('cpu-gpu-pool', j['cpu-gpu-pool'].hashrate_hps, j['cpu-gpu-pool'].workers);
+        return true;
+      } catch (e) { /* try next */ }
+    }
+    return false;
+  }
+
+  async function pullData() {
+    const block = await jsonRpc(RPC, 'eth_blockNumber');
+    if (block) {
+      const fb = fmtBlock(block);
+      setText('evm-block', fb);
+      setText('chain-tip', fb);
+      setText('t-mainnet-tip', fb);
+    }
+    const bal = await jsonRpc(RPC, 'eth_getBalance', ['0x6387C32ccDD60BfBa00EC70A67715Dcd52E8083f','latest']);
+    if (bal) setText('wallet-balance', fmtBdag(bal));
+    const ext = await jsonRpc(BDAGSCAN, 'eth_blockNumber');
+    if (ext) {
+      setText('t-bdagscan-block', fmtBlock(ext));
+      colorChainTip(block, ext);
+    }
+    // pool hashrates — best-effort, fails silently if endpoint not yet exposed
+    await pullPoolStats();
+    lastUpdateTs = Date.now();
+  }
+  pullData();
+  setInterval(pullData, 10000);
+</script>
+
+</body>
+</html>
