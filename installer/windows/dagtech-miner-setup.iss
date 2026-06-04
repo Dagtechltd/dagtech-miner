@@ -21,10 +21,10 @@ AppUpdatesURL={#MinerURL}
 DefaultDirName={userappdata}\DagTech Miner
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
-LicenseFile=..\..\LICENSE
+; LicenseFile=..\..\LICENSE
 OutputDir=..\..\dist
 OutputBaseFilename=DagTech-Miner-v{#AppVersion}-Setup
-SetupIconFile=..\..\assets\dagtech.ico
+; SetupIconFile=..\..\assets\dagtech.ico
 Compression=lzma2/ultra64
 SolidCompression=yes
 WizardStyle=modern
@@ -39,8 +39,8 @@ VersionInfoDescription=BlockDAG Network Mining Software
 VersionInfoProductName={#AppName}
 ArchitecturesInstallIn64BitMode=x64compatible
 MinVersion=10.0
-WizardImageFile=wizard-large.bmp
-WizardSmallImageFile=wizard-small.bmp
+; WizardImageFile=wizard-large.bmp
+; WizardSmallImageFile=wizard-small.bmp
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -67,7 +67,7 @@ Source: "..\..\dashboard\index.html"; DestDir: "{app}\dashboard"; Flags: ignorev
 Source: "..\..\dashboard\dashboard_server.py"; DestDir: "{app}\dashboard"; Flags: ignoreversion
 
 ; Icon
-Source: "..\..\assets\dagtech.ico"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\assets\dagtech.ico"; DestDir: "{app}"; Flags: ignoreversion skipifsourcedoesntexist
 
 ; Python embedded (portable, no system install needed)
 Source: "python-embed\*"; DestDir: "{app}\python"; Flags: ignoreversion recursesubdirs createallsubdirs skipifsourcedoesntexist
