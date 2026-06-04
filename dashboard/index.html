@@ -392,67 +392,137 @@ body::before {
   border-radius: 0 4px 4px 0;
 }
 
-/* ===== MINER START/STOP BUTTON ===== */
+/* ===== MINER START/STOP — REACTOR CORE ===== */
+.miner-toggle-wrap {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Outer spinning ring */
+.reactor-ring {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px dashed rgba(30, 144, 255, 0.2);
+  animation: spinSlow 20s linear infinite;
+  pointer-events: none;
+}
+.reactor-ring-2 {
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(30, 144, 255, 0.1);
+  border-top-color: rgba(102, 179, 255, 0.4);
+  border-right-color: rgba(102, 179, 255, 0.4);
+  animation: spinFast 8s linear infinite reverse;
+  pointer-events: none;
+}
+.reactor-ring-3 {
+  position: absolute;
+  inset: 16px;
+  border-radius: 50%;
+  border: 1px dotted rgba(30, 144, 255, 0.15);
+  animation: spinSlow 12s linear infinite;
+  pointer-events: none;
+}
+
+/* Particle dots orbiting */
+.reactor-particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: var(--blue-bright);
+  border-radius: 50%;
+  box-shadow: 0 0 6px var(--blue), 0 0 12px rgba(30, 144, 255, 0.4);
+  pointer-events: none;
+}
+.reactor-particle:nth-child(1) { top: 0; left: 50%; animation: orbit1 6s linear infinite; }
+.reactor-particle:nth-child(2) { top: 50%; right: 0; animation: orbit2 8s linear infinite; }
+.reactor-particle:nth-child(3) { bottom: 0; left: 30%; animation: orbit3 10s linear infinite; }
+
+/* The actual button */
 .miner-toggle-btn {
   position: relative;
-  width: 100px;
-  height: 100px;
+  width: 110px;
+  height: 110px;
   border-radius: 50%;
-  border: 3px solid var(--blue);
-  background: rgba(30, 144, 255, 0.08);
+  border: 3px solid var(--blue-dim);
+  background: radial-gradient(circle at 40% 35%, rgba(30, 144, 255, 0.12) 0%, rgba(8, 11, 20, 0.95) 70%);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
   outline: none;
-  color: var(--blue-bright);
+  color: var(--text-secondary);
+  z-index: 2;
 }
 .miner-toggle-btn:hover {
-  background: rgba(30, 144, 255, 0.15);
-  box-shadow: 0 0 40px rgba(30, 144, 255, 0.3), 0 0 80px rgba(30, 144, 255, 0.1);
-  transform: scale(1.05);
+  border-color: var(--blue);
+  color: var(--blue-bright);
+  background: radial-gradient(circle at 40% 35%, rgba(30, 144, 255, 0.2) 0%, rgba(8, 11, 20, 0.9) 70%);
+  box-shadow: 0 0 40px rgba(30, 144, 255, 0.25), 0 0 80px rgba(30, 144, 255, 0.08);
+  transform: scale(1.06);
 }
-.miner-toggle-btn:active {
-  transform: scale(0.95);
-}
+.miner-toggle-btn:active { transform: scale(0.94); }
+
+/* STOPPED state */
+.miner-toggle-btn.stopped { border-color: var(--blue-dim); color: var(--text-secondary); }
+.miner-toggle-btn.stopped ~ .reactor-ring,
+.miner-toggle-btn.stopped ~ .reactor-ring-2,
+.miner-toggle-btn.stopped ~ .reactor-ring-3 { opacity: 0.3; }
+.miner-toggle-btn.stopped ~ .reactor-particle { opacity: 0; }
+
+/* RUNNING state — the reactor comes alive */
 .miner-toggle-btn.running {
   border-color: var(--blue-bright);
-  background: rgba(30, 144, 255, 0.12);
-  box-shadow: 0 0 30px rgba(30, 144, 255, 0.25), 0 0 60px rgba(30, 144, 255, 0.08);
-  animation: pulseGlow 2s ease-in-out infinite;
+  color: var(--blue-bright);
+  background: radial-gradient(circle at 40% 35%, rgba(30, 144, 255, 0.25) 0%, rgba(10, 20, 50, 0.9) 60%);
+  box-shadow:
+    0 0 20px rgba(30, 144, 255, 0.3),
+    0 0 50px rgba(30, 144, 255, 0.15),
+    0 0 100px rgba(30, 144, 255, 0.05),
+    inset 0 0 30px rgba(30, 144, 255, 0.1);
+  animation: coreGlow 2.5s ease-in-out infinite;
 }
-.miner-toggle-btn.stopped {
-  border-color: var(--blue-dim);
-  color: var(--text-secondary);
-}
-.miner-toggle-ring {
-  position: absolute;
-  inset: -8px;
-  border-radius: 50%;
-  border: 1px solid rgba(30, 144, 255, 0.15);
-  pointer-events: none;
-}
-.miner-toggle-btn.running .miner-toggle-ring {
-  border-color: rgba(30, 144, 255, 0.3);
-  animation: ringPulse 2s ease-in-out infinite;
-}
-.miner-toggle-icon svg { width: 36px; height: 36px; }
+.miner-toggle-btn.running ~ .reactor-ring { opacity: 1; border-color: rgba(30, 144, 255, 0.35); }
+.miner-toggle-btn.running ~ .reactor-ring-2 { opacity: 1; border-top-color: rgba(102, 179, 255, 0.6); border-right-color: rgba(102, 179, 255, 0.6); }
+.miner-toggle-btn.running ~ .reactor-ring-3 { opacity: 1; }
+.miner-toggle-btn.running ~ .reactor-particle { opacity: 1; }
+
+.miner-toggle-icon { position: relative; z-index: 3; }
+.miner-toggle-icon svg { width: 40px; height: 40px; filter: drop-shadow(0 0 8px rgba(30, 144, 255, 0.5)); }
+.miner-toggle-btn.stopped .miner-toggle-icon svg { filter: none; }
+
 .miner-toggle-label {
-  margin-top: 12px;
+  margin-top: 16px;
   font-family: var(--font-heading);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-secondary);
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
 }
-@keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 30px rgba(30, 144, 255, 0.25), 0 0 60px rgba(30, 144, 255, 0.08); }
-  50% { box-shadow: 0 0 45px rgba(30, 144, 255, 0.35), 0 0 90px rgba(30, 144, 255, 0.12); }
+
+/* Animations */
+@keyframes spinSlow { to { transform: rotate(360deg); } }
+@keyframes spinFast { to { transform: rotate(360deg); } }
+@keyframes coreGlow {
+  0%, 100% { box-shadow: 0 0 20px rgba(30,144,255,0.3), 0 0 50px rgba(30,144,255,0.15), 0 0 100px rgba(30,144,255,0.05), inset 0 0 30px rgba(30,144,255,0.1); }
+  50% { box-shadow: 0 0 35px rgba(30,144,255,0.45), 0 0 70px rgba(30,144,255,0.2), 0 0 120px rgba(30,144,255,0.08), inset 0 0 40px rgba(30,144,255,0.15); }
 }
-@keyframes ringPulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.08); opacity: 0.6; }
+@keyframes orbit1 {
+  0% { top: 0; left: 50%; } 25% { top: 50%; left: 100%; } 50% { top: 100%; left: 50%; } 75% { top: 50%; left: 0; } 100% { top: 0; left: 50%; }
+}
+@keyframes orbit2 {
+  0% { top: 50%; right: 0; } 25% { top: 0; right: 50%; } 50% { top: 50%; right: 100%; } 75% { top: 100%; right: 50%; } 100% { top: 50%; right: 0; }
+}
+@keyframes orbit3 {
+  0% { bottom: 0; left: 30%; } 33% { bottom: 50%; left: 100%; } 66% { bottom: 100%; left: 60%; } 100% { bottom: 0; left: 30%; }
 }
 
 /* ===== WALLET ADDRESS ===== */
@@ -1066,17 +1136,24 @@ input[type="range"] {
         </div>
       </div>
 
-      <!-- MINER CONTROL -->
-      <div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;">
-        <button id="btnMinerToggle" class="miner-toggle-btn stopped" onclick="toggleMiner()">
-          <div class="miner-toggle-icon" id="toggleIcon">
-            <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor" width="40" height="40"><polygon points="6,3 20,12 6,21"/></svg>
-            <svg id="iconStop" viewBox="0 0 24 24" fill="currentColor" width="40" height="40" style="display:none"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
-          </div>
-          <div class="miner-toggle-ring"></div>
-        </button>
+      <!-- MINER CONTROL — REACTOR CORE -->
+      <div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px 24px;">
+        <div class="miner-toggle-wrap">
+          <button id="btnMinerToggle" class="miner-toggle-btn stopped" onclick="toggleMiner()">
+            <div class="miner-toggle-icon" id="toggleIcon">
+              <svg id="iconPlay" viewBox="0 0 24 24" fill="currentColor"><polygon points="6,3 20,12 6,21"/></svg>
+              <svg id="iconStop" viewBox="0 0 24 24" fill="currentColor" style="display:none"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+            </div>
+          </button>
+          <div class="reactor-ring"></div>
+          <div class="reactor-ring-2"></div>
+          <div class="reactor-ring-3"></div>
+          <div class="reactor-particle"></div>
+          <div class="reactor-particle"></div>
+          <div class="reactor-particle"></div>
+        </div>
         <div class="miner-toggle-label" id="toggleLabel">Start Mining</div>
-        <div class="card-subtitle" id="mCpu" style="margin-top:8px">CPU: --%</div>
+        <div class="card-subtitle" id="mCpu" style="margin-top:10px">CPU: --%</div>
         <div class="progress-track" style="width:100%;margin-top:6px">
           <div class="progress-fill" id="mCpuBar" style="width:0%"></div>
         </div>
