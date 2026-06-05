@@ -1,18 +1,155 @@
 #!/usr/bin/env python3
-"""DagTech Miner Dashboard Server v3.0
+"""DagTech Miner Dashboard Server v3.1
 Serves the dashboard UI and provides API endpoints for:
 - GET  /api/metrics   — proxied from miner's metrics port
 - GET  /api/config    — read current config.env
 - POST /api/config    — write config.env
 - POST /api/restart   — restart the miner process
 - GET  /api/hardware  — detect CPU, GPU, RAM, OS
+- GET  /api/diagnose  — installer-sensitivity diagnostics (NEW v3.1)
+
+v3.1 changes:
+- Install path auto-discovered from script location (no hardcoded ~/.dagtech-miner)
+- restart_miner() returns ACTIONABLE errors (launcher missing, config missing, dev-wallet)
+- New /api/diagnose endpoint surfaces install-integrity issues to the dashboard banner
 """
 import http.server, json, os, platform, re, signal, subprocess, sys, urllib.request
 
 DD = os.path.dirname(os.path.abspath(__file__))
 MU = "http://127.0.0.1:8880/"
-CONFIG_FILE = os.path.join(os.path.expanduser("~"), ".dagtech-miner", "config.env")
-BIN_DIR = os.path.join(os.path.expanduser("~"), ".dagtech-miner", "bin")
+
+# Dev wallet — Inno Setup ships this as the default. Refuse to mine to it.
+DEV_WALLET = "0x6387C32cCDD60BfBa00EC70A67715Dcd52E8083f"
+
+
+def discover_install_paths():
+    """Auto-detect install layout. Tries (in order):
+      1. Sibling of this script (dashboard_server.py lives in <install>/dashboard/)
+      2. ~/.dagtech-miner (legacy path)
+      3. ~/dagtech-miner (no-dot variant — what the Inno Setup wizard produces when
+         users edit the default path)
+    Returns dict with bin_dir, config_file, log_dir, install_dir, source.
+    """
+    candidates = []
+
+    # 1. Derive from this script's location (most reliable)
+    script_install = os.path.normpath(os.path.join(DD, ".."))
+    candidates.append(("script_relative", script_install))
+
+    # 2. Standard dot path
+    candidates.append(("user_dot", os.path.join(os.path.expanduser("~"), ".dagtech-miner")))
+
+    # 3. No-dot variant (Inno Setup wizard footgun)
+    candidates.append(("user_nodot", os.path.join(os.path.expanduser("~"), "dagtech-miner")))
+
+    bin_name = "dagtech-start.bat" if platform.system() == "Windows" else "dagtech-start"
+
+    for source, root in candidates:
+        bin_dir = os.path.join(root, "bin")
+        if os.path.isdir(bin_dir) and os.path.exists(os.path.join(bin_dir, bin_name)):
+            return {
+                "install_dir": root,
+                "bin_dir": bin_dir,
+                "config_file": _find_config(root),
+                "log_dir": os.path.join(root, "logs"),
+                "source": source,
+            }
+
+    # Nothing found — return script-relative anyway, dashboard will diagnose
+    return {
+        "install_dir": script_install,
+        "bin_dir": os.path.join(script_install, "bin"),
+        "config_file": _find_config(script_install),
+        "log_dir": os.path.join(script_install, "logs"),
+        "source": "fallback",
+    }
+
+
+def _find_config(root):
+    """Config can live in install dir OR ~/.dagtech-miner (legacy). Prefer install dir."""
+    candidates = [
+        os.path.join(root, "config.env"),
+        os.path.join(os.path.expanduser("~"), ".dagtech-miner", "config.env"),
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return candidates[0]  # default to install-dir path even if missing
+
+
+PATHS = discover_install_paths()
+CONFIG_FILE = PATHS["config_file"]
+BIN_DIR = PATHS["bin_dir"]
+LOG_DIR = PATHS["log_dir"]
+INSTALL_DIR = PATHS["install_dir"]
+
+
+def diagnose():
+    """Return list of installer-integrity issues — surfaced to dashboard banner.
+    Each issue is {severity, code, message, fix}.
+    """
+    issues = []
+    bin_name = "dagtech-start.bat" if platform.system() == "Windows" else "dagtech-start"
+    cpu_name = "dagtech-miner.exe" if platform.system() == "Windows" else "dagtech-miner"
+
+    # Config presence
+    if not os.path.exists(CONFIG_FILE):
+        issues.append({
+            "severity": "error", "code": "CONFIG_MISSING",
+            "message": f"config.env not found at {CONFIG_FILE}",
+            "fix": "Re-run the installer wizard to generate config.env, or create it manually with WALLET, POOL_HOST, POOL_PORT.",
+        })
+
+    # Launcher presence
+    launcher = os.path.join(BIN_DIR, bin_name)
+    if not os.path.exists(launcher):
+        issues.append({
+            "severity": "error", "code": "LAUNCHER_MISSING",
+            "message": f"Launcher script not found at {launcher}",
+            "fix": f"Install path may be wrong. Files were expected under {INSTALL_DIR}. Re-run installer or copy/move install folder.",
+        })
+
+    # Binary presence
+    cpu_bin = os.path.join(BIN_DIR, cpu_name)
+    if not os.path.exists(cpu_bin):
+        issues.append({
+            "severity": "error", "code": "BINARY_MISSING",
+            "message": f"Miner binary not found at {cpu_bin}",
+            "fix": "Install appears incomplete. Re-run the installer.",
+        })
+
+    # Config sanity
+    if os.path.exists(CONFIG_FILE):
+        cfg = read_config()
+        wallet = cfg.get("WALLET", "").strip()
+        if not wallet:
+            issues.append({
+                "severity": "error", "code": "WALLET_EMPTY",
+                "message": "WALLET is empty in config.env",
+                "fix": "Open Settings tab and set your BlockDAG wallet address.",
+            })
+        elif not re.match(r"^0x[0-9a-fA-F]{40}$", wallet):
+            issues.append({
+                "severity": "error", "code": "WALLET_MALFORMED",
+                "message": f"WALLET '{wallet}' is not a valid 0x address (need 0x + 40 hex chars).",
+                "fix": "Open Settings tab and paste the full wallet address.",
+            })
+        elif wallet.lower() == DEV_WALLET.lower():
+            issues.append({
+                "severity": "error", "code": "WALLET_IS_DEV_DEFAULT",
+                "message": "WALLET is set to the bundled developer wallet — rewards would go to the developer, not you.",
+                "fix": "Open Settings tab and set YOUR own wallet address before starting.",
+            })
+
+        host = cfg.get("POOL_HOST", "").strip()
+        if host in ("", "127.0.0.1", "localhost"):
+            issues.append({
+                "severity": "warning", "code": "POOL_LOCALHOST",
+                "message": f"POOL_HOST is '{host}' — miner will try to connect to your own machine.",
+                "fix": "Change POOL_HOST to excalibur.dagtech.network in the Settings tab.",
+            })
+
+    return issues
 
 
 def read_config():
@@ -36,8 +173,8 @@ def write_config(cfg):
     os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
     lines = [
         "# DagTech Miner Configuration",
-        "# Generated by DagTech Dashboard v3.0",
-        f"# https://dagtech.network",
+        "# Generated by DagTech Dashboard v3.1",
+        "# https://dagtech.network",
         "",
     ]
     key_order = [
@@ -157,24 +294,43 @@ def stop_miner():
 
 
 def restart_miner():
-    """Stop and restart the miner process."""
+    """Stop and restart the miner process.
+    Returns True on success, or a dict {error, code, fix} for actionable failures.
+    """
+    # Pre-flight: any blocking diagnostics? If so, refuse to start with actionable message.
+    blockers = [i for i in diagnose() if i["severity"] == "error"]
+    if blockers:
+        first = blockers[0]
+        return {
+            "error": first["message"],
+            "code": first["code"],
+            "fix": first["fix"],
+            "additional_issues": [i["code"] for i in blockers[1:]],
+        }
+
     system = platform.system()
+    bin_name = "dagtech-start.bat" if system == "Windows" else "dagtech-start"
+    start_script = os.path.join(BIN_DIR, bin_name)
+
+    if not os.path.exists(start_script):
+        return {
+            "error": f"Launcher not found at {start_script}",
+            "code": "LAUNCHER_MISSING",
+            "fix": f"Install path mismatch. Expected files under {INSTALL_DIR}.",
+        }
+
     try:
         if system == "Windows":
             subprocess.run(["taskkill", "/f", "/im", "dagtech-miner.exe"], capture_output=True, timeout=5)
             subprocess.run(["taskkill", "/f", "/im", "dagtech-gpu-miner.exe"], capture_output=True, timeout=5)
-            start_script = os.path.join(BIN_DIR, "dagtech-start.bat")
-            if os.path.exists(start_script):
-                subprocess.Popen(["cmd", "/c", "start", "/min", start_script], shell=True)
+            subprocess.Popen(["cmd", "/c", "start", "/min", start_script], shell=True, cwd=BIN_DIR)
         else:
             subprocess.run(["pkill", "-f", "dagtech-miner"], capture_output=True, timeout=5)
             subprocess.run(["pkill", "-f", "dagtech-gpu-miner"], capture_output=True, timeout=5)
-            start_script = os.path.join(BIN_DIR, "dagtech-start")
-            if os.path.exists(start_script):
-                subprocess.Popen([start_script], start_new_session=True)
+            subprocess.Popen([start_script], start_new_session=True, cwd=BIN_DIR)
         return True
     except Exception as e:
-        return str(e)
+        return {"error": str(e), "code": "SPAWN_FAILED", "fix": "Check Windows Event Viewer Application log."}
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -228,6 +384,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             except Exception as e:
                 self._json_response(500, {"error": str(e)})
 
+        elif self.path == "/api/diagnose":
+            try:
+                self._json_response(200, {
+                    "install_dir": INSTALL_DIR,
+                    "config_file": CONFIG_FILE,
+                    "bin_dir": BIN_DIR,
+                    "path_source": PATHS["source"],
+                    "issues": diagnose(),
+                })
+            except Exception as e:
+                self._json_response(500, {"error": str(e)})
+
         else:
             super().do_GET()
 
@@ -257,7 +425,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     if result is True:
                         self._json_response(200, {"status": "restarting"})
                     else:
-                        self._json_response(500, {"error": result})
+                        # Actionable error — dashboard banner can show {error, code, fix}
+                        self._json_response(409, result)
             except Exception as e:
                 self._json_response(500, {"error": str(e)})
 
@@ -272,7 +441,13 @@ if __name__ == "__main__":
     mp = int(sys.argv[2]) if len(sys.argv) > 2 else 8880
     MU = f"http://127.0.0.1:{mp}/"
     p = int(sys.argv[1]) if len(sys.argv) > 1 else 8881
-    print(f"[DASH] DagTech Dashboard v3.0 on :{p}, metrics from :{mp}")
+    print(f"[DASH] DagTech Dashboard v3.1 on :{p}, metrics from :{mp}")
+    print(f"[DASH] Install dir: {INSTALL_DIR} (discovered via {PATHS['source']})")
     print(f"[DASH] Config: {CONFIG_FILE}")
     print(f"[DASH] Hardware detection: {platform.system()} {platform.machine()}")
+    issues = diagnose()
+    if issues:
+        print(f"[DASH] {len(issues)} integrity issue(s) detected:")
+        for i in issues:
+            print(f"  [{i['severity'].upper()}] {i['code']}: {i['message']}")
     http.server.HTTPServer(("0.0.0.0", p), Handler).serve_forever()
