@@ -144,39 +144,49 @@ nav.top .pill:hover .ar{transform:translateX(3px)}
 section.hero{
   position:relative;z-index:5;
   min-height:100vh;
-  padding:140px 32px 80px;
-  display:flex;flex-direction:column;justify-content:center;
+  padding:120px 24px 60px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
   overflow:hidden;
+  text-align:center;
 }
-.hero-canvas{
-  position:absolute;
-  top:0;right:0;width:60%;height:100%;
-  z-index:0;
+.hero-inner{position:relative;z-index:3;max-width:1180px;margin:0 auto;width:100%;display:flex;flex-direction:column;align-items:center}
+.hero .eyebrow{margin-bottom:36px;animation:fu 1s 0.05s both;color:var(--mu)}
+/* CUBE HERO IMAGE — the brand mark, baked in */
+.hero-img-wrap{
+  position:relative;
+  width:100%;max-width:1060px;
+  margin:0 auto 56px;
+  animation:fu 1.4s 0.1s both;
 }
-.hero-canvas::before{
-  content:"";position:absolute;inset:0;
-  background:
-    radial-gradient(ellipse 60% 60% at 50% 50%, rgba(45,166,255,0.25), transparent 70%);
+.hero-img-wrap::before{
+  /* outer halo glow — bleeds image into the void */
+  content:"";position:absolute;inset:-12% -8%;z-index:-1;
+  background:radial-gradient(ellipse 65% 60% at 50% 50%, rgba(45,166,255,0.32), rgba(10,75,255,0.10) 45%, transparent 75%);
+  filter:blur(40px);
   pointer-events:none;
 }
-.hero-inner{position:relative;z-index:3;max-width:1500px;margin:0 auto;width:100%}
-.hero .eyebrow{margin-bottom:30px;animation:fu 1s 0.05s both}
-.hero .heading-1{margin-bottom:30px;animation:fu 1s 0.1s both;max-width:13ch}
-.hero .heading-1 .alt{display:block;color:var(--mu);font-weight:400}
+.hero-img{
+  display:block;width:100%;height:auto;
+  /* feather the rectangle edges into the navy void */
+  -webkit-mask-image:radial-gradient(ellipse 95% 92% at 50% 48%, #000 55%, transparent 100%);
+          mask-image:radial-gradient(ellipse 95% 92% at 50% 48%, #000 55%, transparent 100%);
+}
 .hero-tag{
   font-family:'Space Grotesk';
-  font-weight:300;font-size:clamp(16px,1.4vw,20px);
-  color:var(--fg-d);max-width:42ch;margin-bottom:48px;
-  animation:fu 1s 0.2s both;line-height:1.55;
+  font-weight:300;font-size:clamp(17px,1.45vw,22px);
+  color:var(--fg-d);max-width:62ch;margin:0 auto 48px;
+  animation:fu 1s 0.4s both;line-height:1.55;
+  text-align:center;
 }
 .hero-meta{
-  display:flex;gap:0;align-items:stretch;flex-wrap:wrap;
+  display:flex;gap:0;align-items:stretch;flex-wrap:wrap;justify-content:center;
   border-top:1px solid var(--hair);
-  margin-top:30px;
-  animation:fu 1s 0.3s both;
+  margin-top:30px;width:100%;max-width:920px;
+  animation:fu 1s 0.6s both;
+  text-align:left;
 }
 .hero-meta .cell{
-  padding:18px 28px 0 0;flex:1 1 200px;min-width:200px;
+  padding:22px 32px 4px;flex:1 1 190px;min-width:190px;
   border-right:1px solid var(--hair);
 }
 .hero-meta .cell:last-child{border-right:none;padding-right:0}
@@ -191,7 +201,7 @@ section.hero{
 @keyframes bk{0%,100%{opacity:1}50%{opacity:0.35}}
 @keyframes fu{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 
-.hero-ctas{display:flex;gap:14px;margin-top:44px;flex-wrap:wrap;animation:fu 1s 0.4s both}
+.hero-ctas{display:flex;gap:14px;margin-top:8px;flex-wrap:wrap;justify-content:center;animation:fu 1s 0.5s both}
 .btn{
   display:inline-flex;align-items:center;gap:10px;
   padding:14px 24px;border-radius:6px;
@@ -242,12 +252,22 @@ section.feature{
 }
 @media(max-width:900px){.feature-grid{grid-template-columns:1fr}}
 .feature-vis{
-  background:radial-gradient(ellipse 70% 80% at 50% 50%,rgba(45,166,255,0.18),transparent 70%);
-  padding:60px;min-height:420px;
+  background:#040814;
+  padding:0;min-height:420px;
   position:relative;border-right:1px solid var(--hair);
-  display:flex;align-items:center;justify-content:center;
+  display:flex;align-items:stretch;justify-content:center;
+  overflow:hidden;
 }
-.feature-vis svg{width:80%;max-width:340px;filter:drop-shadow(0 0 40px rgba(45,166,255,0.5))}
+.feature-vis img{
+  width:100%;height:100%;
+  object-fit:cover;object-position:center 35%;
+  display:block;
+}
+.feature-vis::after{
+  /* subtle scrim so the right column text always stays readable next to bright violet */
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(90deg, transparent 70%, rgba(8,11,20,0.55) 100%);
+}
 .feature-content{padding:50px}
 .feature-content .feat-tag{
   font-family:'JetBrains Mono';font-size:11px;letter-spacing:0.22em;text-transform:uppercase;
@@ -522,7 +542,10 @@ footer{
 
 <header id="hdr">
   <a href="/" class="brand">
-    <svg width="32" height="32" viewBox="-50 -50 100 100"><use href="#dmd"/></svg>
+    <picture>
+      <source srcset="dagtech-mark.webp" type="image/webp">
+      <img src="dagtech-mark.png" alt="" width="34" height="34" style="display:block;border-radius:6px;box-shadow:0 0 14px rgba(45,166,255,0.45)">
+    </picture>
     <span class="wm">DAGTECH</span>
   </a>
   <nav class="top">
@@ -538,13 +561,14 @@ footer{
 <!-- HERO -->
 <!-- ===================================================== -->
 <section class="hero">
-  <canvas id="diamond3d" class="hero-canvas"></canvas>
   <div class="hero-inner">
     <div class="eyebrow">DAGTECH · 2026 · ENGINEERING SPACE</div>
-    <h1 class="heading-1">
-      Engineered<br>
-      <span class="it">to the bone.</span>
-    </h1>
+    <div class="hero-img-wrap">
+      <picture>
+        <source srcset="hero-cube.webp" type="image/webp">
+        <img class="hero-img" src="hero-cube.jpg" alt="DagTech — Engineered to the bone" width="1168" height="743" fetchpriority="high" decoding="async">
+      </picture>
+    </div>
     <p class="hero-tag">
       An engineering company building the substrate for production blockchain infrastructure —
       the hash engine, the global mesh, the on-chain registry, the observable systems beneath it all.
@@ -610,7 +634,10 @@ footer{
 
     <div class="feature-grid r d1">
       <div class="feature-vis">
-        <svg viewBox="-50 -50 100 100"><use href="#dmd"/></svg>
+        <picture>
+          <source srcset="excalibur-face.webp" type="image/webp">
+          <img src="excalibur-face.jpg" alt="Project Excalibur — crystalline engineering intelligence" width="784" height="1168" loading="lazy" decoding="async">
+        </picture>
       </div>
       <div class="feature-content">
         <div class="feat-tag">∎ live system · production</div>
@@ -1071,7 +1098,7 @@ footer{
     <div class="foot-top">
       <div class="brand-block">
         <div class="mark-large">
-          <svg width="34" height="34" viewBox="-50 -50 100 100"><use href="#dmd"/></svg>
+          <picture><source srcset="dagtech-mark.webp" type="image/webp"><img src="dagtech-mark.png" alt="" width="34" height="34" style="display:block;border-radius:6px;box-shadow:0 0 14px rgba(45,166,255,0.45)"></picture>
           <span class="name">DAGTECH</span>
         </div>
         <p>An engineering company. Mining infrastructure, dApp registry, observable systems for the BlockDAG Network — every layer engineered in-house.</p>
@@ -1164,116 +1191,7 @@ async function refresh(){
 refresh();
 setInterval(refresh,60000);
 
-// ===== HERO 3D DIAMOND (Three.js refractive crystal) =====
-// Loaded async; will degrade gracefully if it fails
-(async()=>{
-  try{
-    const THREE=await import('https://cdn.jsdelivr.net/npm/three@0.160.0/+esm');
-    const c=document.getElementById('diamond3d');
-    if(!c) return;
-    const rect=()=>({w:c.clientWidth,h:c.clientHeight});
-    const renderer=new THREE.WebGLRenderer({canvas:c,antialias:true,alpha:true});
-    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-    function resize(){const{w,h}=rect();renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();}
-    const scene=new THREE.Scene();
-    const camera=new THREE.PerspectiveCamera(35,1,0.1,100);
-    camera.position.set(0,0,5.6);
-
-    // Diamond geometry — hexagonal bipyramid
-    const g=new THREE.BufferGeometry();
-    const top=[0,1.2,0], bot=[0,-1.4,0];
-    const ringTop=[],ringBot=[];
-    const R=1.05, ry=0.18;
-    for(let i=0;i<6;i++){
-      const a=i*Math.PI/3;
-      ringTop.push([Math.cos(a)*R,ry,Math.sin(a)*R]);
-      ringBot.push([Math.cos(a+Math.PI/6)*R*0.9,-ry,Math.sin(a+Math.PI/6)*R*0.9]);
-    }
-    const verts=[];
-    function tri(a,b,c){verts.push(...a,...b,...c)}
-    // top fan
-    for(let i=0;i<6;i++){tri(top,ringTop[i],ringTop[(i+1)%6])}
-    // middle band
-    for(let i=0;i<6;i++){
-      const a=ringTop[i], b=ringTop[(i+1)%6], c=ringBot[(i+1)%6], d=ringBot[i];
-      tri(a,b,c); tri(a,c,d);
-    }
-    // bottom fan
-    for(let i=0;i<6;i++){tri(bot,ringBot[(i+1)%6],ringBot[i])}
-    g.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
-    g.computeVertexNormals();
-
-    // crystalline material — physical with high transmission
-    const mat=new THREE.MeshPhysicalMaterial({
-      color:0x2da6ff,
-      metalness:0.05,
-      roughness:0.05,
-      transmission:0.85,
-      thickness:1.4,
-      ior:2.4,
-      clearcoat:1.0,
-      clearcoatRoughness:0.05,
-      attenuationColor:0x0a4bff,
-      attenuationDistance:1.6,
-      envMapIntensity:1.2,
-      emissive:0x041830,
-      emissiveIntensity:0.6,
-    });
-    const m=new THREE.Mesh(g,mat);
-    scene.add(m);
-
-    // wireframe outline overlay
-    const wf=new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:0x7fdbff,transparent:true,opacity:0.55}));
-    m.add(wf);
-
-    // bright core inside
-    const core=new THREE.Mesh(new THREE.IcosahedronGeometry(0.32,2),new THREE.MeshBasicMaterial({color:0xbce9ff,transparent:true,opacity:0.85}));
-    m.add(core);
-    const halo=new THREE.Mesh(new THREE.IcosahedronGeometry(0.45,2),new THREE.MeshBasicMaterial({color:0x7fdbff,transparent:true,opacity:0.18,blending:THREE.AdditiveBlending}));
-    m.add(halo);
-
-    // lights
-    scene.add(new THREE.AmbientLight(0xffffff,0.4));
-    const k=new THREE.PointLight(0x7fdbff,4,12); k.position.set(2,2,3); scene.add(k);
-    const r1=new THREE.PointLight(0x0a4bff,3,10); r1.position.set(-2,-1,3); scene.add(r1);
-    const r2=new THREE.PointLight(0xffffff,1.2,8); r2.position.set(0,2.5,-2); scene.add(r2);
-
-    // env reflection — use a procedural gradient cubemap-ish via env scene
-    const pmrem=new THREE.PMREMGenerator(renderer);
-    const envScene=new THREE.Scene();
-    envScene.background=new THREE.Color(0x041020);
-    const eLight=new THREE.PointLight(0x7fdbff,8,15); eLight.position.set(0,3,0); envScene.add(eLight);
-    const env=pmrem.fromScene(envScene,0.04).texture;
-    mat.envMap=env;
-
-    // mouse parallax
-    let mx=0,my=0,tx=0,ty=0;
-    addEventListener('mousemove',e=>{
-      const w=innerWidth,h=innerHeight;
-      tx=((e.clientX-w/2)/w)*0.7;
-      ty=((e.clientY-h/2)/h)*0.5;
-    });
-
-    resize(); addEventListener('resize',resize);
-    function loop(t){
-      mx+=(tx-mx)*0.04; my+=(ty-my)*0.04;
-      m.rotation.y=t*0.00018+mx*1.6;
-      m.rotation.x=Math.sin(t*0.00012)*0.18+my*1.0;
-      m.rotation.z=Math.sin(t*0.00008)*0.06;
-      const s=1+Math.sin(t*0.0006)*0.012;
-      m.scale.set(s,s,s);
-      core.scale.setScalar(0.95+Math.sin(t*0.0018)*0.08);
-      halo.scale.setScalar(1.0+Math.sin(t*0.0014)*0.09);
-      renderer.render(scene,camera);
-      requestAnimationFrame(loop);
-    }
-    requestAnimationFrame(loop);
-  }catch(e){
-    // graceful fallback — large SVG diamond instead
-    const c=document.getElementById('diamond3d');
-    if(c) c.outerHTML='<div class="hero-canvas" style="display:flex;align-items:center;justify-content:center"><svg viewBox="-60 -60 120 120" width="60%" style="max-width:480px;filter:drop-shadow(0 0 60px rgba(45,166,255,0.5))"><use href="#dmd"/></svg></div>';
-  }
-})();
+// Hero: static cube image (replaced Three.js refractive crystal — image carries the brand mark)
 </script>
 
 </body>
