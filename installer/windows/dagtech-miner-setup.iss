@@ -2,7 +2,7 @@
 ; Build with: iscc dagtech-miner-setup.iss
 
 #define AppName "DagTech Miner"
-#define AppVersion "3.0.0"
+#define AppVersion "3.0.1"
 #define AppPublisher "DagTech Ltd"
 #define AppURL "https://dagtech.network"
 #define MinerURL "https://miner.dagtech.network"
@@ -19,6 +19,10 @@ AppUpdatesURL={#MinerURL}
 DefaultDirName={%USERPROFILE}\.dagtech-miner
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
+; Lock the install path — users editing it (e.g. removing the leading dot)
+; previously broke the launcher. Path is fully validated and supported here only.
+DisableDirPage=yes
+AllowNoIcons=yes
 OutputDir=..\..\dist
 OutputBaseFilename=DagTech-Miner-v{#AppVersion}-Setup
 Compression=lzma2/ultra64
@@ -196,6 +200,25 @@ begin
   end;
 end;
 
+// Check that a string contains only hex characters after the 0x prefix
+function IsHexAddress(const Addr: string): Boolean;
+var
+  I: Integer;
+  Ch: Char;
+begin
+  Result := False;
+  if Length(Addr) <> 42 then exit;
+  if Copy(Addr, 1, 2) <> '0x' then exit;
+  for I := 3 to 42 do
+  begin
+    Ch := Addr[I];
+    if not ((Ch >= '0') and (Ch <= '9')) and
+       not ((Ch >= 'a') and (Ch <= 'f')) and
+       not ((Ch >= 'A') and (Ch <= 'F')) then exit;
+  end;
+  Result := True;
+end;
+
 // Validate wallet on Next button
 function NextButtonClick(CurPageID: Integer): Boolean;
 var
@@ -225,6 +248,18 @@ begin
     else if WLen > 42 then
     begin
       MsgBox('Wallet address too long (' + IntToStr(WLen) + ' chars, need 42). Remove extra characters.', mbError, MB_OK);
+      Result := False;
+    end
+    else if not IsHexAddress(Wallet) then
+    begin
+      MsgBox('Wallet address contains non-hex characters. Address must be 0x followed by 40 hex digits (0-9, a-f).', mbError, MB_OK);
+      Result := False;
+    end
+    else if LowerCase(Wallet) = '0x6387c32ccdd60bfba00ec70a67715dcd52e8083f' then
+    begin
+      MsgBox('That is the developer''s wallet address — rewards would go to the developer, not you.' + #13#10 + #13#10 +
+             'Please enter YOUR own BlockDAG wallet address (the address you want to receive mining rewards).',
+             mbError, MB_OK);
       Result := False;
     end;
   end;
@@ -287,6 +322,16 @@ begin
       Lines.Add('WORKER_NAME=' + Trim(ConfigPage.Values[1]));
       Lines.Add('METRICS_PORT=8880');
       Lines.SaveToFile(ConfigFile);
+
+      // Defense-in-depth: also write to legacy ~/.dagtech-miner/config.env so
+      // any pre-existing launcher copies (from older installs or manual copies)
+      // pick up the new config too. v3.1+ launchers find this via auto-discovery.
+      try
+        ForceDirectories(ExpandConstant('{%USERPROFILE}') + '\.dagtech-miner');
+        Lines.SaveToFile(ExpandConstant('{%USERPROFILE}') + '\.dagtech-miner\config.env');
+      except
+        // best effort — install-dir copy is the authoritative one
+      end;
     finally
       Lines.Free;
     end;
