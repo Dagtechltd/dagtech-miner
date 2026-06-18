@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Credit Rebalancer — Pool Fee Fix Tool · DagTech</title>
+  <meta name="description" content="Fix the asic-pool inverse-difficulty credit weighting bug on your BlockDAG mining pool. Open-source in-database sidecar from DagTech.">
+  <link rel="icon" href="https://dapps.dagtech.network/icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root{--bg:#080b14;--fg:#f4f7fb;--primary:#1e90ff;--glow:#66b3ff;--accent:#0a4cbf;--card:#0a0f1a;--secondary:#111b2e;--muted:#607080;--border:#171e2e}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--fg);line-height:1.6}
+    body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 100% 60% at 50% 0%,hsl(210 100% 56%/0.05) 0%,transparent 60%);pointer-events:none;z-index:0}
+    h1,h2,h3{font-family:'Space Grotesk',sans-serif}
+    a{color:var(--primary);text-decoration:none}a:hover{color:var(--glow)}
+    .container{max-width:1100px;margin:0 auto;padding:0 2rem;position:relative;z-index:1}
+    nav{position:fixed;top:0;left:0;right:0;background:hsl(220 50% 4%/0.85);backdrop-filter:blur(20px);border-bottom:1px solid hsl(210 100% 56%/0.08);z-index:100;padding:1rem 0}
+    nav .container{display:flex;align-items:center;justify-content:space-between}
+    .nav-logo{display:flex;align-items:center;gap:.75rem}.nav-logo img{height:32px}.nav-logo span{font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:1.1rem}
+    .nav-cta{background:linear-gradient(135deg,var(--primary),var(--accent));color:white!important;padding:.6rem 1.4rem;border-radius:.85rem;font-weight:600;font-size:.85rem;box-shadow:0 0 24px hsl(210 100% 56%/0.25)}
+    .hero{padding:9rem 0 4rem;text-align:center}
+    .pill{display:inline-block;padding:.4rem 1rem;border-radius:99rem;background:hsl(0 65% 50%/0.10);border:1px solid hsl(0 65% 50%/0.30);color:#ff6b6b;font-size:.78rem;font-weight:600;margin-bottom:1.5rem;font-family:'JetBrains Mono',monospace}
+    h1.title{font-size:clamp(2rem,5vw,3.4rem);font-weight:700;margin-bottom:1rem;background:linear-gradient(135deg,var(--fg) 0%,var(--glow) 50%,var(--primary) 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+    p.lead{font-size:1.15rem;color:var(--muted);max-width:680px;margin:0 auto 2.2rem}
+    .cta-row{display:flex;gap:1rem;justify-content:center;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;gap:.5rem;padding:.9rem 1.6rem;border-radius:.85rem;font-weight:600;font-size:.95rem;border:1px solid transparent}
+    .btn-primary{background:linear-gradient(135deg,var(--primary),var(--accent));color:white;box-shadow:0 0 28px hsl(210 100% 56%/0.3)}
+    .btn-secondary{background:transparent;border-color:var(--border);color:var(--fg)}
+    .section{padding:3rem 0}
+    .card{background:linear-gradient(135deg,var(--card) 0%,var(--secondary) 100%);border:1px solid var(--border);border-radius:1.2rem;padding:2rem;margin-bottom:1.5rem;box-shadow:0 0 30px hsl(210 100% 56%/0.04)}
+    .card h2{font-size:1.6rem;font-weight:600;margin-bottom:1rem}
+    .card h3{font-size:1.15rem;font-weight:600;margin:1.4rem 0 .6rem;color:var(--glow)}
+    .card p{color:var(--muted);margin-bottom:.8rem}
+    .card ul{color:var(--muted);padding-left:1.2rem}.card li{margin-bottom:.3rem}
+    table.compare{width:100%;border-collapse:collapse;margin:1.2rem 0;font-size:.9rem}
+    table.compare th,table.compare td{padding:.7rem 1rem;text-align:left;border-bottom:1px solid var(--border)}
+    table.compare th{font-weight:600;background:hsl(210 100% 56%/0.04)}
+    table.compare td{color:var(--muted)}
+    .wrong{color:#ff6b6b;font-weight:600}.right{color:#5bd17a;font-weight:600}
+    pre.code{background:#04060c;border:1px solid var(--border);border-radius:.6rem;padding:1.1rem;overflow-x:auto;font-family:'JetBrains Mono',monospace;font-size:.85rem;color:#cfd8e3;margin:.8rem 0}
+    .code .c{color:#6a8aa3}
+    .code-inline{background:hsl(210 100% 56%/0.08);border:1px solid var(--border);padding:.1rem .45rem;border-radius:.3rem;font-family:'JetBrains Mono',monospace;font-size:.82em;color:var(--glow)}
+    footer{padding:3rem 0;text-align:center;color:var(--muted);font-size:.85rem;border-top:1px solid var(--border);margin-top:2rem}
+    footer a{color:var(--primary)}
+  </style>
+</head>
+<body>
+  <nav><div class="container">
+    <a class="nav-logo" href="/"><img src="https://dapps.dagtech.network/icon.svg" alt="DagTech"><span>DagTech Miner</span></a>
+    <a class="nav-cta" href="https://github.com/Dagtechltd/dagtech-pool-stack/tree/main/dagtech/credit-rebalancer">View on GitHub</a>
+  </div></nav>
+  <section class="hero"><div class="container">
+    <div class="pill">CRITICAL POOL FIX</div>
+    <h1 class="title">Credit Rebalancer</h1>
+    <p class="lead">If you operate a BlockDAG mining pool using <code class="code-inline">pool-stack-docker-pool-v1.3.23</code> or any earlier asic-pool binary, your high-difficulty ASIC miners are being massively under-credited and low-difficulty CPU/GPU miners are being massively over-credited. This open-source sidecar fixes that &mdash; in-database, reversible, with a complete audit trail.</p>
+    <div class="cta-row">
+      <a class="btn btn-primary" href="https://github.com/Dagtechltd/dagtech-pool-stack/tree/main/dagtech/credit-rebalancer">Install Guide</a>
+      <a class="btn btn-secondary" href="https://github.com/Dagtechltd/dagtech-pool-stack/blob/main/dagtech/credit-rebalancer/rebalancer.py">View the Code</a>
+    </div>
+  </div></section>
+  <section class="section"><div class="container">
+    <div class="card">
+      <h2>The Bug</h2>
+      <p>The compiled <code class="code-inline">mining-pool</code> Go binary computes credits as <strong>inversely</strong> proportional to share difficulty:</p>
+      <pre class="code">credit_i  proportional to  1 / share_difficulty_i      <span class="c">// wrong</span>
+credit_i  proportional to  share_difficulty_i          <span class="c">// correct PPLNS</span></pre>
+      <p>Observed live on a mixed pool with three connected workers (2026-06-18):</p>
+      <table class="compare">
+        <thead><tr><th>Miner</th><th>Vardiff</th><th class="wrong">Wrong (Before)</th><th class="right">Correct (After)</th></tr></thead>
+        <tbody>
+          <tr><td>Low-diff CPU/GPU</td><td>0.5 to 10</td><td class="wrong">93.4%</td><td>0.4%</td></tr>
+          <tr><td>Medium-diff ASIC</td><td>~50</td><td>6.0%</td><td>8.1%</td></tr>
+          <tr><td>High-diff ASIC (X30 etc.)</td><td>thousands</td><td class="wrong">0.5%</td><td class="right">91.4%</td></tr>
+        </tbody>
+      </table>
+      <p>The ASIC owner contributing about 99% of the actual hash work was receiving about 0.5% of the rewards. Silent value transfer between miners; operators are often unaware.</p>
+    </div>
+    <div class="card">
+      <h2>The Fix</h2>
+      <p>A small Python sidecar container scans the <code class="code-inline">credits</code> table every 30 seconds for <code class="code-inline">is_paid=false</code> rows and applies the inverse-of-inverse correction per block:</p>
+      <pre class="code">correct_amount_i = R * (1 / wrong_amount_i) / SUM(1 / wrong_amount_j)
+        where R = SUM(wrong_amount_j)  <span class="c">// the original block reward</span></pre>
+      <p>This cancels the bug exactly while preserving the total block reward bit-for-bit. Every change is logged to a <code class="code-inline">credit_rebalance_audit</code> table.</p>
+      <h3>Safety</h3>
+      <ul>
+        <li>Reversible: <code class="code-inline">systemctl disable --now dagtech-credit-rebalancer.service</code></li>
+        <li>Audit table created on first run; consider snapshotting credits before enabling</li>
+        <li>Invariant preserved: total block reward stays exact</li>
+        <li>No binary patching; works alongside the existing asic-pool</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h2>Install in 60 seconds</h2>
+      <pre class="code">git clone https://github.com/Dagtechltd/dagtech-pool-stack
+cd dagtech-pool-stack/dagtech/credit-rebalancer
+sudo ./install.sh</pre>
+      <p>The installer auto-detects your pool's docker network and database URL, builds the Docker image, writes <code class="code-inline">/etc/dagtech-credit-rebalancer.env</code>, and enables a systemd unit.</p>
+      <h3>Verify</h3>
+      <pre class="code">systemctl status dagtech-credit-rebalancer.service
+journalctl -u dagtech-credit-rebalancer.service -f</pre>
+      <p>Within 30 seconds you should see lines like <code class="code-inline">REBALANCED block=... changes=[...]</code> if you have multiple miners. With a single miner per block, the rebalancer correctly does nothing (the bug has no observable effect there).</p>
+    </div>
+    <div class="card">
+      <h2>Notes for Pool Operators</h2>
+      <ul>
+        <li>If you have already paid out credits with the wrong math, that is done &mdash; the rebalancer can only correct credits with <code class="code-inline">is_paid=false</code>. Consider issuing a goodwill top-up if your ASIC customers were affected long-term.</li>
+        <li>This is a workaround. A patched <code class="code-inline">mining-pool</code> binary needs to flip the weighting at <code class="code-inline">asicPool/internal/pool/pplns.(*Window).PushShare</code> and <code class="code-inline">.Snapshot</code>. We are contributing the diagnosis upstream.</li>
+        <li>The rebalancer is safe to leave running indefinitely. When a corrected binary lands, the rebalancer becomes a no-op.</li>
+      </ul>
+    </div>
+  </div></section>
+  <footer><div class="container">
+    <p>DagTech Miner &mdash; open-source mining for the BlockDAG Network</p>
+    <p style="margin-top:.5rem"><a href="https://github.com/Dagtechltd">GitHub</a> &middot; <a href="/">miner.dagtech.network</a></p>
+  </div></footer>
+</body>
+</html>
