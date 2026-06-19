@@ -19,7 +19,7 @@ BIN_SHA256="c9222f7e022ab06c17d785ca44d737bd7580391c95e76ee5748ef06a71c202bf"
 DEFAULT_POOL_HOST="excalibur.dagtech.network"
 DEFAULT_POOL_PORT="3335"
 DASHBOARD_PORT="8881"
-VERSION="0.1.0"
+VERSION="2.1.0"
 PLIST_LABEL="network.dagtech.miner"
 
 # DagTech brand
