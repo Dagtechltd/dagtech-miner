@@ -13,9 +13,9 @@ IFS=$'\n\t'
 # ============================================================
 INSTALL_DIR="$HOME/.dagtech-miner"
 BIN_NAME="bdag-mac-miner"
-BIN_URL_PRIMARY="https://miner.dagtech.network/mac/dagtech-mac-miner-cpu-arm64-v2.1.0"
-BIN_URL_FALLBACK="https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/docs/mac/dagtech-mac-miner-cpu-arm64-v2.1.0"
-BIN_SHA256="c9222f7e022ab06c17d785ca44d737bd7580391c95e76ee5748ef06a71c202bf"
+BIN_URL_PRIMARY="https://miner.dagtech.network/mac/dagtech-mac-miner-arm64-v2.1.0"
+BIN_URL_FALLBACK="https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/docs/mac/dagtech-mac-miner-arm64-v2.1.0"
+BIN_SHA256="f9a551575018000d9982b90f93271954b4720e5180764b9aff3222e03824fc3d"
 DEFAULT_POOL_HOST="excalibur.dagtech.network"
 DEFAULT_POOL_PORT="3335"
 DASHBOARD_PORT="8881"
@@ -502,6 +502,8 @@ cat > "$PLIST_PATH" << EOF
     <string>--wallet</string><string>${WALLET}.${WORKER}</string>
     <string>--threads</string><string>${THREADS}</string>
     <string>--password</string><string>x</string>
+    <string>--mode</string><string>${MODE:-gpu}</string>
+    <string>--batch</string><string>1024</string>
   </array>
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key>
