@@ -46,7 +46,15 @@ nav .inner { max-width:900px; margin:0 auto; padding:0 1.5rem; display:flex; ali
 .header p { color:var(--muted); margin-top:0.6rem; font-size:1.05rem; max-width:550px; margin-left:auto; margin-right:auto; }
 
 /* PLATFORM TABS */
-.platform-tabs { display:flex; justify-content:center; gap:0.6rem; margin:1.5rem 0 2.5rem; flex-wrap:wrap; padding:0 1rem; }
+.platform-meta { max-width:780px; margin:0 auto 1.4rem; padding:0.8rem 1.2rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; border:1px solid var(--border); border-radius:10px; background:linear-gradient(135deg, hsl(210 100% 56%/0.06), hsl(220 50% 4%/0.6)); flex-wrap:wrap; }
+    .platform-meta .pm-left { display:flex; align-items:center; gap:0.8rem; flex-wrap:wrap; }
+    .platform-meta .pm-version { display:inline-flex; align-items:center; padding:0.25rem 0.7rem; border-radius:999px; background:var(--primary); color:#fff; font-weight:700; font-size:0.85rem; font-family:'JetBrains Mono','SFMono-Regular',Consolas,monospace; }
+    .platform-meta .pm-version.tbd { background:var(--border); color:var(--muted); }
+    .platform-meta .pm-released { color:var(--muted); font-size:0.88rem; }
+    .platform-meta .pm-released strong { color:var(--fg); font-weight:600; }
+    .platform-meta .pm-tagline { color:var(--accent-dark); font-size:0.88rem; font-weight:500; }
+    @media (max-width: 600px) { .platform-meta { flex-direction:column; align-items:flex-start; } }
+    .platform-tabs { display:flex; justify-content:center; gap:0.6rem; margin:1.5rem 0 2.5rem; flex-wrap:wrap; padding:0 1rem; }
 .ptab {
   padding:0.9rem 2rem; background:var(--card); border:1px solid var(--border);
   border-radius:1rem; font-weight:600; cursor:pointer; transition:all 0.25s;
@@ -220,6 +228,8 @@ footer a { color:var(--primary); text-decoration:none; }
   <div class="ptab" onclick="switchPlatform('windows')"><span class="ptab-icon">&#128187;</span> Windows</div>
 </div>
 
+<div id="platform-meta" class="platform-meta"></div>
+
 <div class="container">
   <!-- Progress bar rendered dynamically -->
   <div class="progress-bar" id="progress-bar"></div>
@@ -235,6 +245,7 @@ footer a { color:var(--primary); text-decoration:none; }
 <script>
 const platforms = {
   linux: {
+    meta: { version: 'Coming soon', released: 'TBD', tagline: 'CPU + NVIDIA CUDA GPU' },
     steps: [
       {
         title: 'Open a Terminal',
@@ -284,6 +295,7 @@ const platforms = {
   },
 
   mac: {
+    meta: { version: 'v2.1.0', released: '2026-06-19', tagline: 'CPU + Apple Metal GPU (Apple Silicon)' },
     steps: [
       {
         title: 'Open Terminal',
@@ -317,6 +329,7 @@ const platforms = {
   },
 
   windows: {
+    meta: { version: 'v3.0.0', released: 'TBD', tagline: 'CPU + NVIDIA CUDA GPU (one-click installer)' },
     steps: [
       {
         title: 'Download the Installer',
@@ -374,6 +387,20 @@ function switchPlatform(p) {
 function render() {
   const steps = platforms[currentPlatform].steps;
   const total = steps.length;
+
+  // Meta banner (version + released + tagline)
+  const meta = platforms[currentPlatform].meta || {};
+  const metaEl = document.getElementById('platform-meta');
+  if (metaEl) {
+    const verClass = (meta.version && !/coming|tbd/i.test(meta.version)) ? '' : 'tbd';
+    const rel = meta.released || 'TBD';
+    metaEl.innerHTML =
+      '<div class="pm-left">' +
+        '<span class="pm-version ' + verClass + '">' + (meta.version || 'TBD') + '</span>' +
+        '<span class="pm-released">Released <strong>' + rel + '</strong></span>' +
+      '</div>' +
+      '<div class="pm-tagline">' + (meta.tagline || '') + '</div>';
+  }
 
   // Progress bar
   const pb = document.getElementById('progress-bar');
