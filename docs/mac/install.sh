@@ -13,12 +13,12 @@ IFS=$'\n\t'
 # ============================================================
 INSTALL_DIR="$HOME/.dagtech-miner"
 BIN_NAME="bdag-mac-miner"
-BIN_URL_PRIMARY="https://miner.dagtech.network/mac/dagtech-mac-miner-cpu-arm64-v0.1"
-BIN_URL_FALLBACK="https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/docs/mac/dagtech-mac-miner-cpu-arm64-v0.1"
+BIN_URL_PRIMARY="https://miner.dagtech.network/mac/dagtech-mac-miner-cpu-arm64-v2.1.0"
+BIN_URL_FALLBACK="https://raw.githubusercontent.com/Dagtechltd/dagtech-miner/main/docs/mac/dagtech-mac-miner-cpu-arm64-v2.1.0"
 BIN_SHA256="c9222f7e022ab06c17d785ca44d737bd7580391c95e76ee5748ef06a71c202bf"
 DEFAULT_POOL_HOST="excalibur.dagtech.network"
 DEFAULT_POOL_PORT="3335"
-DASHBOARD_PORT="8765"
+DASHBOARD_PORT="8881"
 VERSION="0.1.0"
 PLIST_LABEL="network.dagtech.miner"
 
@@ -81,7 +81,7 @@ MACOS_VER=$(sw_vers -productVersion 2>/dev/null || echo "?")
 ok "macOS $MACOS_VER"
 
 if [ "$ARCH" != "arm64" ]; then
-  warn "Detected $ARCH. v0.1 supports Apple Silicon (M1/M2/M3/M4) only."
+  warn "Detected $ARCH. v2.1.0 supports Apple Silicon (M1/M2/M3/M4) only."
   warn "Intel Mac support is on the roadmap. Aborting."
   exit 1
 fi
@@ -204,13 +204,14 @@ heading "Dashboard"
 DASH_PY="$INSTALL_DIR/dashboard.py"
 cat > "$DASH_PY" << 'PYEOF'
 #!/usr/bin/env python3
+#!/usr/bin/env python3
 """DagTech Mac Miner dashboard sidecar — parses miner.log + serves HTML."""
 import json, os, re, sys, time, threading, http.server, socketserver, urllib.parse
 from collections import deque
 
 LOG_PATH = os.path.expanduser("~/.dagtech-miner/miner.log")
 CONFIG_PATH = os.path.expanduser("~/.dagtech-miner/config.json")
-PORT = 8765
+PORT = 8881
 
 stats = {
     "hashrate": 0.0,
@@ -229,7 +230,7 @@ stats = {
     "wallet": "",
     "worker": "",
     "threads": 0,
-    "version": "0.1.0",
+    "version": "2.1.0",
 }
 
 # Read config if present

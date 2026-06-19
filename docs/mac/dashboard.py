@@ -5,7 +5,7 @@ from collections import deque
 
 LOG_PATH = os.path.expanduser("~/.dagtech-miner/miner.log")
 CONFIG_PATH = os.path.expanduser("~/.dagtech-miner/config.json")
-PORT = 8765
+PORT = 8881
 
 stats = {
     "hashrate": 0.0,
@@ -24,7 +24,7 @@ stats = {
     "wallet": "",
     "worker": "",
     "threads": 0,
-    "version": "0.1.0",
+    "version": "2.1.0",
 }
 
 # Read config if present

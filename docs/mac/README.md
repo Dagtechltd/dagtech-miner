@@ -15,7 +15,7 @@ That is the entire install. The script:
 5. Asks for your wallet address, worker name, and thread count
 6. Writes config to `~/.dagtech-miner/config.json`
 7. Registers two launchd services (miner + dashboard)
-8. Starts mining and opens the dashboard at <http://127.0.0.1:8765>
+8. Starts mining and opens the dashboard at <http://127.0.0.1:8881>
 
 No Apple Developer account, no manual permission grants, no Terminal proficiency required.
 
@@ -24,7 +24,7 @@ No Apple Developer account, no manual permission grants, no Terminal proficiency
 ## What you get
 
 - **Mining daemon** running under `launchctl`, auto-restart on crash, survives reboot
-- **Live dashboard** at <http://127.0.0.1:8765> showing hashrate, shares, jobs, difficulty, worker name, wallet
+- **Live dashboard** at <http://127.0.0.1:8881> showing hashrate, shares, jobs, difficulty, worker name, wallet
 - **Default pool**: `excalibur.dagtech.network:3335` (CPU/GPU tier, PPLNS payout, low starting difficulty)
 
 ## System requirements
@@ -83,7 +83,7 @@ codesign --force --sign - --timestamp=none dagtech-mac-miner-cpu
 
 ## Reproducibility
 
-v0.1 validated against a 10-iteration install/verify/uninstall loop on a clean M1 Pro running macOS 26.5. Each pass tears down, runs install.sh non-interactively, waits 8s, then verifies launchctl PIDs, dashboard `/api/stats` returns 200, miner.log shows mining activity, dashboard worker name matches config.
+v2.1.0 validated against a 10-iteration install/verify/uninstall loop on a clean M1 Pro running macOS 26.5. Each pass tears down, runs install.sh non-interactively, waits 8s, then verifies launchctl PIDs, dashboard `/api/stats` returns 200, miner.log shows mining activity, dashboard worker name matches config.
 
 Score: **10/10 passed, 0/10 failed.**
 
@@ -91,7 +91,7 @@ Score: **10/10 passed, 0/10 failed.**
 
 | Version | Date       | Notes                                                  |
 |---------|------------|--------------------------------------------------------|
-| v0.1    | 2026-06-19 | First public release. CPU-only. Apple Silicon. 10/10.  |
+| v2.1.0    | 2026-06-19 | First public release. CPU-only. Apple Silicon. 10/10.  |
 | v0.2    | TBD        | Metal GPU acceleration (MSL keccak port).              |
 | v0.3    | TBD        | Intel Mac + automatic algorithm switching.             |
 

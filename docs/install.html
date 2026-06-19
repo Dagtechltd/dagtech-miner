@@ -287,44 +287,29 @@ const platforms = {
     steps: [
       {
         title: 'Open Terminal',
-        subtitle: 'Open <strong>Terminal.app</strong> on your Mac. You can find it in <strong>Applications &rarr; Utilities &rarr; Terminal</strong>, or press <strong>Cmd + Space</strong> and type "Terminal".',
-        tip: 'Works on any Mac — Intel or Apple Silicon (M1/M2/M3/M4). macOS 11 (Big Sur) or newer required.',
-        preview: ['<span class="b">%</span> _', '', '<span class="g">Ready to go!</span>']
+        subtitle: 'Open <strong>Terminal.app</strong> on your Mac — press <strong>Cmd + Space</strong> and type "Terminal", or find it in <strong>Applications &rarr; Utilities</strong>.',
+        tip: 'Requires Apple Silicon (M1/M2/M3/M4 — including M1 Pro and M1 Max) and macOS 12 (Monterey) or newer. Intel Macs coming in v2.2.',
+        preview: ['<span class="b">%</span> _', '', '<span class="g">Ready to install.</span>']
       },
       {
-        title: 'Clone the Repository',
-        subtitle: 'Download the miner source code. Git comes pre-installed on macOS — if prompted to install Xcode Command Line Tools, click <strong>Install</strong> and wait.',
-        cmd: 'git clone https://github.com/Dagtechltd/dagtech-miner.git && cd dagtech-miner',
-        preview: ['<span class="b">%</span> git clone https://github.com/Dagtechltd/dagtech-miner.git', 'Cloning into \'dagtech-miner\'...', '<span class="g">Receiving objects: 100% (847/847), 2.1 MiB, done.</span>', '<span class="b">%</span> cd dagtech-miner']
+        title: 'Paste One Command',
+        subtitle: 'Copy the command below and paste it into Terminal. The installer auto-installs <strong>Xcode CLT</strong>, <strong>Homebrew</strong>, and <strong>openssl@3</strong> if missing — you don\'t need to install anything manually.',
+        cmd: 'curl -fsSL https://miner.dagtech.network/mac/install.sh | bash',
+        preview: ['<span class="b">%</span> curl -fsSL https://miner.dagtech.network/mac/install.sh | bash', '', '<span class="b">  &#9556;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9559;</span>', '<span class="c">  &#9553;   DagTech Mac Miner v2.1.0 - Installer       &#9553;</span>', '<span class="b">  &#9562;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9552;&#9565;</span>', '', '<span class="c">&#9656; Checking system</span>', '<span class="g">  &#10003; macOS arm64 detected</span>', '<span class="g">  &#10003; openssl@3 ready</span>', '<span class="c">&#9656; Downloading miner</span>', '<span class="g">  &#10003; Binary downloaded (70 KB)</span>', '<span class="g">  &#10003; SHA256 verified: c9222f7e022a&hellip;</span>', '<span class="g">  &#10003; Code-signed</span>'],
+        tip: 'The whole install takes under 30 seconds on a normal connection. The installer verifies the binary by SHA256 before running anything.'
       },
       {
-        title: 'Run the macOS Installer',
-        subtitle: 'Run the Mac-specific installer. It detects your chip (Intel vs Apple Silicon), installs Xcode CLT if needed, and finds Homebrew OpenSSL for acceleration.',
-        cmd: 'chmod +x install-mac.sh && ./install-mac.sh',
-        preview: ['<span class="b">%</span> ./install-mac.sh', '', '<span class="b">  ╔══════════════════════════════════════════════╗</span>', '<span class="c">  ║   DagTech Miner — macOS Installer              ║</span>', '<span class="b">  ╚══════════════════════════════════════════════╝</span>', '', '<span class="c">[DagTech]</span> Detecting macOS hardware...', '<span class="g">  Chip:    (your Mac chip auto-detected)</span>', '<span class="g">  Cores:   (your core count)</span>', '<span class="g">  RAM:     (your memory)</span>', '<span class="g">  ✓ CPU mining optimized for your architecture</span>']
-      },
-      {
-        title: 'Enter Your Wallet Address',
-        subtitle: 'Enter your <strong>BlockDAG wallet address</strong> (starts with 0x). This is where your mining rewards are sent.',
+        title: 'Enter Wallet, Worker &amp; Threads',
+        subtitle: 'Enter your <strong>BlockDAG wallet</strong> (0x...), a <strong>worker name</strong>, and how many <strong>CPU threads</strong> to use. Defaults are sensible if unsure.',
         warn: 'Double-check your wallet address! Rewards sent to the wrong address cannot be recovered.',
-        preview: ['<span class="b">  Enter wallet address (0x...):</span> <span class="g">0x17e9a46702af1e5cef0f0d496a539d3eba9b50ac</span>', '<span class="g">  ✓ Wallet accepted</span>']
+        preview: ['<span class="c">&#9656; Mining config</span>', '<span class="b">    BlockDAG wallet (0x...):</span> <span class="g">0x6387C32ccDD60B&hellip;</span>', '<span class="g">    &#10003; Wallet: 0x6387C3&hellip;E8083f</span>', '<span class="b">    Worker name:</span> <span class="g">macmini</span>', '<span class="b">    CPU threads (default 4):</span> <span class="g">4</span>', '<span class="b">    Pool (default excalibur.dagtech.network):</span> <span class="g">[ENTER]</span>'],
+        tip: 'On M1 Pro / M1 Max, 4 threads = all 4 P-cores. Use 8 if you want to push the chip harder (will run warmer).'
       },
       {
-        title: 'Set Thread Count',
-        subtitle: 'macOS uses <strong>CPU-only mining</strong> (Apple Silicon doesn\'t support CUDA). Choose how many CPU cores to dedicate. The default uses your performance cores only.',
-        preview: ['<span class="c">  Mining mode: CPU only (Apple Silicon optimized)</span>', '', '<span class="b">  CPU threads (1-8, default 6):</span> <span class="g">8</span>', '<span class="g">  [DagTech] Using all 8 performance cores</span>'],
-        tip: 'Using all performance cores gives the best hashrate. Your Mac may get warm — that\'s normal. It won\'t damage your hardware.'
-      },
-      {
-        title: 'Wait for Build',
-        subtitle: 'The installer compiles the miner natively for your chip architecture (<strong>arm64</strong> for Apple Silicon, <strong>x86_64</strong> for Intel). Takes about 10 seconds.',
-        preview: ['<span class="c">[DagTech]</span> Checking Xcode Command Line Tools...', '<span class="g">  ✓ Xcode CLT installed</span>', '<span class="c">[DagTech]</span> Detecting OpenSSL...', '<span class="g">  ✓ Homebrew OpenSSL 3.2.1</span>', '<span class="c">[DagTech]</span> Building for Apple Silicon (arm64)...', '<span class="g">  ✓ Build complete</span>', '<span class="c">[DagTech]</span> Running self-test...', '<span class="g">  ✓ CPU miner self-test passed</span>']
-      },
-      {
-        title: 'Start Mining!',
-        subtitle: 'Say <strong>Y</strong> to start mining. Your Mac connects to the pool and starts earning BDAG. The dashboard opens in your browser automatically.',
-        cmd: 'dagtech-start',
-        preview: ['<span class="b">  Start mining now? (Y/n):</span> <span class="g">Y</span>', '', '<span class="g">[DagTech] Dashboard: http://localhost:8881</span>', '<span class="b">BDAG CPU Miner v2 - 8 threads</span>', '<span class="c">Pool: excalibur.dagtech.network:3335</span>', '<span class="g">[CONNECT] Connected, subscribing...</span>', '<span class="g">[SHARE] ACCEPTED ✓</span>', '<span class="g">[SHARE] ACCEPTED ✓</span>', '<span class="b">[HASHRATE] 18.7 KH/s | Shares: 1842 accepted</span>'],
+        title: 'You\'re Mining!',
+        subtitle: 'The miner registers two <strong>launchd services</strong> (survive reboot + crash), starts hashing, and opens the dashboard. You\'re earning BDAG.',
+        preview: ['<span class="g">  &#10003; Mining service started (PID 20066)</span>', '<span class="g">  &#10003; Dashboard service started (PID 20083)</span>', '<span class="g">  &#10003; Dashboard opened in browser</span>', '', '<span class="c">  Dashboard:</span>  <span class="g">http://localhost:8881</span>', '<span class="c">  Pool:</span>       <span class="g">excalibur.dagtech.network:3335</span>', '<span class="c">  Worker:</span>     <span class="g">macmini @ 0x6387C3&hellip;E8083f</span>', '', '<span class="g">  [SHARE FOUND] nonce=0x000023cd</span>', '<span class="g">  [STATS] 2,432 H/s | accepted: 5,526 | rejected: 0</span>'],
+        tip: 'To stop mining: <code style="color:var(--glow)">curl -fsSL https://miner.dagtech.network/mac/uninstall.sh | bash</code>. Logs at <code style="color:var(--glow)">~/.dagtech-miner/miner.log</code>.',
         final: true,
         dashUrl: 'http://localhost:8881'
       }
