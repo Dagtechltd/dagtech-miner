@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DagTech BlockDAG Node v2.0.1 - Corruption-Proof Release</title>
+<meta name="description" content="Hardened QNG/Qitmeer-fork BlockDAG node. Soft-recovery from PathDB shutdown breadcrumbs, tunable diff-layer cap, IPFS snapshot bootstrap. Privacy-first local dashboard.">
 <link rel="icon" href="https://dapps.dagtech.network/icon.svg" type="image/svg+xml">
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -16,57 +17,65 @@
   --card: #0d1220;
   --border: #1a2236;
   --muted: #607080;
+  --heading-font: 'Space Grotesk', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --body-font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono-font: 'JetBrains Mono', 'Consolas', 'Menlo', monospace;
 }
 * { margin:0; padding:0; box-sizing:border-box; }
 html { scroll-behavior:smooth; }
-body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--fg); min-height:100vh; }
+body { font-family:var(--body-font); background:var(--bg); color:var(--fg); min-height:100vh; }
 body::before { content:''; position:fixed; inset:0; background:radial-gradient(ellipse 100% 50% at 50% 0%, hsl(210 100% 56%/0.04) 0%, transparent 60%); pointer-events:none; }
-h1,h2,h3,h4 { font-family:'Space Grotesk',sans-serif; }
+h1,h2,h3,h4 { font-family:var(--heading-font); }
 
-nav { position:sticky; top:0; z-index:100; background:hsl(220 50% 4%/0.9); backdrop-filter:blur(20px); border-bottom:1px solid hsl(210 100% 56%/0.08); padding:0.8rem 0; }
-nav .inner { max-width:980px; margin:0 auto; padding:0 1.5rem; display:flex; align-items:center; justify-content:space-between; }
-.logo { display:flex; align-items:center; gap:0.6rem; font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:1rem; color:var(--fg); text-decoration:none; }
-.logo .badge { display:inline-flex; padding:0.2rem 0.55rem; border-radius:999px; background:var(--primary); color:#fff; font-family:'JetBrains Mono',monospace; font-size:0.72rem; font-weight:700; }
-.nav-links { display:flex; gap:1.4rem; align-items:center; }
+nav { position:sticky; top:0; z-index:100; background:hsl(220 50% 4%/0.92); backdrop-filter:blur(20px); border-bottom:1px solid hsl(210 100% 56%/0.08); padding:0.8rem 0; }
+nav .inner { max-width:1020px; margin:0 auto; padding:0 1.5rem; display:flex; align-items:center; justify-content:space-between; gap:1rem; }
+.logo { display:flex; align-items:center; gap:0.6rem; font-family:var(--heading-font); font-weight:600; font-size:1rem; color:var(--fg); text-decoration:none; }
+.logo .badge { display:inline-flex; padding:0.2rem 0.55rem; border-radius:999px; background:var(--primary); color:#fff; font-family:var(--mono-font); font-size:0.72rem; font-weight:700; }
+.nav-links { display:flex; gap:1.2rem; align-items:center; flex-wrap:wrap; }
 .nav-links a { color:var(--muted); font-size:0.85rem; font-weight:500; text-decoration:none; transition:color 0.2s; }
 .nav-links a:hover { color:var(--fg); }
 
-.header { text-align:center; padding:4.5rem 1.5rem 2rem; position:relative; z-index:1; }
-.header .eyebrow { display:inline-flex; align-items:center; gap:0.4rem; padding:0.35rem 0.9rem; border:1px solid hsl(210 100% 56%/0.3); border-radius:999px; background:hsl(210 100% 56%/0.08); color:var(--glow); font-size:0.8rem; font-weight:600; margin-bottom:1.2rem; font-family:'JetBrains Mono',monospace; }
-.header h1 { font-size:clamp(2rem,5.2vw,3.2rem); font-weight:700; background:linear-gradient(135deg,var(--fg) 30%,var(--glow)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; line-height:1.15; }
-.header .sub { color:var(--muted); margin-top:0.9rem; font-size:1.05rem; max-width:620px; margin-left:auto; margin-right:auto; }
+.header { text-align:center; padding:4rem 1.5rem 2rem; position:relative; z-index:1; }
+.header .eyebrow { display:inline-flex; align-items:center; gap:0.4rem; padding:0.35rem 0.9rem; border:1px solid hsl(210 100% 56%/0.3); border-radius:999px; background:hsl(210 100% 56%/0.08); color:var(--glow); font-size:0.78rem; font-weight:600; margin-bottom:1.2rem; font-family:var(--mono-font); }
+.header h1 { font-size:clamp(1.9rem,5.2vw,3.2rem); font-weight:700; background:linear-gradient(135deg,var(--fg) 30%,var(--glow)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; line-height:1.15; }
+.header .sub { color:hsl(215 25% 75%); margin-top:0.9rem; font-size:1.02rem; max-width:640px; margin-left:auto; margin-right:auto; line-height:1.6; }
 
-.container { max-width:980px; margin:0 auto; padding:0 1.5rem 5rem; position:relative; z-index:1; }
+.container { max-width:1020px; margin:0 auto; padding:0 1.5rem 5rem; position:relative; z-index:1; }
 
 .glass {
   background:linear-gradient(160deg, hsl(220 45% 9%/0.95) 0%, hsl(220 50% 5%) 100%);
   border:1px solid var(--border); border-radius:1.1rem;
-  padding:2rem 2.2rem; margin-bottom:2rem;
+  padding:2rem 2.2rem; margin-bottom:1.6rem;
   box-shadow:0 0 40px hsl(210 100% 56%/0.04);
   transition:border-color 0.25s;
 }
 .glass:hover { border-color:hsl(210 100% 56%/0.25); }
 .glass h2 { font-size:1.45rem; font-weight:700; margin-bottom:1rem; display:flex; align-items:center; gap:0.6rem; }
-.glass h2 .num { display:inline-flex; min-width:36px; height:36px; border-radius:50%; background:hsl(210 100% 56%/0.1); border:2px solid hsl(210 100% 56%/0.3); align-items:center; justify-content:center; font-family:'Space Grotesk',sans-serif; font-weight:700; color:var(--primary); font-size:0.95rem; }
+.glass h2 .num { display:inline-flex; min-width:36px; height:36px; border-radius:50%; background:hsl(210 100% 56%/0.1); border:2px solid hsl(210 100% 56%/0.3); align-items:center; justify-content:center; font-family:var(--heading-font); font-weight:700; color:var(--primary); font-size:0.95rem; }
+.glass h3 { font-size:1.05rem; font-weight:600; color:var(--fg); margin:1.4rem 0 0.5rem; }
 .glass p { color:hsl(215 25% 75%); line-height:1.7; font-size:0.95rem; margin-bottom:0.8rem; }
-.glass ul { list-style:none; padding:0; }
-.glass ul li { color:hsl(215 25% 75%); line-height:1.8; font-size:0.95rem; padding-left:1.4rem; position:relative; }
+.glass ul, .glass ol { list-style:none; padding:0; }
+.glass ul li, .glass ol li { color:hsl(215 25% 75%); line-height:1.75; font-size:0.95rem; padding-left:1.4rem; position:relative; margin-bottom:0.3rem; }
 .glass ul li::before { content:''; position:absolute; left:0; top:0.85rem; width:7px; height:7px; border-radius:50%; background:var(--primary); box-shadow:0 0 8px var(--primary); }
+.glass ol { counter-reset:item; }
+.glass ol li { counter-increment:item; }
+.glass ol li::before { content:counter(item); position:absolute; left:0; top:0.3rem; width:1.1rem; height:1.1rem; border-radius:50%; background:hsl(210 100% 56%/0.15); border:1px solid hsl(210 100% 56%/0.35); color:var(--glow); font-family:var(--mono-font); font-size:0.68rem; font-weight:700; display:flex; align-items:center; justify-content:center; }
+.glass code { font-family:var(--mono-font); background:hsl(220 35% 8%/0.7); border:1px solid var(--border); padding:0.1rem 0.4rem; border-radius:4px; font-size:0.85em; color:var(--glow); }
 
 .code-wrapper { position:relative; margin:1rem 0; }
 .code-block {
   background:#0a0a12; border:1px solid #1e2638; border-radius:0.75rem;
   padding:1.1rem 1.4rem; padding-right:4.5rem;
-  font-family:'JetBrains Mono',monospace; font-size:0.88rem; line-height:1.7;
-  color:var(--glow); overflow-x:auto; white-space:pre-wrap; word-break:break-all;
+  font-family:var(--mono-font); font-size:0.84rem; line-height:1.7;
+  color:var(--glow); overflow-x:auto; white-space:pre-wrap; word-break:break-word;
 }
 .code-block .comment { color:#4a5568; }
 .copy-btn {
   position:absolute; top:0.55rem; right:0.55rem;
   background:hsl(210 100% 56%/0.15); border:1px solid hsl(210 100% 56%/0.3);
   color:var(--glow); padding:0.35rem 0.85rem; border-radius:0.5rem;
-  font-size:0.75rem; font-weight:600; cursor:pointer; transition:all 0.2s;
-  font-family:'Inter',sans-serif;
+  font-size:0.74rem; font-weight:600; cursor:pointer; transition:all 0.2s;
+  font-family:var(--body-font);
 }
 .copy-btn:hover { background:hsl(210 100% 56%/0.25); border-color:hsl(210 100% 56%/0.5); }
 .copy-btn.copied { background:hsl(140 60% 40%/0.2); border-color:var(--primary); color:var(--glow); }
@@ -77,32 +86,89 @@ table.bins th { color:var(--muted); font-weight:600; font-size:0.78rem; text-tra
 table.bins td { color:hsl(215 25% 80%); }
 table.bins td a { color:var(--glow); text-decoration:none; font-weight:600; }
 table.bins td a:hover { text-decoration:underline; }
-table.bins td.hash { font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:var(--muted); word-break:break-all; }
+table.bins td.hash { font-family:var(--mono-font); font-size:0.74rem; color:var(--muted); word-break:break-all; }
 
-.flag-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1rem; margin-top:0.8rem; }
+.flag-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:1rem; margin-top:0.8rem; }
 .flag-card { background:hsl(220 35% 8%/0.6); border:1px solid var(--border); border-radius:0.7rem; padding:1rem 1.1rem; }
-.flag-card code { display:block; font-family:'JetBrains Mono',monospace; color:var(--glow); font-size:0.88rem; font-weight:600; margin-bottom:0.4rem; }
-.flag-card p { color:hsl(215 25% 70%); font-size:0.85rem; line-height:1.55; margin:0; }
+.flag-card code { display:block; font-family:var(--mono-font); color:var(--glow); font-size:0.88rem; font-weight:600; margin-bottom:0.4rem; background:transparent; border:none; padding:0; }
+.flag-card p { color:hsl(215 25% 70%); font-size:0.86rem; line-height:1.55; margin:0; }
 
 .tip-box {
   background:hsl(210 100% 56%/0.06); border:1px solid hsl(210 100% 56%/0.15);
   border-radius:0.75rem; padding:1rem 1.2rem; margin:1rem 0;
   display:flex; gap:0.8rem; align-items:flex-start;
 }
-.tip-box .tip-icon { font-size:1.2rem; flex-shrink:0; margin-top:0.1rem; color:var(--glow); }
+.tip-box .tip-icon { font-size:1.15rem; flex-shrink:0; margin-top:0.05rem; color:var(--glow); font-family:var(--mono-font); font-weight:700; }
 .tip-box p { color:hsl(215 30% 75%); font-size:0.88rem; line-height:1.6; margin:0; }
+.tip-box.warn { background:hsl(40 100% 56%/0.05); border-color:hsl(40 100% 56%/0.18); }
+.tip-box.warn .tip-icon { color:#ffcc66; }
+
+/* Collapsible FAQ */
+details.faq {
+  background:hsl(220 35% 8%/0.5); border:1px solid var(--border); border-radius:0.7rem;
+  padding:0; margin-bottom:0.7rem; overflow:hidden;
+  transition:border-color 0.2s;
+}
+details.faq[open] { border-color:hsl(210 100% 56%/0.3); }
+details.faq summary {
+  cursor:pointer; padding:1rem 1.2rem; list-style:none;
+  font-family:var(--heading-font); font-weight:600; color:var(--fg); font-size:0.98rem;
+  display:flex; align-items:center; justify-content:space-between; gap:0.8rem;
+}
+details.faq summary::-webkit-details-marker { display:none; }
+details.faq summary::after {
+  content:'+'; font-family:var(--mono-font); color:var(--glow); font-size:1.3rem;
+  flex-shrink:0; width:1.5rem; text-align:center; transition:transform 0.2s;
+}
+details.faq[open] summary::after { content:'-'; }
+details.faq .faq-body {
+  padding:0 1.2rem 1.2rem; border-top:1px solid var(--border);
+}
+details.faq .faq-body p { color:hsl(215 25% 75%); line-height:1.7; font-size:0.92rem; margin:0.9rem 0; }
+details.faq .faq-body ul, details.faq .faq-body ol { padding:0; margin:0.6rem 0; }
+details.faq .faq-body ul li, details.faq .faq-body ol li { color:hsl(215 25% 75%); line-height:1.7; font-size:0.92rem; padding-left:1.4rem; position:relative; margin-bottom:0.25rem; }
+details.faq .faq-body ul li::before { content:''; position:absolute; left:0.2rem; top:0.75rem; width:5px; height:5px; border-radius:50%; background:var(--primary); }
+details.faq .faq-body code { font-family:var(--mono-font); background:hsl(220 35% 8%/0.7); border:1px solid var(--border); padding:0.1rem 0.4rem; border-radius:4px; font-size:0.85em; color:var(--glow); }
+
+/* OS tabs */
+.os-tabs { display:flex; gap:0.4rem; margin:0.6rem 0 0.4rem; flex-wrap:wrap; }
+.os-tab { padding:0.45rem 1rem; background:hsl(220 35% 8%/0.6); border:1px solid var(--border); border-radius:0.5rem; color:var(--muted); font-size:0.82rem; font-weight:600; cursor:pointer; font-family:var(--body-font); transition:all 0.2s; }
+.os-tab.active { background:hsl(210 100% 56%/0.15); border-color:hsl(210 100% 56%/0.4); color:var(--glow); }
+.os-tab:hover { color:var(--fg); }
+.os-panel { display:none; }
+.os-panel.active { display:block; }
+
+/* Pillar cards (What makes this DagTech-unique) */
+.pillar-grid { display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:1rem; margin-top:1rem; }
+.pillar-card { background:hsl(220 35% 8%/0.6); border:1px solid var(--border); border-radius:0.7rem; padding:1.1rem 1.2rem; }
+.pillar-card .pillar-num { font-family:var(--mono-font); color:var(--glow); font-size:0.8rem; font-weight:700; letter-spacing:0.08em; margin-bottom:0.3rem; }
+.pillar-card h3 { font-family:var(--heading-font); font-size:1.02rem; font-weight:600; color:var(--fg); margin:0 0 0.5rem; }
+.pillar-card p { color:hsl(215 25% 70%); font-size:0.86rem; line-height:1.6; margin:0; }
+
+/* Roadmap (Known bugs in next release) */
+.roadmap-list { margin-top:0.6rem; }
+.roadmap-item { display:flex; align-items:flex-start; gap:0.8rem; padding:0.7rem 0; border-bottom:1px solid var(--border); }
+.roadmap-item:last-child { border-bottom:none; }
+.roadmap-item .tag { flex-shrink:0; font-family:var(--mono-font); font-size:0.7rem; font-weight:700; letter-spacing:0.05em; padding:0.2rem 0.55rem; border-radius:4px; background:hsl(210 100% 56%/0.12); color:var(--glow); border:1px solid hsl(210 100% 56%/0.2); margin-top:0.1rem; }
+.roadmap-item .body { color:hsl(215 25% 75%); font-size:0.92rem; line-height:1.6; }
+.roadmap-item .body strong { color:var(--fg); font-weight:600; }
 
 footer { text-align:center; padding:2.5rem 1.5rem 3rem; color:var(--muted); font-size:0.8rem; border-top:1px solid var(--border); line-height:1.7; }
 footer a { color:var(--primary); text-decoration:none; }
-footer .confidential { display:inline-block; margin-top:0.6rem; padding:0.25rem 0.7rem; border-radius:4px; border:1px solid hsl(210 100% 56%/0.2); background:hsl(220 35% 8%/0.6); color:var(--glow); font-family:'JetBrains Mono',monospace; font-size:0.72rem; letter-spacing:0.05em; }
+footer .confidential { display:inline-block; margin-top:0.6rem; padding:0.25rem 0.7rem; border-radius:4px; border:1px solid hsl(210 100% 56%/0.2); background:hsl(220 35% 8%/0.6); color:var(--glow); font-family:var(--mono-font); font-size:0.72rem; letter-spacing:0.05em; }
+
+.kbd { display:inline-block; padding:0.1rem 0.45rem; font-family:var(--mono-font); font-size:0.78em; background:hsl(220 35% 12%); border:1px solid var(--border); border-bottom-width:2px; border-radius:4px; color:var(--fg); }
 
 @media (max-width:600px) {
-  .glass { padding:1.5rem 1.3rem; }
+  .glass { padding:1.5rem 1.2rem; }
   .nav-links { display:none; }
-  table.bins th, table.bins td { padding:0.5rem 0.4rem; font-size:0.8rem; }
-  table.bins td.hash { font-size:0.65rem; }
+  .header { padding:2.5rem 1rem 1.5rem; }
+  table.bins th, table.bins td { padding:0.5rem 0.4rem; font-size:0.78rem; }
+  table.bins td.hash { font-size:0.6rem; }
   .copy-btn { position:static; display:block; margin-top:0.5rem; text-align:center; }
-  .code-block { padding-right:1rem; }
+  .code-block { padding-right:1.1rem; font-size:0.78rem; }
+  details.faq summary { font-size:0.92rem; padding:0.85rem 1rem; }
+  details.faq .faq-body { padding:0 1rem 1rem; }
 }
 </style>
 </head>
@@ -112,11 +178,11 @@ footer .confidential { display:inline-block; margin-top:0.6rem; padding:0.25rem 
     <a href="/" class="logo">DagTech BlockDAG Node <span class="badge">v2.0.1</span></a>
     <div class="nav-links">
       <a href="#install">Install</a>
+      <a href="#dashboard">Dashboard</a>
       <a href="#verify">Verify</a>
-      <a href="#downloads">Downloads</a>
-      <a href="#flags">New Flags</a>
-      <a href="#fixed">Fixed</a>
-      <a href="#snapshot">Snapshot</a>
+      <a href="#unique">Why DagTech</a>
+      <a href="#faq">FAQ</a>
+      <a href="#roadmap">v2.1.0</a>
     </div>
   </div>
 </nav>
@@ -124,39 +190,60 @@ footer .confidential { display:inline-block; margin-top:0.6rem; padding:0.25rem 
 <section class="header">
   <div class="eyebrow">CLEAN-ROOM v2 RELEASE - 2026-06-24</div>
   <h1>DagTech BlockDAG Node v2.0.1<br>Corruption-Proof Release</h1>
-  <p class="sub">A hardened QNG / Qitmeer-fork node tuned for the BlockDAG mainnet. Eliminates the destructive <code>--cleanup</code> footgun, adds soft-recovery from PathDB shutdown breadcrumbs, and ships a tunable diff-layer cap.</p>
+  <p class="sub">A hardened QNG / Qitmeer-fork node tuned for the BlockDAG mainnet. Soft-recovery from PathDB shutdown breadcrumbs, tunable diff-layer cap, IPFS snapshot bootstrap, and a local-only dashboard. No telemetry, no phone-home, no analytics. Your stats stay on your box.</p>
 </section>
 
 <div class="container">
 
   <div class="glass" id="install">
     <h2><span class="num">1</span>Install (one line)</h2>
-    <p>Run on Linux (amd64 / arm64) as the user that will own the node. The installer is idempotent, verifies its own SHA-256, and pulls Jeremy's IPFS chain snapshot to skip the multi-day resync.</p>
+    <p>Run on Linux (amd64 / arm64) as the user that will own the node. The installer is idempotent, verifies its own SHA-256, pulls the IPFS chain snapshot to skip the multi-day resync, and brings up a local dashboard you can open in your browser.</p>
     <div class="code-wrapper">
       <pre class="code-block" id="code-install">curl -fsSL https://miner.dagtech.network/v201/install.sh | bash</pre>
       <button class="copy-btn" onclick="copyCode('code-install', this)">Copy</button>
     </div>
-    <div class="tip-box"><span class="tip-icon">i</span><p><strong>Pre-flight checks the installer runs:</strong> 8 GB RAM, 200 GB free disk, outbound TCP 8130 reachable. It will refuse and explain rather than fail half-installed.</p></div>
+    <div class="tip-box"><span class="tip-icon">i</span><p><strong>Pre-flight checks the installer runs:</strong> 8 GB RAM, 200 GB free disk, outbound TCP 8130 reachable, Docker present. It will refuse and explain rather than fail half-installed.</p></div>
+    <div class="tip-box warn"><span class="tip-icon">!</span><p><strong>v2.0.1 is a one-way trip.</strong> Once the node shuts down cleanly on v2.0.1, the on-disk state format is incompatible with v1. Snapshot your data dir before upgrading if you want a rollback path.</p></div>
+  </div>
+
+  <div class="glass" id="dashboard">
+    <h2><span class="num">2</span>Local dashboard (auto-opens at <code>http://127.0.0.1:8881</code>)</h2>
+    <p>After install, the node serves a local-only dashboard on loopback. Health, peers, sync progress, current block, RAM/CPU, recent shares, wallet inflow vs outflow - all rendered server-side from your own node. Nothing is sent anywhere.</p>
+    <div class="code-wrapper">
+      <pre class="code-block" id="code-dash"># Open the dashboard
+xdg-open http://127.0.0.1:8881    <span class="comment"># Linux</span>
+open     http://127.0.0.1:8881    <span class="comment"># macOS</span>
+start    http://127.0.0.1:8881    <span class="comment"># Windows</span>
+
+<span class="comment"># Or just point your browser at:</span>
+<span class="comment"># http://127.0.0.1:8881</span></pre>
+      <button class="copy-btn" onclick="copyCode('code-dash', this)">Copy</button>
+    </div>
+    <div class="tip-box"><span class="tip-icon">i</span><p><strong>Why loopback only.</strong> The dashboard binds to <code>127.0.0.1</code> by design - your operational telemetry is your business. If you want to reach it from your laptop, use an SSH tunnel: <code>ssh -L 8881:127.0.0.1:8881 user@your-node</code>. No accounts, no API keys, no remote endpoints.</p></div>
   </div>
 
   <div class="glass" id="verify">
-    <h2><span class="num">2</span>Verify the binary (recommended)</h2>
-    <p>Every artifact is SHA-256 signed. Verify before you trust:</p>
+    <h2><span class="num">3</span>Verify the binary (recommended)</h2>
+    <p>Every artifact is SHA-256 signed and the running binary embeds a DagTech signature stamp - so you can prove at runtime that what's executing is what we shipped.</p>
     <div class="code-wrapper">
-      <pre class="code-block" id="code-verify"># Download the binary you want plus SHA256SUMS
+      <pre class="code-block" id="code-verify"><span class="comment"># Download the binary you want plus SHA256SUMS</span>
 curl -fLO https://miner.dagtech.network/v201/dagtech-node-v2.0.1-linux-amd64
 curl -fLO https://miner.dagtech.network/v201/SHA256SUMS
 
-# Verify
-sha256sum -c SHA256SUMS --ignore-missing</pre>
+<span class="comment"># Verify file hash</span>
+sha256sum -c SHA256SUMS --ignore-missing
+
+<span class="comment"># Verify the running binary identifies itself as ours</span>
+docker exec blockdag-node bdag --version
+<span class="comment"># expect: bdag v2.0.1 (build &lt;hash&gt;) - DagTech corruption-proof release</span></pre>
       <button class="copy-btn" onclick="copyCode('code-verify', this)">Copy</button>
     </div>
-    <p>Expected output: <code>dagtech-node-v2.0.1-linux-amd64: OK</code></p>
+    <p>Expected output: <code>dagtech-node-v2.0.1-linux-amd64: OK</code>. GPG signature on <code>SHA256SUMS</code> lands in v2.1.0 (Boss-signed); for now the manifest is SHA-only and pulled over TLS from <code>miner.dagtech.network</code>.</p>
   </div>
 
   <div class="glass" id="downloads">
-    <h2><span class="num">3</span>Direct downloads</h2>
-    <p>Three platforms, statically-linked, no external runtime dependencies.</p>
+    <h2><span class="num">4</span>Direct downloads</h2>
+    <p>Statically-linked, no external runtime dependencies. Linux + Windows today; Darwin lands in v2.1.0.</p>
     <table class="bins">
       <thead><tr><th>Platform</th><th>Binary</th><th>Size</th><th>SHA-256</th></tr></thead>
       <tbody>
@@ -180,81 +267,454 @@ sha256sum -c SHA256SUMS --ignore-missing</pre>
         </tr>
       </tbody>
     </table>
-    <p style="margin-top:1rem;"><a href="SHA256SUMS" style="color:var(--glow); text-decoration:none; font-weight:600;">SHA256SUMS</a> &mdash; signed manifest of all three artifacts.</p>
+    <p style="margin-top:1rem;"><a href="SHA256SUMS" style="color:var(--glow); text-decoration:none; font-weight:600;">SHA256SUMS</a> - signed manifest of all three artifacts.</p>
+  </div>
+
+  <div class="glass" id="unique">
+    <h2><span class="num">5</span>What makes this build unique to DagTech</h2>
+    <p>This is not a rebadged upstream binary. The fixes below were derived from real production incidents on our UAE mining node, and the engineering trail is in our public commit history.</p>
+    <div class="pillar-grid">
+      <div class="pillar-card">
+        <div class="pillar-num">01</div>
+        <h3>The "Illegal withdrawal" bug fixed</h3>
+        <p>Every other operator was told to run <code>--cleanup</code> and wipe their chain to genesis. We traced it to the shutdown tracker in <code>qng-src/core/shutdown/tracker.go</code> and shipped <code>--rescue</code> for soft, non-destructive recovery.</p>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-num">02</div>
+        <h3>PathDB diff layer cap raised + tunable</h3>
+        <p>v1 hardcoded <code>maxDiffLayers=128</code> for vanilla Ethereum. GHOSTDAG consensus needs more headroom. We default to 256 and expose <code>--state.diff-layers-max</code> for memory-aware tuning.</p>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-num">03</div>
+        <h3>Sync-stuck self-heal (30s watchdog)</h3>
+        <p>If the chain head doesn't advance for 30 seconds while peers are connected, an in-process watchdog unsticks the import pipeline without restarting the binary. Catches the cases where the node sat silent for hours.</p>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-num">04</div>
+        <h3>DagTech signature in <code>--version</code></h3>
+        <p>The running binary prints a DagTech signature tag at startup. Anyone can verify at a glance that what's executing is our build - not an upstream copy with the same version string.</p>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-num">05</div>
+        <h3>Local dashboard, zero phone-home</h3>
+        <p>The dashboard at <code>127.0.0.1:8881</code> is server-rendered from your own node. No analytics, no telemetry, no DagTech endpoints called from the binary. Your operational data never leaves your box.</p>
+      </div>
+      <div class="pillar-card">
+        <div class="pillar-num">06</div>
+        <h3>Reproducible, hash-verified builds</h3>
+        <p>SHA256SUMS for all platforms. The build is deterministic - 10/10 reproducibility verified across rebuild. GPG signature lands in v2.1.0.</p>
+      </div>
+    </div>
   </div>
 
   <div class="glass" id="flags">
-    <h2><span class="num">4</span>New flags</h2>
+    <h2><span class="num">6</span>New flags</h2>
     <div class="flag-grid">
       <div class="flag-card">
         <code>--rescue</code>
-        <p>Non-destructive recovery mode. Replaces the destructive <code>--cleanup</code> advice that wiped chain data on operators following misleading runbooks. Soft-clears stale shutdown breadcrumbs without touching the trie, then attempts normal start.</p>
+        <p>Non-destructive recovery. Clears the stale shutdown breadcrumb, rolls back to the last fully-committed block, and resumes. Use this instead of <code>--cleanup</code> for OOM/SIGKILL/power-loss recovery.</p>
       </div>
       <div class="flag-card">
         <code>--state.diff-layers-max=N</code>
-        <p>Caps in-memory PathDB diff layers. Default 256. Lower (128) for memory-constrained hosts, raise (512+) for aggressive ingest hosts with abundant RAM. v1 hardcoded this to 128 and never surfaced it.</p>
+        <p>Caps in-memory PathDB diff layers. Default 256. Lower (128) for 8 GB RAM, raise (512+) on 32 GB+ pool backends. Each layer is ~30-60 MB of working set.</p>
+      </div>
+      <div class="flag-card">
+        <code>--cache=N</code>
+        <p>EVM cache in MB. Sensible: 2048 for 8 GB hosts, 4096 default for 16 GB, 8192 for 32 GB+.</p>
+      </div>
+      <div class="flag-card">
+        <code>--rescue --dry-run</code>
+        <p>Reports what <code>--rescue</code> would do without writing. Useful before a real rescue if you want to see which block it will roll back to.</p>
       </div>
     </div>
   </div>
 
   <div class="glass" id="fixed">
-    <h2><span class="num">5</span>What v2.0.1 fixes</h2>
+    <h2><span class="num">7</span>What v2.0.1 fixes</h2>
     <ul>
       <li><strong>"Illegal withdrawal at block X"</strong> is now recognised as a shutdown breadcrumb (not a withdrawal). <code>--rescue</code> soft-recovers without wiping the chain.</li>
       <li><strong>"missing trie node"</strong> after unclean shutdown is auto-recovered on next start instead of refusing to boot.</li>
       <li><strong>maxDiffLayers</strong> is no longer hardcoded. Adapts to DAG reorg depth via <code>--state.diff-layers-max</code>.</li>
-      <li><strong>PathDB flush / snapshot / reorg</strong> transient errors are now distinguished from corruption. The node retries rather than panicking.</li>
+      <li><strong>PathDB flush / snapshot / reorg</strong> transient errors are distinguished from corruption. The node retries rather than panicking.</li>
       <li><strong>lockfile orphan</strong> on container kill no longer prevents restart; replaced by atomic PID-tracked lock.</li>
-      <li><strong>Reproducible builds:</strong> SHA-256 signed, deterministic across rebuild. 10/10 reproducibility verified.</li>
+      <li><strong>Sync-stuck watchdog (30s)</strong> unsticks the import pipeline when chain head sits still with peers connected.</li>
+      <li><strong>Local-only dashboard</strong> on <code>127.0.0.1:8881</code> - no remote stats endpoint.</li>
+      <li><strong>Reproducible builds:</strong> SHA-256 signed, deterministic. 10/10 reproducibility verified.</li>
     </ul>
   </div>
 
   <div class="glass" id="snapshot">
-    <h2><span class="num">6</span>Chain snapshot (skip the resync)</h2>
-    <p>A full resync from genesis takes ~2.7 days. Instead, the installer pulls Jeremy's auto-updating IPFS chain snapshot - SHA-verified, peer-list-bundled, ~10 GB compressed. Updated continuously.</p>
+    <h2><span class="num">8</span>Chain snapshot (skip the 2.7-day resync)</h2>
+    <p>A full resync from genesis takes ~2.7 days. The installer pulls Jeremy's auto-updating IPFS chain snapshot - SHA-verified, peer-list-bundled, ~10 GB compressed, refreshed continuously.</p>
     <div class="code-wrapper">
-      <pre class="code-block" id="code-snap"># Pull latest snapshot manually (the installer does this automatically)
-ipfs get /ipns/blockdag-snapshot.dagtech.network --output=./snapshot.tar.zst
+      <pre class="code-block" id="code-snap"><span class="comment"># The installer does this for you. Manual path:</span>
+SNAPSHOT_CID=$(curl -s https://miner.dagtech.network/v201/snapshot-cid.txt)
+curl -L "https://${SNAPSHOT_CID}.ipfs.dweb.link/" -o snapshot.tar.zst
+curl -L "https://${SNAPSHOT_CID}.ipfs.dweb.link/sha256" -o snapshot.tar.zst.sha256
+sha256sum -c snapshot.tar.zst.sha256
 
-# Or via HTTP gateway if IPFS isn't installed
-curl -fLO https://ipfs.io/ipns/blockdag-snapshot.dagtech.network/latest.tar.zst</pre>
+<span class="comment"># Then stop node, extract, restart:</span>
+docker stop blockdag-node
+tar --use-compress-program=unzstd -xf snapshot.tar.zst -C /var/lib/blockdag/
+docker start blockdag-node</pre>
       <button class="copy-btn" onclick="copyCode('code-snap', this)">Copy</button>
     </div>
-    <div class="tip-box"><span class="tip-icon">i</span><p>Use the subdomain gateway form (<code>CID.ipfs.dweb.link/</code>) if a path-style gateway returns 404.</p></div>
+    <div class="tip-box"><span class="tip-icon">i</span><p>Use the subdomain gateway form (<code>CID.ipfs.dweb.link/</code>) - it works. Path-style gateways return 404 for our snapshots, don't bother.</p></div>
   </div>
 
   <div class="glass">
-    <h2><span class="num">7</span>Upgrade from v1</h2>
-    <p>One command. Stops v1 cleanly, snapshots the datadir, installs v2.0.1, restarts, verifies first block import within 60 s; rolls back on failure.</p>
+    <h2><span class="num">9</span>Upgrade from v1</h2>
+    <p>One command. Stops v1 cleanly, snapshots the datadir, installs v2.0.1, restarts, verifies first block import within 60 seconds; rolls back on failure.</p>
     <div class="code-wrapper">
       <pre class="code-block" id="code-upgrade">curl -fsSL https://miner.dagtech.network/v201/upgrade.sh | bash</pre>
       <button class="copy-btn" onclick="copyCode('code-upgrade', this)">Copy</button>
     </div>
-    <div class="tip-box"><span class="tip-icon">i</span><p>Your v1 datadir is renamed to <code>&lt;datadir&gt;.v1-backup-&lt;timestamp&gt;</code> - not copied. The upgrade is atomic and reversible.</p></div>
+    <div class="tip-box"><span class="tip-icon">i</span><p>Your v1 datadir is renamed to <code>&lt;datadir&gt;.v1-backup-&lt;timestamp&gt;</code> - not copied. The upgrade is atomic and reversible until v2.0.1 cleanly shuts down for the first time.</p></div>
   </div>
 
   <div class="glass">
-    <h2><span class="num">8</span>First share in ~30 min</h2>
-    <p>After install + snapshot import, the node converges with the DAG tip in 5-15 minutes, then begins accepting stratum work. Point your X100 (or any miner) at <code>excalibur.dagtech.network:3334</code>.</p>
-    <p>Stuck? <a href="https://stats.dagtech.network" style="color:var(--glow); text-decoration:none; font-weight:600;">stats.dagtech.network</a> (Grafana) and the install logs at <code>/var/log/dagtech-node/install.log</code> are the first stops.</p>
+    <h2><span class="num">10</span>First share after install</h2>
+    <p>After install + snapshot import, the node converges with the DAG tip in 5-15 minutes, then begins accepting stratum work. Point your X100 (or any miner) at <strong>your own pool</strong> (or whichever pool you've decided to mine to) - this build doesn't bake in a pool endpoint.</p>
+    <p>Watch progress in real time at <code>http://127.0.0.1:8881</code> - the local dashboard streams sync progress, peer count, first share, and first block. The install log lives at <code>/var/log/dagtech-node/install.log</code> if you need the early boot trace.</p>
+  </div>
+
+  <div class="glass">
+    <h2><span class="num">11</span>Quick restart - per OS</h2>
+    <p>One-liners. Pick your stack.</p>
+    <div class="os-tabs">
+      <button class="os-tab active" onclick="showOS(this,'os-docker')">Docker</button>
+      <button class="os-tab" onclick="showOS(this,'os-systemd')">Linux (systemd)</button>
+      <button class="os-tab" onclick="showOS(this,'os-windows')">Windows</button>
+      <button class="os-tab" onclick="showOS(this,'os-macos')">macOS</button>
+    </div>
+    <div class="os-panel active" id="os-docker">
+      <div class="code-wrapper">
+        <pre class="code-block" id="code-restart-docker"><span class="comment"># Soft restart (preserves volumes)</span>
+docker restart blockdag-node
+
+<span class="comment"># Hard recreate (re-applies docker-compose.yml changes)</span>
+cd /opt/dagtech-node
+docker compose up -d --force-recreate blockdag-node
+
+<span class="comment"># Tail logs after restart</span>
+docker logs -f --tail=200 blockdag-node</pre>
+        <button class="copy-btn" onclick="copyCode('code-restart-docker', this)">Copy</button>
+      </div>
+    </div>
+    <div class="os-panel" id="os-systemd">
+      <div class="code-wrapper">
+        <pre class="code-block" id="code-restart-systemd">sudo systemctl restart dagtech-node
+sudo systemctl status  dagtech-node
+sudo journalctl -fu    dagtech-node</pre>
+        <button class="copy-btn" onclick="copyCode('code-restart-systemd', this)">Copy</button>
+      </div>
+    </div>
+    <div class="os-panel" id="os-windows">
+      <div class="code-wrapper">
+        <pre class="code-block" id="code-restart-windows"><span class="comment"># PowerShell as Administrator</span>
+Restart-Service DagTechNode
+Get-Service     DagTechNode
+Get-Content     "$env:ProgramData\DagTech\node\logs\node.log" -Wait -Tail 200</pre>
+        <button class="copy-btn" onclick="copyCode('code-restart-windows', this)">Copy</button>
+      </div>
+    </div>
+    <div class="os-panel" id="os-macos">
+      <div class="code-wrapper">
+        <pre class="code-block" id="code-restart-macos"><span class="comment"># Darwin binary lands in v2.1.0. For now, run via Docker:</span>
+docker restart blockdag-node
+docker logs -f --tail=200 blockdag-node</pre>
+        <button class="copy-btn" onclick="copyCode('code-restart-macos', this)">Copy</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="glass">
+    <h2><span class="num">12</span>How to sync to network tip (from scratch)</h2>
+    <p>If you're starting cold or your chain head fell behind, here's the path with the lowest time-to-tip:</p>
+    <ol>
+      <li><strong>Stop the node</strong> if it's running: <code>docker stop blockdag-node</code></li>
+      <li><strong>Pull the IPFS snapshot</strong> - <code>~10 GB compressed</code>, gets you to roughly head-minus-15-minutes.</li>
+      <li><strong>Verify the snapshot SHA</strong> against the published hash before extracting (the installer does this automatically).</li>
+      <li><strong>Extract into your data dir</strong> - <code>tar --use-compress-program=unzstd -xf snapshot.tar.zst -C /var/lib/blockdag/</code></li>
+      <li><strong>Start the node</strong> - <code>docker start blockdag-node</code></li>
+      <li><strong>Watch convergence</strong> at <code>http://127.0.0.1:8881</code>. Expect chain head to advance from the snapshot block to network tip in 5-15 minutes once peers are above 4.</li>
+      <li><strong>Verify you're at tip</strong>: dashboard shows <code>synced: true</code> and chain head equals network head from any public RPC.</li>
+    </ol>
+    <p>If you'd rather sync from peers and skip the snapshot entirely: just start the node with an empty data dir. Expect ~2.7 days on a good connection, longer on a marginal one. Most operators don't want this.</p>
+  </div>
+
+  <div class="glass" id="faq">
+    <h2><span class="num">13</span>FAQ - operator answers</h2>
+    <p>The questions actually asked when a node breaks. Click to expand.</p>
+
+    <details class="faq">
+      <summary>How do I restart my node? (per OS)</summary>
+      <div class="faq-body">
+        <p><strong>Docker (most operators):</strong></p>
+        <p><code>docker restart blockdag-node</code> for a soft restart. <code>docker compose up -d --force-recreate blockdag-node</code> if you've edited <code>docker-compose.yml</code> and need the changes picked up.</p>
+        <p><strong>Linux systemd:</strong></p>
+        <p><code>sudo systemctl restart dagtech-node</code> + <code>sudo journalctl -fu dagtech-node</code> to tail logs.</p>
+        <p><strong>Windows:</strong></p>
+        <p><code>Restart-Service DagTechNode</code> from an elevated PowerShell. Logs live at <code>%ProgramData%\DagTech\node\logs\node.log</code>.</p>
+        <p>See Section 11 above for copy-paste blocks.</p>
+      </div>
+    </details>
+
+    <details class="faq">
+      <summary>I see "Previous shutdown was unclean - last block in progress: &lt;X&gt;". What do I do?</summary>
+      <div class="faq-body">
+        <p>This is the shutdown tracker breadcrumb, not a withdrawal bug, and <strong>not</strong> a sign of corruption. It means the node was killed mid-block-commit (OOM, SIGKILL, power loss, container kill).</p>
+        <p><strong>Do not run <code>--cleanup</code></strong>. That wipes your chain back to genesis and forces a ~2.7-day resync. The advice floating in semi-official channels to use <code>--cleanup</code> for this message is wrong.</p>
+        <p><strong>Run <code>--rescue</code> once</strong>, then restart normally:</p>
+        <div class="code-wrapper">
+          <pre class="code-block" id="code-rescue">docker exec blockdag-node bdag --rescue
+docker restart blockdag-node
+docker exec blockdag-node bdag attach --exec "eth.blockNumber"</pre>
+          <button class="copy-btn" onclick="copyCode('code-rescue', this)">Copy</button>
+        </div>
+        <p>If <code>eth.blockNumber</code> returns a number close to network head, you're done. Total recovery: ~30 seconds. No resync.</p>
+        <p><strong>Stopgap if you can't upgrade yet</strong> (still on v1): remove the lockfile and restart.</p>
+        <div class="code-wrapper">
+          <pre class="code-block" id="code-stopgap">docker exec blockdag-node rm data/&lt;network&gt;/lockfile
+docker restart blockdag-node</pre>
+          <button class="copy-btn" onclick="copyCode('code-stopgap', this)">Copy</button>
+        </div>
+        <p>That's a hack. Upgrade to v2.0.1 properly when you can.</p>
+      </div>
+    </details>
+
+    <details class="faq">
+      <summary>When should I use <code>--rescue</code> vs <code>--cleanup</code>? (decision tree)</summary>
+      <div class="faq-body">
+        <p>Almost always <code>--rescue</code>. The only legitimate use of <code>--cleanup</code> is when your data dir is genuinely corrupt and you've decided to start over.</p>
+        <p><strong>Use <code>--rescue</code> when:</strong></p>
+        <ul>
+          <li>"Illegal withdrawal at block:X" on startup</li>
+          <li>"Previous shutdown was unclean" message</li>
+          <li>Node was OOM-killed, SIGKILL'd, power-lost, or container-killed mid-commit</li>
+          <li>"missing trie node" right after an unclean shutdown</li>
+        </ul>
+        <p><strong>Use <code>--cleanup</code> ONLY when:</strong></p>
+        <ul>
+          <li>Your disk had a hardware failure and the trie is genuinely partial</li>
+          <li>You manually edited or partially restored chaindata files</li>
+          <li><code>--rescue</code> has been run and the node still won't boot for trie reasons</li>
+          <li>You've decided to start fresh and don't care about your existing chaindata</li>
+        </ul>
+        <p>For all "I've decided to start fresh" cases, prefer the IPFS snapshot - faster than running <code>--cleanup</code> and resyncing from peers.</p>
+        <p>If unsure, run <code>bdag --rescue --dry-run</code> first - it reports what it would do without writing.</p>
+      </div>
+    </details>
+
+    <details class="faq">
+      <summary>My node won't start with OOM / high memory. What knob do I tune?</summary>
+      <div class="faq-body">
+        <p>PathDB is the hungry component. Two knobs: <code>--state.diff-layers-max</code> and <code>--cache</code>.</p>
+        <table class="bins">
+          <thead><tr><th>RAM</th><th><code>--state.diff-layers-max</code></th><th><code>--cache</code> (MB)</th></tr></thead>
+          <tbody>
+            <tr><td>8 GB</td><td>128</td><td>2048</td></tr>
+            <tr><td>16 GB (default)</td><td>256</td><td>4096</td></tr>
+            <tr><td>32 GB+</td><td>512</td><td>8192</td></tr>
+          </tbody>
+        </table>
+        <p>Edit <code>docker-compose.yml</code>:</p>
+        <div class="code-wrapper">
+          <pre class="code-block" id="code-oom">command:
+  - --state.diff-layers-max=128
+  - --cache=2048</pre>
+          <button class="copy-btn" onclick="copyCode('code-oom', this)">Copy</button>
+        </div>
+        <p>Then <code>docker compose up -d --force-recreate blockdag-node</code>. Watch RSS for 30 minutes. If it still climbs past 80% of available RAM, drop <code>--state.diff-layers-max</code> one more step (128 -&gt; 96).</p>
+        <p>If you're consistently OOM-killing on 8 GB, the honest answer is your box is undersized for steady operation - 16 GB is the comfortable floor.</p>
+      </div>
+    </details>
+
+    <details class="faq">
+      <summary>How do I sync to network tip from scratch?</summary>
+      <div class="faq-body">
+        <p>Two routes - snapshot (recommended) or peer sync.</p>
+        <p><strong>Route 1 - IPFS snapshot (~30 min total):</strong> the installer does this automatically. See Section 12 above for the manual step-by-step.</p>
+        <p><strong>Route 2 - sync from peers (~2.7 days):</strong> wipe your data dir and just start the node. It will discover peers and sync from genesis. Most operators don't choose this voluntarily.</p>
+        <p>Verify you're at tip: dashboard at <code>http://127.0.0.1:8881</code> shows <code>synced: true</code> and your chain head matches any public RPC's head.</p>
+      </div>
+    </details>
+
+    <details class="faq">
+      <summary>My node DB is corrupted. How do I resync from the DagTech IPFS snapshot?</summary>
+      <div class="faq-body">
+        <p>Step by step:</p>
+        <ol>
+          <li><strong>Stop the node:</strong> <code>docker stop blockdag-node</code></li>
+          <li><strong>Move the broken data dir aside</strong> (don't delete until snapshot import succeeds):
+            <div class="code-wrapper"><pre class="code-block" id="code-resync1">sudo mv /var/lib/blockdag /var/lib/blockdag.broken.$(date +%s)
+sudo mkdir -p /var/lib/blockdag
+sudo chown -R bdag:bdag /var/lib/blockdag</pre><button class="copy-btn" onclick="copyCode('code-resync1', this)">Copy</button></div>
+          </li>
+          <li><strong>Resolve the latest snapshot CID</strong> (auto-updating IPNS pointer):
+            <div class="code-wrapper"><pre class="code-block" id="code-resync2">SNAPSHOT_CID=$(curl -s https://miner.dagtech.network/v201/snapshot-cid.txt)
+echo "$SNAPSHOT_CID"</pre><button class="copy-btn" onclick="copyCode('code-resync2', this)">Copy</button></div>
+          </li>
+          <li><strong>Pull the snapshot via subdomain gateway</strong> (path-style gateways 404 for our snapshots):
+            <div class="code-wrapper"><pre class="code-block" id="code-resync3">curl -L "https://${SNAPSHOT_CID}.ipfs.dweb.link/" -o snapshot.tar.zst
+curl -L "https://${SNAPSHOT_CID}.ipfs.dweb.link/sha256" -o snapshot.tar.zst.sha256</pre><button class="copy-btn" onclick="copyCode('code-resync3', this)">Copy</button></div>
+          </li>
+          <li><strong>Verify SHA</strong> before extracting - non-negotiable:
+            <div class="code-wrapper"><pre class="code-block" id="code-resync4">sha256sum -c snapshot.tar.zst.sha256
+<span class="comment"># expect: snapshot.tar.zst: OK</span></pre><button class="copy-btn" onclick="copyCode('code-resync4', this)">Copy</button></div>
+          </li>
+          <li><strong>Extract into the data dir:</strong>
+            <div class="code-wrapper"><pre class="code-block" id="code-resync5">sudo tar --use-compress-program=unzstd -xf snapshot.tar.zst -C /var/lib/blockdag/
+sudo chown -R bdag:bdag /var/lib/blockdag</pre><button class="copy-btn" onclick="copyCode('code-resync5', this)">Copy</button></div>
+          </li>
+          <li><strong>Start the node:</strong> <code>docker start blockdag-node</code></li>
+          <li><strong>Watch convergence</strong> at <code>http://127.0.0.1:8881</code>. Expect tip in 5-15 minutes with peers above 4.</li>
+          <li><strong>Once you're at tip and stable for an hour</strong>, you can delete the old broken dir: <code>sudo rm -rf /var/lib/blockdag.broken.*</code></li>
+        </ol>
+        <p>Snapshot lineage and hash history live at <code>miner.dagtech.network/v201/snapshot-status</code>.</p>
+      </div>
+    </details>
+
+    <details class="faq">
+      <summary>How do I update from v2.0.1 to a future version?</summary>
+      <div class="faq-body">
+        <p>Use the upgrade script - same pattern as v1 -&gt; v2.0.1:</p>
+        <div class="code-wrapper">
+          <pre class="code-block" id="code-future-upgrade">curl -fsSL https://miner.dagtech.network/v210/upgrade.sh | bash</pre>
+          <button class="copy-btn" onclick="copyCode('code-future-upgrade', this)">Copy</button>
+        </div>
+        <p>It stops the running node cleanly, snapshots your data dir to <code>&lt;datadir&gt;.v201-backup-&lt;timestamp&gt;</code>, installs the new binary, starts it back up, and verifies first block import within 60 seconds. On failure it rolls back automatically.</p>
+        <p><strong>Forward compatibility:</strong> minor-version upgrades within v2.x preserve on-disk format. A major bump (v3.x) will publish its own migration path.</p>
+        <p>Always check the release notes for the target version before upgrading. We publish them at <code>miner.dagtech.network/&lt;version&gt;/</code>.</p>
+      </div>
+    </details>
+
+    <details class="faq">
+      <summary>What if my peer count drops below 5?</summary>
+      <div class="faq-body">
+        <p>First check is your inbound port:</p>
+        <div class="code-wrapper">
+          <pre class="code-block" id="code-peers">curl -s "https://portchecker.io/api/query?host=YOUR_PUBLIC_IP&amp;port=8130"</pre>
+          <button class="copy-btn" onclick="copyCode('code-peers', this)">Copy</button>
+        </div>
+        <p>If <strong>port 8130 is closed</strong>: fix your NAT / firewall. That's 99% of low-peer cases. Behind hard NAT with no port mapping, you'll be peer-leeching and your count will sit low forever - the network won't dial you back.</p>
+        <p>If <strong>port 8130 is open</strong> and peers still stuck low for 15+ minutes:</p>
+        <ul>
+          <li>Restart the node - bootstrap peers cycle</li>
+          <li>Check <code>docker logs blockdag-node 2>&amp;1 | tail -200</code> for "no route to host" or "dial timeout" patterns</li>
+          <li>Check your upstream isn't being filtered (ISP, hosting-provider AUP)</li>
+          <li>File a GitHub issue at <a href="https://github.com/Dagtechltd/dagtech-miner/issues">github.com/Dagtechltd/dagtech-miner/issues</a> with your public IP and the last 200 log lines</li>
+        </ul>
+      </div>
+    </details>
+
+    <details class="faq">
+      <summary>My miner gets "Expired job" - what's wrong?</summary>
+      <div class="faq-body">
+        <p>"Expired job" from your miner means the pool sent a new <code>mining.notify</code> with <code>clean_jobs=true</code> before your miner finished the previous job. The miner discarded in-flight nonces and switched.</p>
+        <p>This is normal at low rates (a few per hour during DAG reorgs). It becomes a problem when:</p>
+        <ul>
+          <li><strong>You're seeing dozens per minute</strong> - the pool is sending <code>clean_jobs=true</code> on every notify (broken / mis-configured pool router), or your node is reorging constantly. Check pool config first, then node sync stability.</li>
+          <li><strong>Bursts of expired jobs followed by zero hash output</strong> - vardiff death spiral. Your miner can't complete a job before the next clean_jobs arrives. Mitigation in v2.0.1 lands at the Sentry pool-side layer; on the node side, ensure your node isn't lagging the network.</li>
+          <li><strong>One-off after a node restart</strong> - normal. The pool sees the chain advance and pushes a clean job. Ignore.</li>
+        </ul>
+        <p>If you operate the pool too, check the pool config docs - <code>clean_jobs</code> should only fire on genuine GHOSTDAG reorgs that invalidate work.</p>
+      </div>
+    </details>
+
+    <details class="faq">
+      <summary>Does this build phone home?</summary>
+      <div class="faq-body">
+        <p><strong>No.</strong></p>
+        <p>The binary makes <strong>zero outbound calls to DagTech-controlled endpoints</strong> during normal operation. Specifically:</p>
+        <ul>
+          <li>No telemetry, no usage analytics, no crash reporting service</li>
+          <li>No remote health check pings to <code>dagtech.network</code></li>
+          <li>No stats upload, no anonymous metrics, no opt-out flag because there's nothing to opt out of</li>
+          <li>The local dashboard at <code>127.0.0.1:8881</code> is loopback-only; it doesn't post anywhere</li>
+        </ul>
+        <p>The only times the binary touches DagTech infrastructure are <strong>operator-initiated</strong>:</p>
+        <ul>
+          <li><code>install.sh</code> / <code>upgrade.sh</code> fetch artifacts from <code>miner.dagtech.network</code> (that's the install path you chose)</li>
+          <li>Snapshot pull from IPFS (also install path)</li>
+          <li>If you set the optional update-check flag, the binary will check our releases manifest once a day - off by default</li>
+        </ul>
+        <p>Want to verify? <code>tcpdump -i any -n host not YOUR_PEERS</code> while the node is steady-state. Outbound destinations should be peer IPs only.</p>
+      </div>
+    </details>
+
+  </div>
+
+  <div class="glass" id="roadmap">
+    <h2><span class="num">14</span>Known bugs we're fixing in v2.1.0</h2>
+    <p>The transparency section. These are real, we know about them, and they're in flight.</p>
+    <div class="roadmap-list">
+      <div class="roadmap-item">
+        <div class="tag">CONSENSUS</div>
+        <div class="body"><strong>Conflux-style deferred state commit (5-block window).</strong> Eliminates the "Zero state root" class of errors entirely by deferring state commitment until 5 blocks after the block lands. We've done the design work; implementation is in progress.</div>
+      </div>
+      <div class="roadmap-item">
+        <div class="tag">PLATFORM</div>
+        <div class="body"><strong>Darwin binaries.</strong> v2.0.1 ships Linux + Windows only. macOS arm64 and amd64 binaries land in v2.1.0, ad-hoc codesigned at minimum.</div>
+      </div>
+      <div class="roadmap-item">
+        <div class="tag">SECURITY</div>
+        <div class="body"><strong>GPG signature on SHA256SUMS.</strong> v2.0.1 is SHA-only over TLS. v2.1.0 adds Boss-signed GPG signature on <code>SHA256SUMS.asc</code> so the chain of trust extends past TLS termination at our CDN.</div>
+      </div>
+      <div class="roadmap-item">
+        <div class="tag">DASHBOARD</div>
+        <div class="body"><strong>Wallet rate inflow vs outflow split panel.</strong> Today the dashboard shows combined wallet movement. v2.1.0 splits inbound rewards from outbound transactions so you can see your real revenue rate at a glance.</div>
+      </div>
+      <div class="roadmap-item">
+        <div class="tag">WATCHDOG</div>
+        <div class="body"><strong>Sync watchdog will also disconnect the stale peer.</strong> Today the 30-second watchdog unsticks the import pipeline. v2.1.0 will additionally identify and drop the peer that fed the stale data, so the next reconnect picks a healthier one.</div>
+      </div>
+      <div class="roadmap-item">
+        <div class="tag">OBSERVABILITY</div>
+        <div class="body"><strong>Structured event log over Unix socket.</strong> Optional newline-delimited JSON event stream on a local socket for operators running their own monitoring. Still local-only.</div>
+      </div>
+    </div>
+    <p style="margin-top:1.2rem;">Suggest a fix or report a bug: <a href="https://github.com/Dagtechltd/dagtech-miner/issues" style="color:var(--glow); text-decoration:none; font-weight:600;">github.com/Dagtechltd/dagtech-miner/issues</a></p>
+  </div>
+
+  <div class="glass">
+    <h2><span class="num">15</span>Where to get help</h2>
+    <ul>
+      <li><strong>GitHub issues:</strong> <a href="https://github.com/Dagtechltd/dagtech-miner/issues" style="color:var(--glow);">github.com/Dagtechltd/dagtech-miner/issues</a> - bugs, features, and anything that needs a paper trail</li>
+      <li><strong>Telegram operators channel:</strong> see <a href="/" style="color:var(--glow);">miner.dagtech.network</a> for the invite</li>
+      <li><strong>Snapshot status / IPFS health:</strong> <a href="/v201/snapshot-status" style="color:var(--glow);">miner.dagtech.network/v201/snapshot-status</a></li>
+      <li><strong>Local dashboard:</strong> <code>http://127.0.0.1:8881</code> - your own node's status, no account needed</li>
+    </ul>
   </div>
 
 </div>
 
 <footer>
-  &copy; 2026 DagTech Ltd. &middot; <a href="/">miner.dagtech.network</a> &middot; <a href="/install.html">All installers</a><br>
+  &copy; 2026 DagTech Ltd. &middot; <a href="/">miner.dagtech.network</a> &middot; <a href="/install.html">All installers</a> &middot; <a href="https://github.com/Dagtechltd/dagtech-miner">GitHub</a><br>
+  Excalibur &middot; Hans-Solo &middot; JARVIS<br>
   <span class="confidential">CONFIDENTIAL - DagTech IP - All rights reserved</span>
 </footer>
 
 <script>
 function copyCode(id, btn) {
-  const txt = document.getElementById(id).innerText;
+  const el = document.getElementById(id);
+  if (!el) return;
+  const txt = el.innerText;
   navigator.clipboard.writeText(txt).then(() => {
     const orig = btn.innerText;
     btn.innerText = 'Copied!';
     btn.classList.add('copied');
     setTimeout(() => { btn.innerText = orig; btn.classList.remove('copied'); }, 1600);
   });
+}
+function showOS(btn, panelId) {
+  const tabs = btn.parentElement.querySelectorAll('.os-tab');
+  tabs.forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  const container = btn.parentElement.parentElement;
+  container.querySelectorAll('.os-panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById(panelId);
+  if (panel) panel.classList.add('active');
 }
 </script>
 </body>
