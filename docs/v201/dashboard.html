@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DagTech Local Node Dashboard</title>
+<style>
+:root{
+  --bg:#080b14;
+  --fg:#f4f7fb;
+  --primary:hsl(210 100% 56%);
+  --glow:#66b3ff;
+  --accent:#0a4cbf;
+  --card:#0d1220;
+  --border:#1a2236;
+  --muted:#607080;
+  --ok:hsl(210 100% 56%);
+  --warn:hsl(35 100% 60%);
+  --bad:hsl(0 80% 60%);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:'Inter','Segoe UI',-apple-system,BlinkMacSystemFont,Roboto,Helvetica,Arial,sans-serif;
+  background:var(--bg);
+  color:var(--fg);
+  min-height:100vh;
+  line-height:1.5;
+}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 100% 50% at 50% 0%,hsl(210 100% 56%/0.05) 0%,transparent 60%);pointer-events:none;z-index:0;}
+h1,h2,h3,h4{font-family:'Space Grotesk','Inter','Segoe UI',sans-serif;font-weight:700;letter-spacing:-0.01em;}
+header{position:sticky;top:0;z-index:50;background:hsl(220 50% 4%/0.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid hsl(210 100% 56%/0.1);padding:0.85rem 1.25rem;}
+header .inner{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap;}
+.logo{display:flex;align-items:center;gap:0.55rem;font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:1rem;}
+.logo .dot{width:10px;height:10px;border-radius:50%;background:var(--primary);box-shadow:0 0 12px var(--primary);animation:pulse 2s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.5;}}
+.logo .badge{display:inline-flex;padding:0.18rem 0.55rem;border-radius:999px;background:var(--primary);color:#fff;font-family:'Courier New',monospace;font-size:0.7rem;font-weight:700;}
+.meta{display:flex;gap:1rem;font-size:0.78rem;color:var(--muted);font-family:'Courier New',monospace;flex-wrap:wrap;}
+.meta span{display:inline-flex;align-items:center;gap:0.35rem;}
+.meta .live::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--ok);box-shadow:0 0 6px var(--ok);}
+.meta .stale::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--warn);}
+.meta .dead::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--bad);}
+main{max-width:1200px;margin:0 auto;padding:1.5rem 1.25rem 4rem;position:relative;z-index:1;}
+.hero{text-align:center;padding:1rem 0 2rem;}
+.hero h1{font-size:clamp(1.5rem,4vw,2.2rem);background:linear-gradient(135deg,var(--fg) 40%,var(--glow));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.hero p{color:var(--muted);margin-top:0.4rem;font-size:0.9rem;}
+.wallet-form{display:flex;gap:0.5rem;max-width:560px;margin:1.25rem auto 0;flex-wrap:wrap;}
+.wallet-form input{flex:1;min-width:240px;background:#0a0e1a;border:1px solid var(--border);color:var(--fg);padding:0.65rem 0.85rem;border-radius:0.55rem;font-family:'Courier New',monospace;font-size:0.85rem;outline:none;transition:border-color 0.2s;}
+.wallet-form input:focus{border-color:var(--primary);}
+.wallet-form button{background:var(--primary);color:#fff;border:none;padding:0.65rem 1.1rem;border-radius:0.55rem;font-weight:600;cursor:pointer;font-size:0.85rem;transition:transform 0.1s;}
+.wallet-form button:hover{transform:translateY(-1px);}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1rem;margin-bottom:1rem;}
+.card{background:linear-gradient(160deg,hsl(220 45% 9%/0.95) 0%,hsl(220 50% 5%) 100%);border:1px solid var(--border);border-radius:0.9rem;padding:1.25rem 1.35rem;position:relative;overflow:hidden;transition:border-color 0.25s,box-shadow 0.25s;}
+.card:hover{border-color:hsl(210 100% 56%/0.3);box-shadow:0 0 24px hsl(210 100% 56%/0.08);}
+.card .label{font-size:0.72rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--muted);font-weight:600;margin-bottom:0.45rem;display:flex;align-items:center;gap:0.4rem;}
+.card .label .pill{padding:0.12rem 0.5rem;border-radius:999px;font-size:0.65rem;letter-spacing:0.05em;}
+.pill.ok{background:hsl(210 100% 56%/0.15);color:var(--glow);border:1px solid hsl(210 100% 56%/0.3);}
+.pill.warn{background:hsl(35 100% 60%/0.15);color:var(--warn);border:1px solid hsl(35 100% 60%/0.3);}
+.pill.bad{background:hsl(0 80% 60%/0.15);color:var(--bad);border:1px solid hsl(0 80% 60%/0.3);}
+.card .value{font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;color:var(--fg);line-height:1.1;word-break:break-all;}
+.card .value.small{font-size:1.35rem;}
+.card .sub{font-family:'Courier New',monospace;font-size:0.78rem;color:var(--muted);margin-top:0.4rem;word-break:break-all;}
+.card .rates{display:grid;grid-template-columns:repeat(2,1fr);gap:0.5rem;margin-top:0.8rem;}
+.card .rates .r{background:hsl(220 30% 8%);border:1px solid var(--border);border-radius:0.5rem;padding:0.5rem 0.65rem;}
+.card .rates .r .k{font-size:0.65rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;}
+.card .rates .r .v{font-family:'Space Grotesk',sans-serif;font-weight:700;color:var(--glow);font-size:0.95rem;margin-top:0.15rem;}
+.full{grid-column:1 / -1;}
+.logs{background:#06080f;border:1px solid var(--border);border-radius:0.6rem;padding:0.9rem 1rem;font-family:'Courier New',monospace;font-size:0.76rem;color:hsl(215 25% 75%);max-height:280px;overflow:auto;white-space:pre-wrap;word-break:break-all;line-height:1.55;}
+.logs::-webkit-scrollbar{width:6px;}
+.logs::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+.actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:0.75rem;margin-top:0.8rem;}
+.actions .btn{background:hsl(220 30% 8%);border:1px solid var(--border);color:var(--fg);padding:0.75rem 1rem;border-radius:0.55rem;font-size:0.85rem;font-weight:600;cursor:pointer;text-align:left;transition:all 0.2s;display:flex;flex-direction:column;gap:0.3rem;font-family:inherit;}
+.actions .btn:hover{border-color:var(--primary);background:hsl(220 30% 10%);}
+.actions .btn .t{color:var(--glow);font-weight:700;}
+.actions .btn .d{font-size:0.72rem;color:var(--muted);font-family:'Courier New',monospace;word-break:break-all;}
+.cmd{display:none;margin-top:0.65rem;background:#06080f;border:1px solid var(--primary);border-radius:0.5rem;padding:0.7rem 0.9rem;font-family:'Courier New',monospace;font-size:0.78rem;color:var(--glow);word-break:break-all;position:relative;}
+.cmd.show{display:block;}
+.cmd .x{position:absolute;top:0.3rem;right:0.45rem;color:var(--muted);cursor:pointer;background:none;border:none;font-size:1rem;}
+footer{text-align:center;padding:2rem 1rem;color:var(--muted);font-size:0.75rem;border-top:1px solid var(--border);margin-top:2rem;}
+footer .priv{display:inline-flex;align-items:center;gap:0.4rem;padding:0.25rem 0.7rem;border-radius:999px;background:hsl(210 100% 56%/0.08);border:1px solid hsl(210 100% 56%/0.2);color:var(--glow);margin-bottom:0.7rem;font-family:'Courier New',monospace;}
+@media (max-width:540px){
+  .meta{font-size:0.7rem;gap:0.6rem;}
+  .card .value{font-size:1.6rem;}
+  .card .value.small{font-size:1.1rem;}
+  header .inner{flex-direction:column;align-items:flex-start;}
+  .hero{padding:0.5rem 0 1.25rem;}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="inner">
+    <div class="logo">
+      <span class="dot"></span>
+      <span>DagTech Node</span>
+      <span class="badge">LOCAL</span>
+    </div>
+    <div class="meta">
+      <span id="rpc-state" class="live">EVM RPC</span>
+      <span id="dag-state" class="live">MeerDAG RPC</span>
+      <span id="last-poll">Polling...</span>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <h1>Your node. Your stats. Your box.</h1>
+    <p>Everything you see is read from <code style="color:var(--glow);">127.0.0.1</code>. No data ever leaves this machine.</p>
+    <form class="wallet-form" id="walletForm" onsubmit="return saveWallet(event);">
+      <input id="walletInput" type="text" placeholder="0x... (paste your mining wallet to track balance)" autocomplete="off" spellcheck="false">
+      <button type="submit">Save</button>
+    </form>
+  </section>
+
+  <div class="grid">
+    <div class="card">
+      <div class="label">Sync Health <span id="sync-pill" class="pill ok">CHECKING</span></div>
+      <div class="value small" id="sync-age">--</div>
+      <div class="sub" id="sync-detail">block age since last tip</div>
+    </div>
+    <div class="card">
+      <div class="label">Peer Count <span id="peers-pill" class="pill ok">--</span></div>
+      <div class="value" id="peers-count">--</div>
+      <div class="sub">libp2p inbound + outbound</div>
+    </div>
+    <div class="card">
+      <div class="label">Chain Head</div>
+      <div class="value small" id="dag-order">DAG: --</div>
+      <div class="sub" id="evm-block">EVM: --</div>
+    </div>
+    <div class="card">
+      <div class="label">Wallet Balance</div>
+      <div class="value small" id="wallet-bal">--</div>
+      <div class="sub" id="wallet-addr">No wallet set</div>
+      <div class="rates" id="wallet-rates">
+        <div class="r"><div class="k">5 min</div><div class="v" id="rate5">--</div></div>
+        <div class="r"><div class="k">15 min</div><div class="v" id="rate15">--</div></div>
+        <div class="r"><div class="k">30 min</div><div class="v" id="rate30">--</div></div>
+        <div class="r"><div class="k">60 min</div><div class="v" id="rate60">--</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Dashboard Uptime</div>
+      <div class="value small" id="uptime">--</div>
+      <div class="sub" id="version">version: checking...</div>
+    </div>
+    <div class="card">
+      <div class="label">Privacy</div>
+      <div class="value small" style="color:var(--glow);">All-local</div>
+      <div class="sub">No telemetry. No analytics. No external HTTP. Your wallet address is stored only in this browser's localStorage.</div>
+    </div>
+  </div>
+
+  <div class="card full">
+    <div class="label">Recent Node Log <span class="pill ok" id="log-pill">tail -20</span></div>
+    <div class="logs" id="logs">Reading log...</div>
+  </div>
+
+  <div class="card full">
+    <div class="label">Quick Actions <span class="pill ok">manual</span></div>
+    <p style="color:var(--muted);font-size:0.82rem;margin-bottom:0.7rem;">These show the command - they do not execute it. Run them in your terminal.</p>
+    <div class="actions">
+      <button class="btn" onclick="showCmd('restart-cmd')">
+        <span class="t">Restart node</span>
+        <span class="d">stop &amp; start the dagtech-node service</span>
+      </button>
+      <button class="btn" onclick="showCmd('rescue-cmd')">
+        <span class="t">Soft-recover (--rescue)</span>
+        <span class="d">non-destructive recovery for "missing trie node"</span>
+      </button>
+      <button class="btn" onclick="showCmd('snap-cmd')">
+        <span class="t">Resync from snapshot</span>
+        <span class="d">snapshot procedure (offline-readable)</span>
+      </button>
+    </div>
+    <div id="restart-cmd" class="cmd">
+      <button class="x" onclick="hideCmd('restart-cmd')">x</button>
+      sudo systemctl restart dagtech-node
+      <br><span style="color:var(--muted);">or, if running by hand:</span>
+      <br>pkill -f dagtech-node &amp;&amp; ~/.dagtech-node/dagtech-node --config ~/.dagtech-node/config.toml
+    </div>
+    <div id="rescue-cmd" class="cmd">
+      <button class="x" onclick="hideCmd('rescue-cmd')">x</button>
+      sudo systemctl stop dagtech-node
+      <br>~/.dagtech-node/dagtech-node --config ~/.dagtech-node/config.toml --rescue
+      <br>sudo systemctl start dagtech-node
+    </div>
+    <div id="snap-cmd" class="cmd">
+      <button class="x" onclick="hideCmd('snap-cmd')">x</button>
+      sudo systemctl stop dagtech-node
+      <br>rm -rf ~/.dagtech-node/data/mainnet/*
+      <br>cd ~/.dagtech-node &amp;&amp; ./dagtech-node fetch-snapshot
+      <br>sudo systemctl start dagtech-node
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="priv">PRIVACY-FIRST - LOCAL-ONLY POLLING</div>
+  <div>DagTech BlockDAG Node v2.0.1 - dashboard on 127.0.0.1:8881 - nothing leaves your machine</div>
+</footer>
+
+<script>
+const EVM_RPC = "http://127.0.0.1:18545";
+const DAG_RPC = "http://127.0.0.1:38131";
+const LOG_URL = "/log";
+const VERSION_URL = "/version";
+const POLL_MS = 5000;
+const HISTORY_KEY = "dagtech_balance_history";
+const WALLET_KEY = "dagtech_wallet";
+const FIRST_SEEN_KEY = "dagtech_first_seen";
+
+let walletAddr = localStorage.getItem(WALLET_KEY) || "";
+if (walletAddr) document.getElementById("walletInput").value = walletAddr;
+if (!localStorage.getItem(FIRST_SEEN_KEY)) localStorage.setItem(FIRST_SEEN_KEY, String(Date.now()));
+
+function saveWallet(e){
+  e.preventDefault();
+  const v = document.getElementById("walletInput").value.trim();
+  if (!/^0x[0-9a-fA-F]{40}$/.test(v) && v !== "") {
+    alert("Wallet must be 0x + 40 hex chars (or blank to clear)");
+    return false;
+  }
+  walletAddr = v;
+  localStorage.setItem(WALLET_KEY, v);
+  localStorage.removeItem(HISTORY_KEY);
+  poll();
+  return false;
+}
+function showCmd(id){
+  document.querySelectorAll(".cmd").forEach(function(c){c.classList.remove("show");});
+  document.getElementById(id).classList.add("show");
+}
+function hideCmd(id){ document.getElementById(id).classList.remove("show"); }
+
+async function rpcCall(url, method, params){
+  const r = await fetch(url, {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({jsonrpc:"2.0",id:1,method:method,params:params||[]})
+  });
+  if (!r.ok) throw new Error("HTTP "+r.status);
+  const j = await r.json();
+  if (j.error) throw new Error(j.error.message||"rpc error");
+  return j.result;
+}
+function setPill(elId, cls, txt){
+  const e = document.getElementById(elId);
+  if (!e) return;
+  e.className = "pill "+cls;
+  e.textContent = txt;
+}
+function fmtBdag(weiHex){
+  if (!weiHex) return "0";
+  const wei = BigInt(weiHex);
+  const whole = wei / 1000000000000000000n;
+  const frac = wei % 1000000000000000000n;
+  const fracStr = frac.toString().padStart(18,'0').slice(0,4);
+  return whole.toLocaleString("en-US") + "." + fracStr;
+}
+function bdagFloat(weiHex){
+  if (!weiHex) return 0;
+  return Number(BigInt(weiHex)) / 1e18;
+}
+function fmtAge(seconds){
+  if (seconds < 0) seconds = 0;
+  if (seconds < 60) return seconds.toFixed(0) + "s ago";
+  if (seconds < 3600) return (seconds/60).toFixed(1) + "m ago";
+  if (seconds < 86400) return (seconds/3600).toFixed(1) + "h ago";
+  return (seconds/86400).toFixed(1) + "d ago";
+}
+function fmtUptime(ms){
+  const s = Math.floor(ms/1000);
+  if (s < 60) return s + "s";
+  if (s < 3600) return Math.floor(s/60) + "m " + (s%60) + "s";
+  if (s < 86400) return Math.floor(s/3600) + "h " + Math.floor((s%3600)/60) + "m";
+  return Math.floor(s/86400) + "d " + Math.floor((s%86400)/3600) + "h";
+}
+function pushBalance(bal){
+  let h = [];
+  try { h = JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]"); } catch(e){}
+  const now = Date.now();
+  h.push({t:now, bal:bal});
+  const cutoff = now - 90*60*1000;
+  h = h.filter(function(x){return x.t >= cutoff;});
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(h));
+  return h;
+}
+function rateOver(h, minutes){
+  if (!h || h.length < 2) return null;
+  const target = Date.now() - minutes*60*1000;
+  let oldest = null;
+  for (const e of h) {
+    if (e.t <= target) oldest = e;
+    else if (!oldest) oldest = e;
+  }
+  if (!oldest) return null;
+  const latest = h[h.length-1];
+  const dt = (latest.t - oldest.t)/1000/60;
+  if (dt < 1) return null;
+  const db = latest.bal - oldest.bal;
+  return (db / dt) * 60;
+}
+function fmtRate(r){
+  if (r === null || r === undefined || isNaN(r)) return "--";
+  if (Math.abs(r) < 0.0001) return "0.00";
+  return r.toFixed(2) + "/h";
+}
+async function pollEvm(){
+  try {
+    const blockHex = await rpcCall(EVM_RPC, "eth_blockNumber", []);
+    const blockNum = parseInt(blockHex, 16);
+    const blockObj = await rpcCall(EVM_RPC, "eth_getBlockByNumber", [blockHex, false]);
+    const ts = blockObj && blockObj.timestamp ? parseInt(blockObj.timestamp, 16) : null;
+    document.getElementById("rpc-state").className = "live";
+    document.getElementById("evm-block").textContent = "EVM: " + blockNum.toLocaleString("en-US");
+    if (ts) {
+      const ageSec = Math.floor(Date.now()/1000) - ts;
+      document.getElementById("sync-age").textContent = fmtAge(ageSec);
+      document.getElementById("sync-detail").textContent = "tip block #" + blockNum.toLocaleString();
+      if (ageSec < 60) setPill("sync-pill", "ok", "HEALTHY");
+      else if (ageSec < 300) setPill("sync-pill", "warn", "LAGGING");
+      else setPill("sync-pill", "bad", "STALE");
+    }
+    try {
+      const peerHex = await rpcCall(EVM_RPC, "net_peerCount", []);
+      const peers = parseInt(peerHex, 16);
+      document.getElementById("peers-count").textContent = peers;
+      if (peers >= 8) setPill("peers-pill", "ok", "OK");
+      else if (peers >= 3) setPill("peers-pill", "warn", "LOW");
+      else setPill("peers-pill", "bad", "CRITICAL");
+    } catch(e) {
+      document.getElementById("peers-count").textContent = "n/a";
+      setPill("peers-pill", "warn", "n/a");
+    }
+    if (walletAddr) {
+      try {
+        const balHex = await rpcCall(EVM_RPC, "eth_getBalance", [walletAddr, "latest"]);
+        document.getElementById("wallet-bal").textContent = fmtBdag(balHex) + " BDAG";
+        document.getElementById("wallet-addr").textContent = walletAddr.slice(0,8) + "..." + walletAddr.slice(-6);
+        const h = pushBalance(bdagFloat(balHex));
+        document.getElementById("rate5").textContent = fmtRate(rateOver(h,5));
+        document.getElementById("rate15").textContent = fmtRate(rateOver(h,15));
+        document.getElementById("rate30").textContent = fmtRate(rateOver(h,30));
+        document.getElementById("rate60").textContent = fmtRate(rateOver(h,60));
+      } catch(e) {
+        document.getElementById("wallet-bal").textContent = "RPC error";
+        document.getElementById("wallet-addr").textContent = "check node logs";
+      }
+    } else {
+      document.getElementById("wallet-bal").textContent = "Not set";
+      document.getElementById("wallet-addr").textContent = "paste wallet above";
+    }
+  } catch(e) {
+    document.getElementById("rpc-state").className = "dead";
+    setPill("sync-pill", "bad", "RPC DOWN");
+    document.getElementById("sync-age").textContent = "RPC down";
+    document.getElementById("sync-detail").textContent = "EVM RPC unreachable on 127.0.0.1:18545";
+    document.getElementById("evm-block").textContent = "EVM: --";
+  }
+}
+async function pollDag(){
+  try {
+    let result = null;
+    try { result = await rpcCall(DAG_RPC, "getNodeInfo", []); } catch(e){}
+    if (!result) { try { result = await rpcCall(DAG_RPC, "getBlockCount", []); } catch(e){} }
+    if (result !== null && result !== undefined) {
+      const order = (result.graphstate && result.graphstate.mainorder) ||
+                    (result.mainOrder) ||
+                    (typeof result === "number" ? result : null);
+      if (order !== null) {
+        document.getElementById("dag-order").textContent = "DAG: " + Number(order).toLocaleString();
+      } else {
+        document.getElementById("dag-order").textContent = "DAG: (parsed)";
+      }
+      document.getElementById("dag-state").className = "live";
+    } else {
+      throw new Error("no response");
+    }
+  } catch(e) {
+    document.getElementById("dag-state").className = "stale";
+    document.getElementById("dag-order").textContent = "DAG: rpc-na";
+  }
+}
+async function pollLogs(){
+  try {
+    const r = await fetch(LOG_URL);
+    if (!r.ok) throw new Error("HTTP "+r.status);
+    const t = await r.text();
+    document.getElementById("logs").textContent = t || "(log empty)";
+  } catch(e) {
+    document.getElementById("logs").textContent = "Log unavailable: " + e.message + "\n(server.py /log endpoint must be running)";
+  }
+}
+async function pollVersion(){
+  try {
+    const r = await fetch(VERSION_URL);
+    if (!r.ok) return;
+    const t = (await r.text()).trim();
+    document.getElementById("version").textContent = "version: " + t;
+  } catch(e) {
+    document.getElementById("version").textContent = "version: n/a";
+  }
+}
+function updateUptime(){
+  const seen = parseInt(localStorage.getItem(FIRST_SEEN_KEY) || String(Date.now()), 10);
+  const ms = Date.now() - seen;
+  document.getElementById("uptime").textContent = fmtUptime(ms);
+}
+async function poll(){
+  document.getElementById("last-poll").textContent = "polling...";
+  await Promise.all([pollEvm(), pollDag(), pollLogs()]);
+  updateUptime();
+  const t = new Date();
+  const hh = String(t.getHours()).padStart(2,'0');
+  const mm = String(t.getMinutes()).padStart(2,'0');
+  const ss = String(t.getSeconds()).padStart(2,'0');
+  document.getElementById("last-poll").textContent = "last: " + hh + ":" + mm + ":" + ss;
+}
+pollVersion();
+poll();
+setInterval(poll, POLL_MS);
+setInterval(updateUptime, 1000);
+</script>
+</body>
+</html>

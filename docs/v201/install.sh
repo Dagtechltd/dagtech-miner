@@ -230,6 +230,66 @@ if [ "$SNAP_OK" = "yes" ]; then
   fi
 fi
 
+
+# --- LOCAL DASHBOARD (privacy-first, no phone-home) ---------------------
+log "installing local dashboard (no telemetry, 127.0.0.1 only)..."
+mkdir -p "$HOME/.dagtech-node"
+DASH_HTML_URL="${BASE_URL}/dashboard.html"
+DASH_PY_URL="${BASE_URL}/server.py"
+if curl -fsSL -o "$HOME/.dagtech-node/dashboard.html" "$DASH_HTML_URL" \
+   && curl -fsSL -o "$HOME/.dagtech-node/server.py" "$DASH_PY_URL"; then
+  ok "dashboard files downloaded"
+else
+  warn "dashboard fetch failed - skipping local dashboard"
+fi
+
+# Write version stamp the dashboard's /version endpoint reads
+echo "v2.0.1" > "$HOME/.dagtech-node/VERSION"
+
+# Start it: prefer systemd-user, fallback to nohup
+DASH_STARTED="no"
+if command -v systemctl >/dev/null 2>&1 && [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -d "$HOME/.config" ]; then
+  mkdir -p "$HOME/.config/systemd/user"
+  cat > "$HOME/.config/systemd/user/dagtech-node-dashboard.service" <<UNIT_EOF
+[Unit]
+Description=DagTech BlockDAG Node - Local Dashboard (privacy-first, 127.0.0.1:8881)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 %h/.dagtech-node/server.py
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target
+UNIT_EOF
+  if systemctl --user daemon-reload >/dev/null 2>&1 \
+     && systemctl --user enable --now dagtech-node-dashboard.service >/dev/null 2>&1; then
+    ok "dashboard service started (systemd --user)"
+    DASH_STARTED="yes"
+  fi
+fi
+if [ "$DASH_STARTED" = "no" ] && [ -f "$HOME/.dagtech-node/server.py" ]; then
+  # fallback: background process
+  pkill -f "dagtech-node/server.py" >/dev/null 2>&1 || true
+  nohup python3 "$HOME/.dagtech-node/server.py" >"$HOME/.dagtech-node/server.log" 2>&1 &
+  disown 2>/dev/null || true
+  ok "dashboard started (background process)"
+  DASH_STARTED="yes"
+fi
+
+# Try to open it in a browser
+if [ "$DASH_STARTED" = "yes" ]; then
+  sleep 2
+  DASH_URL="http://127.0.0.1:8881"
+  if command -v xdg-open >/dev/null 2>&1; then xdg-open "$DASH_URL" >/dev/null 2>&1 &
+  elif command -v open >/dev/null 2>&1; then open "$DASH_URL" >/dev/null 2>&1 &
+  elif command -v cmd.exe >/dev/null 2>&1; then cmd.exe /c start "$DASH_URL" >/dev/null 2>&1 &
+  fi
+fi
+
+
 # --- FINAL ---------------------------------------------------------------
 echo ""
 ok "Install complete."
@@ -245,7 +305,7 @@ cat <<EONOTE
          sudo systemctl daemon-reload && sudo systemctl enable --now dagtech-node
     4. Point your miner at  ${STRATUM_ENDPOINT}
     5. First share expected within 30 minutes of full DAG sync.
-    6. Live stats:          https://stats.dagtech.network
+    6. Local dashboard:     http://127.0.0.1:8881 (privacy-first, on YOUR box)
 
   Stuck?
     Logs: ${LOG_DIR}/  or  journalctl -u dagtech-node -f
