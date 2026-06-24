@@ -223,21 +223,41 @@ start    http://127.0.0.1:8881    <span class="comment"># Windows</span>
   </div>
 
   <div class="glass" id="verify">
-    <h2><span class="num">3</span>Verify the binary (recommended)</h2>
-    <p>Every artifact is SHA-256 signed and the running binary embeds a DagTech signature stamp - so you can prove at runtime that what's executing is what we shipped.</p>
+    <h2><span class="num">3</span>Verify the binary (optional)</h2>
+    <p>You don't need to verify to install — the one-liner above is enough. This section is for operators in regulated environments, the security-conscious, or anyone who wants a cryptographic guarantee that what's running on their box came from us and nothing else.</p>
+    <p><strong>SHA-256 manifest</strong> — proves the binary you downloaded matches what we published.<br><strong>GPG signature on the manifest</strong> — proves the manifest itself came from DagTech and wasn't swapped in transit.</p>
+    <p>Our build key:</p>
+    <table class="bins" style="margin-bottom:1.2rem;">
+      <tbody>
+        <tr><td><strong>UID</strong></td><td><code>DagTech Build &lt;build@dagtech.network&gt;</code></td></tr>
+        <tr><td><strong>Algorithm</strong></td><td><code>ed25519</code> (sign-only)</td></tr>
+        <tr><td><strong>Fingerprint</strong></td><td class="hash">2A0E 0B93 7523 9B0D 7723  101B 6850 0137 C7D4 EB71</td></tr>
+      </tbody>
+    </table>
     <div class="code-wrapper">
-      <pre class="code-block" id="code-verify"><span class="comment"># Download the binary you want plus SHA256SUMS</span>
-curl -fLO https://miner.dagtech.network/v201/dagtech-node-v2.0.1-linux-amd64
-curl -fLO https://miner.dagtech.network/v201/SHA256SUMS
+      <pre class="code-block" id="code-verify"><span class="comment"># 1. Import the DagTech build pubkey (one-time)</span>
+curl -sO https://miner.dagtech.network/v201/dagtech-build-pubkey.asc
+gpg --import dagtech-build-pubkey.asc
+gpg --fingerprint build@dagtech.network
+<span class="comment"># Confirm the fingerprint matches the one published above</span>
 
-<span class="comment"># Verify file hash</span>
+<span class="comment"># 2. Verify the signed manifest</span>
+curl -sO https://miner.dagtech.network/v201/SHA256SUMS
+curl -sO https://miner.dagtech.network/v201/SHA256SUMS.asc
+gpg --verify SHA256SUMS.asc SHA256SUMS
+<span class="comment"># expect: Good signature from "DagTech Build &lt;build@dagtech.network&gt;"</span>
+
+<span class="comment"># 3. Verify your downloaded binaries against the manifest</span>
 sha256sum -c SHA256SUMS --ignore-missing
+<span class="comment"># expect: dagtech-node-v2.0.1-linux-amd64: OK</span>
 
-<span class="comment"># Verify the running binary identifies itself as ours</span>
+<span class="comment"># 4. Bonus: the running binary identifies itself</span>
 docker exec blockdag-node bdag --version
 <span class="comment"># expect: bdag v2.0.1 (build &lt;hash&gt;) - DagTech corruption-proof release</span></pre>
       <button class="copy-btn" onclick="copyCode('code-verify', this)">Copy</button>
     </div>
+    <div class="tip-box"><span class="tip-icon">i</span><p><strong>Why "WARNING: This key is not certified with a trusted signature"?</strong> That's GPG telling you you've never explicitly told it to trust this key. The signature itself is still <em>cryptographically good</em>. If you want to silence the warning after confirming the fingerprint, run <code>gpg --lsign-key build@dagtech.network</code>.</p></div>
+  </div>
     <p>Expected output: <code>dagtech-node-v2.0.1-linux-amd64: OK</code>. GPG signature on <code>SHA256SUMS</code> lands in v2.1.0 (Boss-signed); for now the manifest is SHA-only and pulled over TLS from <code>miner.dagtech.network</code>.</p>
   </div>
 
