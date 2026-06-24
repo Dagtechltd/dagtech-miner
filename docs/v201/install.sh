@@ -13,6 +13,8 @@ set -euo pipefail
 
 VERSION="v2.0.1"
 BASE_URL="https://miner.dagtech.network/v201"
+SNAPSHOT_URL="https://miners.dagtech.network/snapshot/latest.tar.zst"
+SNAPSHOT_SHA_URL="https://miners.dagtech.network/snapshot/SHA256SUMS"
 IPFS_GATEWAY="https://ipfs.io"
 IPNS_NAME="blockdag-snapshot.dagtech.network"
 INSTALL_DIR="${DAGTECH_PREFIX:-/opt/dagtech-node}"
@@ -197,27 +199,47 @@ else
   ok "existing config preserved: ${CONF}"
 fi
 
-# --- SNAPSHOT ------------------------------------------------------------
+# --- SNAPSHOT (corruption-proof: HTTPS first, IPFS fallback) -------------
 log "pulling chain snapshot (skip multi-day resync)..."
 SNAP_FILE="${DATA_DIR}/snapshot.tar.zst"
 SNAP_OK="no"
 
-if command -v ipfs >/dev/null 2>&1; then
+# Primary: direct HTTPS from miners.dagtech.network (CF tunnel + UAE nginx)
+log "downloading from ${SNAPSHOT_URL} ..."
+if curl -fL --progress-bar -o "$SNAP_FILE" "$SNAPSHOT_URL"; then
+  log "verifying SHA-256..."
+  curl -fL --silent -o "${SNAP_FILE}.sums" "$SNAPSHOT_SHA_URL" || true
+  if [ -f "${SNAP_FILE}.sums" ]; then
+    EXPECTED=$(awk '{print $1}' "${SNAP_FILE}.sums")
+    ACTUAL=$(sha256sum "$SNAP_FILE" | awk '{print $1}')
+    if [ "$EXPECTED" = "$ACTUAL" ]; then
+      ok "snapshot SHA-256 verified"
+      SNAP_OK="yes"
+    else
+      warn "snapshot SHA-256 mismatch (expected ${EXPECTED}, got ${ACTUAL}); discarding"
+      rm -f "$SNAP_FILE"
+    fi
+    rm -f "${SNAP_FILE}.sums"
+  else
+    warn "SHA256SUMS unavailable; using snapshot without verify"
+    SNAP_OK="yes"
+  fi
+else
+  warn "HTTPS snapshot pull failed; trying IPFS fallback"
+fi
+
+# Fallback: IPFS gateway (in case snapshot.dagtech.network ever goes down)
+if [ "$SNAP_OK" = "no" ] && command -v ipfs >/dev/null 2>&1; then
   log "using local IPFS..."
   if ipfs get "/ipns/${IPNS_NAME}" --output="$SNAP_FILE" 2>&1 | tail -3; then
     SNAP_OK="yes"
   else
-    warn "IPFS pull failed; falling back to HTTP gateway"
+    warn "IPFS pull failed"
   fi
 fi
 
 if [ "$SNAP_OK" = "no" ]; then
-  log "downloading from ${IPFS_GATEWAY}/ipns/${IPNS_NAME}/latest.tar.zst ..."
-  if curl -fL --progress-bar -o "$SNAP_FILE" "${IPFS_GATEWAY}/ipns/${IPNS_NAME}/latest.tar.zst"; then
-    SNAP_OK="yes"
-  else
-    warn "snapshot pull failed - node will resync from genesis (~2.7d). Continuing anyway."
-  fi
+  warn "snapshot pull failed - node will resync from genesis (~2.7d). Continuing anyway."
 fi
 
 if [ "$SNAP_OK" = "yes" ]; then
@@ -229,7 +251,6 @@ if [ "$SNAP_OK" = "yes" ]; then
     warn "zstd not installed - leaving snapshot at ${SNAP_FILE}; install zstd and extract manually"
   fi
 fi
-
 
 # --- LOCAL DASHBOARD (privacy-first, no phone-home) ---------------------
 log "installing local dashboard (no telemetry, 127.0.0.1 only)..."
