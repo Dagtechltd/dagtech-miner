@@ -66,12 +66,12 @@ if [ -r /proc/meminfo ]; then
   ok "RAM: ${GB} GB"
 fi
 
-# Disk check (need >= 200 GB free where DATA_DIR will live)
+# Disk check (need >= 50 GB free where DATA_DIR will live)
 PARENT="$(dirname "$DATA_DIR")"
 mkdir -p "$PARENT"
 AVAIL_KB="$(df -P "$PARENT" | awk 'NR==2 {print $4}')"
 AVAIL_GB="$((AVAIL_KB / 1024 / 1024))"
-[ "$AVAIL_GB" -ge 200 ] || die "need >= 200 GB free at ${PARENT} (found ${AVAIL_GB} GB)"
+[ "$AVAIL_GB" -ge 50 ] || die "need >= 50 GB free at ${PARENT} (found ${AVAIL_GB} GB)"
 ok "disk: ${AVAIL_GB} GB free at ${PARENT}"
 
 # Tools
